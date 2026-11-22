@@ -1,8 +1,8 @@
 import asyncio, sys, json
-sys.path.insert(0, __import__('os').path.dirname(__file__))
+sys.path.insert(0,'/home/claude')
 from e2e_lib import *
 from playwright.async_api import async_playwright
-SH=__import__('os').environ.get('SHOTS','/tmp/')
+SH='/home/claude/shots/'
 async def main():
     async with async_playwright() as p:
         b, ctx, pg = await new(p)

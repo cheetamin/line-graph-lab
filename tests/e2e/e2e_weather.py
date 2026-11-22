@@ -1,8 +1,8 @@
 import asyncio, sys
-sys.path.insert(0, __import__('os').path.dirname(__file__))
+sys.path.insert(0,'/home/claude')
 from e2e_lib import *
 from playwright.async_api import async_playwright
-SH=__import__('os').environ.get('SHOTS','/tmp/')
+SH='/home/claude/shots/'
 async def main():
     async with async_playwright() as p:
         b, ctx, pg = await new(p)
@@ -36,13 +36,10 @@ async def main():
         await sels.nth(0).select_option('년'); await sels.nth(1).select_option('일')
         await pg.click('.step .chip-btn:text-is("2")')
         await pg.wait_for_timeout(500)
-        coords = await graph_coords(pg, [(i,v) for i,v in enumerate(vals)])
-        for x,y in coords:
-            await pg.mouse.move(x,y); await pg.mouse.down(); await pg.mouse.move(x+1,y); await pg.mouse.up()
-            await pg.wait_for_timeout(120)
+        coords = None
+        for i,v in enumerate(vals): await click_point(pg, i, v)
         await pg.click('.tool-btn:has-text("선 잇기")')
-        for x,y in coords:
-            await pg.mouse.click(x,y); await pg.wait_for_timeout(100)
+        for i,v in enumerate(vals): await click_point(pg, i, v)
         await pg.screenshot(path=SH+'weather3.png')
         d = await pg.evaluate("JSON.stringify({p: window.__editor.d.points, s: window.__editor.d.segments})")
         print('drawn', d)

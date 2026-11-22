@@ -18,7 +18,7 @@ async def student_login(pg, code, num, pin):
     await pg.fill('input[name=number]', str(num))
     await pg.fill('input[name=pin]', pin)
     await pg.click('button[type=submit]')
-    await pg.wait_for_selector('.side-tabs')
+    await pg.wait_for_selector('.side-tab[aria-current]')
     await pg.wait_for_timeout(500)
 
 async def graph_coords(pg, items):
@@ -33,7 +33,7 @@ async def graph_coords(pg, items):
       return items.map(([i,v]) => { const L = window.__editor.Lc; const pt = svg.createSVGPoint(); pt.x = L.x(i); pt.y = L.y(v); const q = pt.matrixTransform(ctm); return [q.x, q.y]; });
     }""", items)
 
-async def click_point(pg, i, v, down_up=True):
+async def click_point(pg, i, v, down_up=True, touch=False):
     xy = await pg.evaluate("""([i,v]) => { const ed = window.__editor; const L = ed.Lc; const svg = ed.svg; const sc = ed.scroll;
       const pt = svg.createSVGPoint(); pt.x = L.x(i); pt.y = L.y(v);
       let q = pt.matrixTransform(svg.getScreenCTM()); const r = sc.getBoundingClientRect();
@@ -42,5 +42,6 @@ async def click_point(pg, i, v, down_up=True):
       sc.scrollIntoView({block:'nearest'});
       q = pt.matrixTransform(svg.getScreenCTM()); return [q.x, q.y]; }""", [i, v])
     x, y = xy
-    await pg.mouse.move(x, y); await pg.mouse.down(); await pg.mouse.up()
+    if touch: await pg.touchscreen.tap(x, y)
+    else: await pg.mouse.move(x, y); await pg.mouse.down(); await pg.mouse.up()
     await pg.wait_for_timeout(70)

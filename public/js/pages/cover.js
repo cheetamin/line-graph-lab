@@ -2,7 +2,8 @@
 import { h, A, icon, btn, toast, reducedMotion } from '../ui.js';
 import { api, isDemo } from '../api.js';
 import { Book } from '../book.js';
-import { makeHeader, deskProps } from '../shell.js';
+import { makeHeader, deskProps, scene } from '../shell.js';
+import { iconSrc } from '../ui.js';
 import { boot } from '../main.js';
 
 const ss = { get: (k) => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch { /* */ } }, del: (k) => { try { sessionStorage.removeItem(k); } catch { /* */ } } };
@@ -66,8 +67,11 @@ function demoHint(kind, fill) {
 export function mountLogin(root, tab = 'student') {
   const header = makeHeader({ onLogo: () => { ss.del('kgl-opened'); root.replaceChildren(); mountCover(root); }, right: h('b', null, '연구소 입구') });
   const book = new Book({ onPrev: () => { ss.del('kgl-opened'); root.replaceChildren(); mountCover(root); }, onNext: () => {} });
-  const wrap = h('div', { class: 'stage', style: { gridTemplateColumns: '1fr', maxWidth: '1280px', margin: '0 auto' } }, book.wrap);
-  root.append(header, wrap);
+  const tabsRO = h('nav', { class: 'side-tabs login-tabs', 'aria-label': '탐구 순서(입장 후 열려요)' },
+    [['home', '목차'], ['weather', '기상자료 탐험실'], ['vote', '주제 선택·투표'], ['table', '자료표 만들기'], ['graph', '꺾은선그래프 그리기'], ['gallery', '작품 전시관']].map(([k, t]) =>
+      h('button', { class: 'side-tab', type: 'button', 'aria-disabled': 'true', onClick: () => toast('먼저 오른쪽에서 연구소에 들어가요.') }, h('img', { src: iconSrc(k), alt: '' }), h('span', null, t))));
+  const wrap = h('div', { class: 'stage login-stage' }, h('div', { class: 'side-col' }, tabsRO), book.wrap);
+  root.append(scene(header, wrap));
   deskProps(root);
 
   const left = (el) => {

@@ -3,7 +3,7 @@ import { sealImg, h, A, icon, toast, iconSrc } from '../ui.js';
 import { Book } from '../book.js';
 import { S, loadStudent, saveUi } from '../store.js';
 import { logout } from '../main.js';
-import { makeHeader, deskProps, lanternImg } from '../shell.js';
+import { makeHeader, deskProps, lanternImg, scene } from '../shell.js';
 import * as home from './home.js';
 import * as weather from './weather.js';
 import * as topics from './topics.js';
@@ -53,7 +53,7 @@ export async function mountStudent(root) {
   });
   const tabs = h('nav', { class: 'side-tabs', 'aria-label': '장 목록' });
   const book = new Book({ onPrev: () => app.step(-1), onNext: () => app.step(1) });
-  root.append(top, h('main', { class: 'stage' }, h('div', { class: 'side-col' }, tabs, lanternImg()), book.wrap));
+  root.append(scene(top, h('main', { class: 'stage' }, h('div', { class: 'side-col' }, tabs, lanternImg()), book.wrap)));
   deskProps(root);
 
   const app = {

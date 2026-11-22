@@ -80,8 +80,12 @@ export class Book {
     this.fill(spread);
     const newL = clonePage(this.left); const newR = clonePage(this.right);
     const layer = h('div', { class: 'flip-layer' });
+    const br = this.el.getBoundingClientRect();
+    const rect = (el) => { const r = el.getBoundingClientRect(); return { left: `${r.left - br.left}px`, top: `${r.top - br.top}px`, width: `${r.width}px`, height: `${r.height}px` }; };
+    const L = rect(this.left); const Rr = rect(this.right);
+    layer.style.inset = '0';
     const half = (side, node, scroll) => {
-      const box = h('div', { class: 'flip-static', style: side === 'left' ? { left: 0, width: '50%' } : { left: '50%', width: '50%' } }, node);
+      const box = h('div', { class: 'flip-static', style: side === 'left' ? L : Rr }, node);
       node.style.height = '100%'; node.style.overflow = 'hidden';
       return [box, () => { const sc = node.querySelector('.page-scroll'); if (sc) sc.scrollTop = scroll; }];
     };
@@ -94,11 +98,11 @@ export class Book {
     if (dir === 'next') {
       const [b, fx] = half('left', oldL, sL); staticBox = b; fixes.push(fx);
       const [f1, fx1] = face(oldR, false, sR); const [f2] = face(newL, true, 0); fixes.push(fx1);
-      leaf = h('div', { class: 'leaf', style: { left: '50%', width: '50%', transformOrigin: 'left center' } }, f1, f2);
+      leaf = h('div', { class: 'leaf', style: { ...Rr, transformOrigin: 'left center' } }, f1, f2);
     } else {
       const [b, fx] = half('right', oldR, sR); staticBox = b; fixes.push(fx);
       const [f1, fx1] = face(oldL, false, sL); const [f2] = face(newR, true, 0); fixes.push(fx1);
-      leaf = h('div', { class: 'leaf', style: { left: 0, width: '50%', transformOrigin: 'right center' } }, f1, f2);
+      leaf = h('div', { class: 'leaf', style: { ...L, transformOrigin: 'right center' } }, f1, f2);
     }
     layer.append(staticBox, leaf);
     this.el.append(layer);

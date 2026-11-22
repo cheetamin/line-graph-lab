@@ -228,12 +228,16 @@ export class GraphEditor {
   render() {
     const d = this.d;
     const L = this.L();
+    const key = `${L.W}x${L.H}`;
+    if (this.lastKey && this.lastKey !== key) this.fitted = false;
+    this.lastKey = key;
     this.Lc = L;
     this.svg.replaceChildren();
     drawFrame(this.svg, L, d, { labels: this.labels });
     if (!this.fitted && this.scroll.clientWidth > 0) {
       this.fitted = true;
-      this.zoom = Math.min(1.4, Math.max(0.45, (this.scroll.clientWidth - 4) / L.W));
+      const mh = parseFloat(getComputedStyle(this.scroll).maxHeight) || Infinity;
+      this.zoom = Math.min(1.4, Math.max(0.45, Math.min((this.scroll.clientWidth - 4) / L.W, (mh - 4) / L.H)));
     }
     this.svg.style.width = `${L.W * this.zoom}px`;
     this.svg.style.height = `${L.H * this.zoom}px`;
