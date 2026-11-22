@@ -16,7 +16,7 @@ const CHAPTERS = [
   ['gallery', '5. 작품 전시관'],
 ];
 
-const D = (n) => `assets/deco/${n}.webp`;
+const D = (n) => `assets/art/${n}.png`;
 const deco = (n, style, cls = '') => h('img', { class: `deco ${cls}`, src: D(n), alt: '', style, draggable: 'false' });
 
 export function mountCover(root, opts = {}) {
@@ -27,16 +27,16 @@ export function mountCover(root, opts = {}) {
   const book = h('div', { class: 'ibook' },
     h('div', { class: 'ib-cover' }),
     pages,
-    deco('pine', { left: '5.4%', top: '0', width: '31%' }, 'd-pine'),
-    deco('crane', { left: '56.4%', top: '3%', width: '15.3%' }, 'd-crane'),
-    deco('cloud1', { left: '6.2%', top: '35%', width: '9.9%' }, 'd-cloud'),
-    deco('cloud2', { left: '76.8%', top: '7%', width: '10.8%' }, 'd-cloud'),
-    deco('cloud3', { left: '59.8%', top: '61.6%', width: '12%' }, 'd-cloud'),
-    deco('pavilion', { left: '5.4%', top: '54.4%', width: '24.5%' }, 'd-pav'),
-    deco('mount_right', { left: '70%', top: '68%', width: '12.9%' }, 'd-mtr'),
-    deco('books_stack', { left: '0', top: '68%', width: '18.5%' }, 'd-books'),
-    deco('inkstone_brush', { right: '0', top: '58.4%', width: '19.9%' }, 'd-ink'),
-    deco('binding', { left: '0', top: '0', height: '100%', width: 'auto' }, 'd-bind'),
+    deco('prop_mountains', { left: '0', bottom: '2.4%', width: '100%', height: '36%' }, 'd-mtn'),
+    deco('prop_pine', { left: '4.6%', top: '-1%', width: '35%' }, 'd-pine'),
+    deco('prop_crane', { left: '53%', top: '1%', width: '19%' }, 'd-crane'),
+    deco('prop_cloud', { left: '7.5%', top: '36%', width: '11%' }, 'd-cloud'),
+    deco('prop_cloud_gold', { left: '61%', top: '61%', width: '12%' }, 'd-cloud'),
+    deco('prop_pavilion', { left: '5.5%', top: '55%', width: '19%' }, 'd-pav'),
+    deco('prop_books', { left: '0.4%', bottom: '0', width: '17%' }, 'd-books'),
+    deco('prop_brush', { right: '1.5%', bottom: '17%', width: '23%' }, 'd-brush'),
+    deco('prop_inkstone', { right: '0.8%', bottom: '0.5%', width: '17%' }, 'd-ink'),
+    deco('prop_binding', { left: '0', top: '0', height: '100%', width: 'auto' }, 'd-bind'),
     h('div', { class: 'ib-content' },
       h('div', { class: 'ib-main' },
         h('div', { class: 'ib-eyebrow' }, '우리 반 데이터 탐구서'),

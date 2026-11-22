@@ -1,5 +1,5 @@
 // 제1장 기상자료 탐험실 (교과서 118~121쪽): 포털 조사 → 표 → 직접 그래프
-import { h, icon, btn, toast, debounce } from '../ui.js';
+import { sealImg, h, icon, btn, toast, debounce } from '../ui.js';
 import { api } from '../api.js';
 import { S, saveState } from '../store.js';
 import { graphSpread, celebrate } from './graphwork.js';
@@ -25,7 +25,7 @@ export function spreads(app) {
   } else {
     list.push({
       left: (el) => el.append(h('h2', null, '폭염일수 꺾은선그래프'), h('div', { class: 'divider' }), h('p', null, '표를 먼저 완성하면 이 쪽에서 모눈종이에 그래프를 그릴 수 있어요.')),
-      right: (el) => el.append(h('div', { class: 'lock-page' }, h('div', null, h('div', { class: 'seal', style: { margin: '0 auto 12px' } }, '表'), h('p', null, '앞쪽의 표를 완성하고 [표 확인하기]를 눌러 주세요.'), btn('표 만들러 가기', () => app.go('weather', 1, 'prev'), { variant: 'green' })))),
+      right: (el) => el.append(h('div', { class: 'lock-page' }, h('div', null, sealImg('表'), h('p', null, '앞쪽의 표를 완성하고 [표 확인하기]를 눌러 주세요.'), btn('표 만들러 가기', () => app.go('weather', 1, 'prev'), { variant: 'green' })))),
     });
   }
   return list;

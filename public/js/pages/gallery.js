@@ -1,5 +1,5 @@
 // 제5장 작품 전시관: 왼쪽 작품 목록, 오른쪽 선택한 작품 — 작품마다 한 펼침, 책장을 넘기며 감상
-import { h, icon, btn, fmt } from '../ui.js';
+import { sealImg, h, icon, btn, fmt } from '../ui.js';
 import { api } from '../api.js';
 import { renderStatic } from '../graph.js';
 
@@ -16,7 +16,7 @@ export function spreads(app) {
   if (!items.length) {
     return [{
       left: (el) => header(el, app, items),
-      right: (el) => el.append(h('div', { class: 'lock-page' }, h('div', null, h('div', { class: 'seal', style: { margin: '0 auto 12px' } }, '展'), h('h3', null, '아직 걸린 작품이 없어요'), h('p', null, cache.error || '선생님이 승인한 작품이 이곳에 전시돼요.'), btn('새로 불러오기', () => { cache = null; app.refresh(); }, { variant: 'green small' })))),
+      right: (el) => el.append(h('div', { class: 'lock-page' }, h('div', null, sealImg('展'), h('h3', null, '아직 걸린 작품이 없어요'), h('p', null, cache.error || '선생님이 승인한 작품이 이곳에 전시돼요.'), btn('새로 불러오기', () => { cache = null; app.refresh(); }, { variant: 'green small' })))),
     }];
   }
   return items.map((w, i) => ({

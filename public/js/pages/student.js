@@ -1,5 +1,5 @@
 // 학생용 책: 상단 막대 + 장(章) 책갈피 + 책장 넘김 탐색
-import { h, A, icon, toast, iconSrc } from '../ui.js';
+import { sealImg, h, A, icon, toast, iconSrc } from '../ui.js';
 import { Book } from '../book.js';
 import { S, loadStudent, saveUi } from '../store.js';
 import { logout } from '../main.js';
@@ -12,7 +12,7 @@ import * as graphCh from './graphpage.js';
 import * as gallery from './gallery.js';
 
 export const CHAPTERS = [
-  { key: 'home', label: '목차', icon: 'scroll', mod: home },
+  { key: 'home', label: '목차', icon: 'home', mod: home },
   { key: 'weather', label: '기상자료 탐험실', icon: 'weather', mod: weather },
   { key: 'topics', label: '주제 선택·투표', icon: 'vote', mod: topics },
   { key: 'table', label: '자료표 만들기', icon: 'table', mod: table },
@@ -36,7 +36,7 @@ export function lockedSpread(ch, reason, app) {
   return {
     left: (el) => el.append(h('div', { class: 'page-head' }, icon(ch.icon), h('h2', null, ch.label)), h('div', { class: 'divider' }), h('p', null, '이 장은 아직 열리지 않았어요.')),
     right: (el) => el.append(h('div', { class: 'lock-page' }, h('div', null,
-      h('div', { class: 'seal', style: { margin: '0 auto 12px' } }, '封'),
+      sealImg('封'),
       h('h3', null, '아직 봉인된 장이에요'), h('p', null, reason),
       h('button', { class: 'btn green', type: 'button', onClick: () => app.go('home', 0, 'prev') }, '목차로 돌아가기')))),
   };

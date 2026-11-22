@@ -1,5 +1,5 @@
 // 고서 책 틀과 책장 넘김 애니메이션
-import { h, A, reducedMotion, isNarrow } from './ui.js';
+import { h, ART, reducedMotion, isNarrow } from './ui.js';
 
 function clonePage(el) {
   const c = el.cloneNode(true);
@@ -19,8 +19,8 @@ export class Book {
     this.onPrev = onPrev; this.onNext = onNext;
     this.left = h('section', { class: 'page left', 'aria-label': '왼쪽 쪽' });
     this.right = h('section', { class: 'page right', 'aria-label': '오른쪽 쪽' });
-    this.prevBtn = h('button', { class: 'flip-btn prev', type: 'button', 'aria-label': '이전 쪽으로 넘기기', onClick: () => this.onPrev() }, h('img', { src: A('23_arrow_previous'), alt: '' }));
-    this.nextBtn = h('button', { class: 'flip-btn next', type: 'button', 'aria-label': '다음 쪽으로 넘기기', onClick: () => this.onNext() }, h('img', { src: A('24_arrow_next'), alt: '' }));
+    this.prevBtn = h('button', { class: 'flip-btn prev', type: 'button', 'aria-label': '이전 쪽으로 넘기기', onClick: () => this.onPrev() }, h('img', { src: ART('arrow_prev'), alt: '' }));
+    this.nextBtn = h('button', { class: 'flip-btn next', type: 'button', 'aria-label': '다음 쪽으로 넘기기', onClick: () => this.onNext() }, h('img', { src: ART('arrow_next'), alt: '' }));
     this.prevLabel = h('div', { class: 'flip-label prev' });
     this.nextLabel = h('div', { class: 'flip-label next' });
     this.dots = h('div', { class: 'dots', role: 'tablist', 'aria-label': '쪽 표시' });
@@ -35,8 +35,8 @@ export class Book {
   }
 
   decorate(pageEl, folio) {
-    pageEl.append(h('img', { class: 'corner tl', src: A('36_decorative_corner'), alt: '' }));
-    pageEl.append(h('img', { class: 'corner br', src: A('36_decorative_corner'), alt: '' }));
+    pageEl.append(h('img', { class: 'corner tl', src: ART('frame_corner'), alt: '' }));
+    pageEl.append(h('img', { class: 'corner br', src: ART('frame_corner'), alt: '' }));
     if (folio) pageEl.append(h('div', { class: 'folio' }, folio));
   }
 

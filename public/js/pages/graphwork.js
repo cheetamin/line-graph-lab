@@ -1,5 +1,5 @@
 // 그래프 그리기 공용 펼침(기상자료·조사 주제 모두 사용): 왼쪽 단계 안내, 오른쪽 모눈종이
-import { h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js';
+import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js';
 import { api } from '../api.js';
 import { S, setSave, backup, clearBackup, getBackup } from '../store.js';
 import { GraphEditor } from '../graph.js';
@@ -211,5 +211,5 @@ export function graphSpread(app, { kind, labels, values, unit, xUnit, heading, i
 }
 
 export async function celebrate(title, text) {
-  await modal({ title, body: h('div', { class: 'center' }, h('div', { class: 'seal', style: { margin: '0 auto 10px', width: '84px', height: '84px', borderRadius: '10px', background: '#7b2620', color: '#fbe7c7', display: 'grid', placeItems: 'center', fontSize: '1.8rem', fontFamily: 'var(--f-title)' } }, '完'), h('p', null, text)), actions: [{ label: '다음 장으로 ›', value: true, variant: 'gold' }] });
+  await modal({ title, body: h('div', { class: 'center' }, sealImg('完', 96), h('p', null, text)), actions: [{ label: '다음 장으로 ›', value: true, variant: 'gold' }] });
 }

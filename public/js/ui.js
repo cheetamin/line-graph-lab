@@ -5,11 +5,14 @@ for (const fn of ['append', 'replaceChildren', 'prepend']) {
   Element.prototype[fn] = function (...nodes) { return orig.apply(this, nodes.filter((n) => n !== null && n !== undefined && n !== false)); };
 }
 export const A = (name) => `assets/${name}.webp`;
+export const ART = (name) => `assets/art/${name}.png`;
 export const ICONS = {
-  book: '25_icon_book', graph: '26_icon_graph', table: '27_icon_table', vote: '28_icon_vote', weather: '29_icon_weather',
-  search: '30_icon_search', gallery: '31_icon_gallery', scroll: '32_icon_scroll', brush: '33_icon_brush',
+  book: 'icon_book', graph: 'icon_graph', table: 'icon_table', vote: 'icon_vote', weather: 'icon_weather',
+  search: 'icon_search', gallery: 'icon_gallery', scroll: 'icon_scroll', brush: 'icon_brush', home: 'icon_home',
 };
-export const iconSrc = (k) => A(ICONS[k] || k);
+export const iconSrc = (k) => ART(ICONS[k] || k);
+const SEALS = { '封': 'seal_lock', '完': 'seal_done', '展': 'seal_show', '待': 'seal_wait', '表': 'seal_table' };
+export const sealImg = (ch, size = 92) => h('img', { class: 'seal-img', src: ART(SEALS[ch] || 'seal_lock'), alt: '', width: size, height: size, style: { width: `${size}px`, height: `${size}px`, display: 'block', margin: '0 auto 12px' } });
 
 export function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);

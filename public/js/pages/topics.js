@@ -1,5 +1,5 @@
 // 제2장 주제 선택·투표 + 2026년 월별 경험 조사
-import { h, icon, btn, toast, fmt, iconSrc } from '../ui.js';
+import { sealImg, h, icon, btn, toast, fmt, iconSrc } from '../ui.js';
 import { api } from '../api.js';
 import { S, saveState, backup, getBackup, clearBackup } from '../store.js';
 import { TOPICS, CATEGORIES, topicById, monthMax, validateEntry, YEAR } from '../../shared/topics.js';
@@ -80,7 +80,7 @@ function surveySpread(app) {
 
   const drawRight = () => {
     const t = topicById(surveyTopic);
-    if (!t) { rightEl.replaceChildren(h('div', { class: 'lock-page' }, h('div', null, h('div', { class: 'seal', style: { margin: '0 auto 12px' } }, '待'), h('p', null, '선생님이 우리 반 조사 주제를 열면 여기에서 월별 경험을 적을 수 있어요.')))); return; }
+    if (!t) { rightEl.replaceChildren(h('div', { class: 'lock-page' }, h('div', null, sealImg('待'), h('p', null, '선생님이 우리 반 조사 주제를 열면 여기에서 월별 경험을 적을 수 있어요.')))); return; }
     const submitted = d.gates.submittedTopics.includes(t.id);
     const canEdit = s.surveyOpen && (!submitted || s.allowEdit);
     const saved = {}; d.responses.filter((r) => r.topic_id === t.id).forEach((r) => { saved[r.month] = { status: r.status, value: r.value, source: r.source }; });
