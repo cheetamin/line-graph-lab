@@ -5,6 +5,7 @@ import { S } from '../store.js';
 import { logout } from '../main.js';
 import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js';
 import { renderStatic } from '../graph.js';
+import { makeHeader } from '../shell.js';
 
 const TABS = [['progress', '진행 현황'], ['roster', '학생 명단'], ['topics', '주제·투표'], ['settings', '단계·조사 설정'], ['aggregate', '학급 집계'], ['works', '작품 승인'], ['export', '자료 내려받기'], ['account', '계정']];
 let classes = []; let cur = null; let tab = 'progress';
@@ -12,10 +13,7 @@ let classes = []; let cur = null; let tab = 'progress';
 export async function mountTeacher(root) {
   const t = S.me.teacher;
   root.append(
-    h('header', { class: 'topbar' },
-      h('img', { class: 'logo', src: A('title'), alt: '꺾은선그래프 연구소' }),
-      h('span', { style: { fontFamily: 'var(--f-title)', fontSize: '1.2rem' } }, '교사 관리실'),
-      h('div', { class: 'who' }, h('b', null, t.name), h('span', { class: 'nm' }, `(${t.username})`), h('button', { class: 'top-btn', type: 'button', onClick: () => logout() }, '나가기'))),
+    makeHeader({ sub: '교사 관리실', right: [h('b', null, t.name), h('button', { class: 'top-btn', type: 'button', onClick: () => logout() }, '나가기')] }),
     h('main', { class: 'admin' }, h('div', { class: 'admin-grid' }, h('aside', { class: 'admin-side', id: 'side' }), h('section', { class: 'admin-main', id: 'main' }))));
   await loadClasses();
 }

@@ -3,6 +3,7 @@ import { h, A, icon, toast, iconSrc } from '../ui.js';
 import { Book } from '../book.js';
 import { S, loadStudent, saveUi } from '../store.js';
 import { logout } from '../main.js';
+import { makeHeader, deskProps, lanternImg } from '../shell.js';
 import * as home from './home.js';
 import * as weather from './weather.js';
 import * as topics from './topics.js';
@@ -46,14 +47,14 @@ export async function mountStudent(root) {
   const d = S.data;
   const saveEl = h('span', { class: 'save-state', 'aria-live': 'polite' }, '저장됨 ✓');
   S.saveEl = saveEl;
-  const top = h('header', { class: 'topbar' },
-    h('img', { class: 'logo', src: A('title'), alt: '꺾은선그래프 연구소 — 목차로', onClick: () => app.go('home', 0, 'prev') }),
-    h('div', { class: 'who' }, saveEl,
-      h('span', { class: 'nm' }, d.cls.name, ' · '), h('b', null, `${d.student.number}번 ${d.student.name}`),
-      h('button', { class: 'top-btn', type: 'button', onClick: () => logout() }, '나가기')));
+  const top = makeHeader({
+    onLogo: () => app.go('home', 0, 'prev'),
+    right: [h('div', { class: 'hdr-name' }, h('span', { class: 'nm' }, d.cls.name), h('b', null, `${d.student.number}번 ${d.student.name}`)), h('div', { class: 'row', style: { gap: '6px', justifyContent: 'center' } }, saveEl, h('button', { class: 'top-btn', type: 'button', onClick: () => logout() }, '나가기'))],
+  });
   const tabs = h('nav', { class: 'side-tabs', 'aria-label': '장 목록' });
   const book = new Book({ onPrev: () => app.step(-1), onNext: () => app.step(1) });
-  root.append(top, h('main', { class: 'stage' }, tabs, book.wrap));
+  root.append(top, h('main', { class: 'stage' }, h('div', { class: 'side-col' }, tabs, lanternImg()), book.wrap));
+  deskProps(root);
 
   const app = {
     book, ch: 'home', idx: 0, list: [],

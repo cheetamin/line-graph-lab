@@ -1,8 +1,8 @@
 // 첫 화면(고서 표지)과 입장(로그인)
 import { h, A, icon, btn, toast, reducedMotion } from '../ui.js';
 import { api, isDemo } from '../api.js';
-import { inkLandscape, plumBranch } from '../inkart.js';
 import { Book } from '../book.js';
+import { makeHeader, deskProps } from '../shell.js';
 import { boot } from '../main.js';
 
 const ss = { get: (k) => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch { /* */ } }, del: (k) => { try { sessionStorage.removeItem(k); } catch { /* */ } } };
@@ -16,42 +16,43 @@ const CHAPTERS = [
   ['gallery', '5. 작품 전시관'],
 ];
 
+const D = (n) => `assets/deco/${n}.webp`;
+const deco = (n, style, cls = '') => h('img', { class: `deco ${cls}`, src: D(n), alt: '', style, draggable: 'false' });
+
 export function mountCover(root, opts = {}) {
   if (opts.skipCover || ss.get('kgl-opened') === '1') return mountLogin(root, opts.tab);
-  const art = h('div', { class: 'cover-art' });
-  art.innerHTML = `
-    <div style="position:absolute;left:0;right:0;bottom:0;height:62%;">${inkLandscape({ w: 1400, h: 520, seed: 11 })}</div>
-    <div style="position:absolute;right:0;top:0;width:36%;max-width:440px;height:34%;">${plumBranch({ seed: 5, flip: true })}</div>`;
-  art.querySelectorAll('svg').forEach((s) => { s.style.width = '100%'; s.style.height = '100%'; });
-  const cover = h('div', { class: 'cover' },
-    h('div', { class: 'cover-face' },
-      art,
-      h('div', { class: 'binding' }, h('div', { class: 'thread', style: { top: '8%' } }), h('div', { class: 'thread', style: { bottom: '8%' } }), h('div', { class: 'thread v' })),
-      h('div', { class: 'cover-content' },
-        h('div', { class: 'cover-main' },
-          h('div', { class: 'eyebrow' }, '우리 반 데이터 탐구서'),
-          h('h1', { class: 'sr-only' }, '꺾은선그래프 연구소'),
-          h('img', { class: 'cover-title', src: A('title'), alt: '꺾은선그래프 연구소', width: 1400, height: 597 }),
-          h('p', { class: 'cover-sub' }, '우리의 경험을 숫자로 기록하고, 변화를 읽어요'),
-          h('div', { class: 'cover-cta' }, btn('탐험 시작하기 ›', () => openCover(), { variant: 'gold big' }))),
-        h('nav', { class: 'cover-toc', 'aria-label': '탐구 순서' },
-          CHAPTERS.map(([k, t]) => h('div', { class: 'toc-slip' }, icon(k), h('span', null, t))))),
-      h('div', { class: 'cover-meta' }, '초등 4학년 2학기 수학 · 5. 꺾은선그래프'),
-      h('div', { class: 'cover-foot' }, h('button', { class: 'teacher-door', type: 'button', onClick: () => openCover('teacher') }, '🔑 교사 관리실'))),
-    h('div', { class: 'cover-back' }));
-  const book = h('div', { class: 'cover-book' }, h('div', { class: 'cover-under' }), cover);
-  const screen = h('main', { class: 'cover-screen' }, book);
-  root.append(screen);
-  if (!reducedMotion()) {
-    for (let i = 0; i < 7; i++) {
-      screen.append(h('span', { class: 'petal', style: { left: `${10 + Math.random() * 85}%`, animationDuration: `${12 + Math.random() * 10}s`, animationDelay: `${Math.random() * 10}s`, transform: `scale(${0.7 + Math.random() * 0.6})` } }));
-    }
-  }
-  function openCover(tab) {
+  const pages = h('div', { class: 'ib-pages' },
+    h('div', { class: 'ib-page l' }), h('div', { class: 'ib-page r' }), h('div', { class: 'ib-fold' }), h('div', { class: 'ib-edge' }));
+  const leaf = h('div', { class: 'ib-leaf' }, h('div', { class: 'ib-leaf-face front' }), h('div', { class: 'ib-leaf-face back' }));
+  const book = h('div', { class: 'ibook' },
+    h('div', { class: 'ib-cover' }),
+    pages,
+    deco('pine', { left: '5.4%', top: '0', width: '31%' }, 'd-pine'),
+    deco('crane', { left: '56.4%', top: '3%', width: '15.3%' }, 'd-crane'),
+    deco('cloud1', { left: '6.2%', top: '35%', width: '9.9%' }, 'd-cloud'),
+    deco('cloud2', { left: '76.8%', top: '7%', width: '10.8%' }, 'd-cloud'),
+    deco('cloud3', { left: '59.8%', top: '61.6%', width: '12%' }, 'd-cloud'),
+    deco('pavilion', { left: '5.4%', top: '54.4%', width: '24.5%' }, 'd-pav'),
+    deco('mount_right', { left: '70%', top: '68%', width: '12.9%' }, 'd-mtr'),
+    deco('books_stack', { left: '0', top: '68%', width: '18.5%' }, 'd-books'),
+    deco('inkstone_brush', { right: '0', top: '58.4%', width: '19.9%' }, 'd-ink'),
+    deco('binding', { left: '0', top: '0', height: '100%', width: 'auto' }, 'd-bind'),
+    h('div', { class: 'ib-content' },
+      h('div', { class: 'ib-main' },
+        h('div', { class: 'ib-eyebrow' }, '우리 반 데이터 탐구서'),
+        h('h1', { class: 'sr-only' }, '꺾은선그래프 연구소'),
+        h('img', { class: 'ib-title', src: A('title'), alt: '꺾은선그래프 연구소', width: 1400, height: 597 }),
+        h('p', { class: 'ib-sub' }, '— 우리의 경험을 숫자로 기록하고, 변화를 읽어요 —'),
+        h('button', { class: 'ib-cta', type: 'button', onClick: () => openBook() }, h('span', null, '탐험 시작하기'), h('b', { 'aria-hidden': 'true' }, '›'))),
+      h('nav', { class: 'ib-toc', 'aria-label': '탐구 순서' }, CHAPTERS.map(([k, t]) => h('div', { class: 'ib-slip' }, icon(k), h('span', null, t))))),
+    h('button', { class: 'ib-teacher', type: 'button', onClick: () => openBook('teacher') }, '교사 관리실'),
+    leaf);
+  root.append(h('main', { class: 'intro-screen' }, book));
+  function openBook(tab) {
     ss.set('kgl-opened', '1');
     if (reducedMotion()) { root.replaceChildren(); mountLogin(root, tab); return; }
-    cover.classList.add('open');
-    setTimeout(() => { root.replaceChildren(); mountLogin(root, tab); }, 1150);
+    book.classList.add('turning');
+    setTimeout(() => { root.replaceChildren(); mountLogin(root, tab); }, 1000);
   }
 }
 
@@ -63,12 +64,11 @@ function demoHint(kind, fill) {
 }
 
 export function mountLogin(root, tab = 'student') {
-  const header = h('header', { class: 'topbar' },
-    h('img', { class: 'logo', src: A('title'), alt: '꺾은선그래프 연구소', onClick: () => { ss.del('kgl-opened'); root.replaceChildren(); mountCover(root); } }),
-    h('div', { class: 'who' }, h('span', null, '연구소 입구')));
+  const header = makeHeader({ onLogo: () => { ss.del('kgl-opened'); root.replaceChildren(); mountCover(root); }, right: h('b', null, '연구소 입구') });
   const book = new Book({ onPrev: () => { ss.del('kgl-opened'); root.replaceChildren(); mountCover(root); }, onNext: () => {} });
   const wrap = h('div', { class: 'stage', style: { gridTemplateColumns: '1fr', maxWidth: '1280px', margin: '0 auto' } }, book.wrap);
   root.append(header, wrap);
+  deskProps(root);
 
   const left = (el) => {
     el.append(
