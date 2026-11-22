@@ -73,7 +73,7 @@ export async function mountStudent(root) {
         return h('button', {
           class: `side-tab ${done ? 'done' : ''}`, type: 'button', 'aria-current': c.key === this.ch ? 'page' : undefined, 'aria-disabled': locked ? 'true' : undefined,
           title: locked ? lockReason(c.key) : c.label,
-          onClick: () => { const cur = CHAPTERS.findIndex((x) => x.key === this.ch); const to = CHAPTERS.findIndex((x) => x.key === c.key); this.go(c.key, 0, to >= cur ? 'next' : 'prev'); },
+          onClick: () => { const cur = CHAPTERS.findIndex((x) => x.key === this.ch); const to = CHAPTERS.findIndex((x) => x.key === c.key); if (c.key === this.ch && this.idx === 0) return; const adjacent = to === cur + 1 && this.idx === this.list.length - 1; this.go(c.key, 0, adjacent ? 'next' : 'jump'); },
         }, h('img', { src: iconSrc(c.icon), alt: '' }), h('span', null, c.label), locked ? h('span', { class: 'lock', 'aria-label': '잠김' }, '🔒') : null, done ? h('span', { class: 'tick' }, '완료') : null);
       }));
     },
@@ -94,22 +94,29 @@ export async function mountStudent(root) {
       this.idx = idx < 0 ? this.list.length - 1 : Math.min(idx, this.list.length - 1);
       const sp = { ...this.list[this.idx], ...this.spreadMeta(this.idx) };
       sp.folio = sp.folio || [`${this.chapter(key).label}`, `${this.idx * 2 + 2}`];
-      sp.dots = this.list.length > 1 ? { count: this.list.length, index: this.idx, onPick: (i) => this.go(key, i, i > this.idx ? 'next' : 'prev') } : null;
+      sp.dots = this.list.length > 1 ? { count: this.list.length, index: this.idx, onPick: (i) => i !== this.idx && this.go(key, i, Math.abs(i - this.idx) === 1 ? (i > this.idx ? 'next' : 'prev') : 'jump') } : null;
       const sL = book.leftScroll?.scrollTop || 0; const sR = book.rightScroll?.scrollTop || 0; const sW = window.scrollY;
       await book.show(sp, keepScroll ? null : dir);
+      if (this.queue.length && !keepScroll) { const d = this.queue.shift(); setTimeout(() => this.stepNow(d), 0); }
       if (keepScroll) { book.leftScroll.scrollTop = sL; book.rightScroll.scrollTop = sR; window.scrollTo(0, sW); }
       this.renderTabs();
       try { history.replaceState(null, '', `#${key}-${this.idx}`); } catch { /* */ }
       saveUi(key, this.idx);
     },
+    queue: [],
     step(delta) {
+      // 연속 클릭: 넘기는 중이면 한 장씩 차례로(최대 3장까지 대기)
+      if (book.busy) { if (this.queue.length < 3) this.queue.push(delta); return; }
+      return this.stepNow(delta);
+    },
+    stepNow(delta) {
       const ci = CHAPTERS.findIndex((c) => c.key === this.ch);
       const ni = this.idx + delta;
       if (ni >= 0 && ni < this.list.length) return this.go(this.ch, ni, delta > 0 ? 'next' : 'prev');
       const nc = CHAPTERS[ci + delta];
       if (!nc) return;
       const reason = lockReason(nc.key);
-      if (reason) { toast(reason, 'bad'); return; }
+      if (reason) { this.queue = []; toast(reason, 'bad'); return; }
       return this.go(nc.key, delta > 0 ? 0 : -1, delta > 0 ? 'next' : 'prev');
     },
     refresh() { return this.go(this.ch, this.idx, null, { keepScroll: true }); },
@@ -126,6 +133,6 @@ export async function mountStudent(root) {
   if (start.ch !== 'home') toast('지난번에 하던 쪽을 펼쳤어요.', 'ok');
   window.addEventListener('hashchange', () => {
     const mm = location.hash.match(/^#([a-z]+)-(\d+)$/);
-    if (mm && (mm[1] !== app.ch || +mm[2] !== app.idx) && CHAPTERS.some((c) => c.key === mm[1])) app.go(mm[1], +mm[2], 'next');
+    if (mm && (mm[1] !== app.ch || +mm[2] !== app.idx) && CHAPTERS.some((c) => c.key === mm[1])) app.go(mm[1], +mm[2], 'jump');
   });
 }

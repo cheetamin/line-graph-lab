@@ -937,3 +937,29 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
 @media (min-width: 900px) and (min-aspect-ratio: 13/10) { .cs-slip:nth-child(4) { top: 48.247%; height: 7.864%; animation-delay: 0.32s; } }
 @media (min-width: 900px) and (min-aspect-ratio: 13/10) { .cs-slip:nth-child(5) { top: 58.661%; height: 7.864%; animation-delay: 0.40s; } }
 @media (min-width: 900px) and (min-aspect-ratio: 13/10) { .cs-slip { font-size: 2.9cqh; white-space: nowrap; gap: 1.2cqw; } }
+
+/* ═════════ 책장 넘김(한 장 앞뒷면, 책등 축) ═════════ */
+.page-body { position: absolute; inset: 0; }
+.page-holder { position: absolute; visibility: hidden; pointer-events: none; overflow: hidden; }
+.folio.l { left: 34px; } .folio.r { right: 34px; }
+.turn-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; transform-style: preserve-3d; }
+.turn-leaf { position: absolute; transform-style: preserve-3d; will-change: transform; }
+.turn-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden;
+  background: #efe0bd url(../assets/paper_blank.webp) center / cover; }
+.turn-face.back { transform: rotateY(180deg); }
+.turn-leaf.to-left .turn-face.front { border-radius: 0 3px 3px 0; box-shadow: inset 18px 0 22px -14px rgba(90,55,20,.45), inset -6px 0 10px -6px rgba(120,80,30,.35); }
+.turn-leaf.to-left .turn-face.back { border-radius: 3px 0 0 3px; box-shadow: inset -18px 0 22px -14px rgba(90,55,20,.45), inset 6px 0 10px -6px rgba(120,80,30,.35); }
+.turn-leaf.to-right .turn-face.front { border-radius: 3px 0 0 3px; box-shadow: inset -18px 0 22px -14px rgba(90,55,20,.45), inset 6px 0 10px -6px rgba(120,80,30,.35); }
+.turn-leaf.to-right .turn-face.back { border-radius: 0 3px 3px 0; box-shadow: inset 18px 0 22px -14px rgba(90,55,20,.45), inset -6px 0 10px -6px rgba(120,80,30,.35); }
+.turn-content { position: absolute; }
+.turn-content > .page-body { position: absolute; inset: 0; }
+.turn-content .page-scroll { overflow: hidden !important; }
+.turn-shade, .turn-gloss { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.turn-leaf.to-left .front .turn-shade, .turn-leaf.to-right .back .turn-shade { background: linear-gradient(90deg, rgba(50,28,10,.75), rgba(50,28,10,.15) 45%, rgba(50,28,10,0) 75%); }
+.turn-leaf.to-right .front .turn-shade, .turn-leaf.to-left .back .turn-shade { background: linear-gradient(-90deg, rgba(50,28,10,.75), rgba(50,28,10,.15) 45%, rgba(50,28,10,0) 75%); }
+.turn-leaf.to-left .turn-gloss { background: linear-gradient(-90deg, rgba(255,248,228,.0), rgba(255,248,228,.55) 6%, rgba(255,248,228,0) 22%); }
+.turn-leaf.to-right .turn-gloss { background: linear-gradient(90deg, rgba(255,248,228,.0), rgba(255,248,228,.55) 6%, rgba(255,248,228,0) 22%); }
+.turn-cast { position: absolute; opacity: 0; pointer-events: none; }
+.turn-cast.from-left { background: linear-gradient(90deg, rgba(40,22,8,.6), rgba(40,22,8,.18) 18%, rgba(40,22,8,0) 45%); }
+.turn-cast.from-right { background: linear-gradient(-90deg, rgba(40,22,8,.6), rgba(40,22,8,.18) 18%, rgba(40,22,8,0) 45%); }
+@media (max-width: 900px) { .page-body { position: static; } }
