@@ -903,3 +903,37 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
   .scene .tool-btn svg { width: 2.4cqh; height: 2.4cqh; }
   .scene .toolbar { gap: .4cqh; }
 }
+
+/* ═════════ 첫 화면: 사용자 표지 그림 배경 ═════════ */
+.cover-scene { display: none; }
+@media (min-width: 900px) and (min-aspect-ratio: 13/10) {
+  .intro-screen { padding: 0; place-items: center; }
+  .intro-screen > .ibook { display: none; }
+  .cover-scene { display: block; position: relative; width: min(100vw, calc(100vh * 1.7768)); aspect-ratio: 1672/941;
+    background: url(../assets/cover_bg.webp) 0 0 / 100% 100% no-repeat; container-type: size; perspective: 2800px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .cs-titlebox { position: absolute; left: 18.242%; top: 26.567%; width: 44.856%; height: 31.456%; display: grid; place-items: center; }
+  .cs-title { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(60,30,10,.25)); animation: inkIn 1.3s ease both; }
+  .cs-sub { position: absolute; left: 19.737%; top: 62.699%; width: 41.866%; margin: 0; text-align: center; font-family: var(--f-title); font-size: 3.1cqh; color: #2a1810; text-shadow: 0 1px 0 rgba(255,245,220,.8); }
+  .cs-sub::before, .cs-sub::after { content: ' — '; color: #7a5f45; }
+  .cs-cta { position: absolute; left: 34.809%; top: 73.751%; width: 30.383%; height: 11.902%; border: 0; background: none; cursor: pointer;
+    font-family: var(--f-title); font-size: 6cqh; color: #5a1a12; letter-spacing: .04em; text-shadow: 0 1px 0 rgba(255,240,210,.8); border-radius: 6px; transition: transform .15s, text-shadow .15s; animation: inkIn 1.3s .4s ease both; }
+  .cs-cta:hover { transform: scale(1.03); text-shadow: 0 0 12px rgba(255,210,120,.9); }
+  .cs-cta:focus-visible { outline: 3px solid #e9b949; }
+  .cs-toc { position: absolute; inset: 0; pointer-events: none; }
+  .cs-slip { position: absolute; left: 73.086%; width: 22.428%; display: flex; align-items: center; gap: 1.6cqw; padding-left: 1.4cqw;
+    font-family: var(--f-title); font-size: 3.2cqh; color: #2a1810; animation: slipIn .7s ease both; }
+  .cs-slip img { width: 6.4cqh; height: 6.4cqh; }
+  .cs-teacher { position: absolute; right: 1.6%; top: 2.2%; padding: .5cqh 1.2cqw; font-family: var(--f-title); font-size: 2cqh; color: #f6e5bf;
+    background: rgba(60,28,14,.85); border: 1px solid #c8973c; border-radius: 4px; cursor: pointer; }
+  .cs-leaf { position: absolute; left: 49.6%; top: 2%; bottom: 4%; width: 48%; transform-origin: left center; transform-style: preserve-3d; opacity: 0; pointer-events: none; }
+  .cs-leaf-face { position: absolute; inset: 0; backface-visibility: hidden; background: #ead7ad url(../assets/01_background_parchment_1920x1080.webp) center / cover; box-shadow: inset 40px 0 50px -30px rgba(70,40,15,.55); border-radius: 2px 8px 8px 2px; }
+  .cs-leaf-face.back { transform: rotateY(180deg); box-shadow: inset -40px 0 50px -30px rgba(70,40,15,.55); }
+  .cover-scene.turning .cs-leaf { opacity: 1; animation: leafTurn 1s cubic-bezier(.45,.05,.35,1) forwards; }
+  .cover-scene.turning .cs-toc, .cover-scene.turning .cs-teacher { transition: opacity .3s .15s; opacity: 0; }
+}
+@media (min-width: 900px) and (min-aspect-ratio: 13/10) { .cs-slip:nth-child(1) { top: 17.003%; height: 7.864%; animation-delay: 0.08s; } }
+@media (min-width: 900px) and (min-aspect-ratio: 13/10) { .cs-slip:nth-child(2) { top: 27.418%; height: 7.864%; animation-delay: 0.16s; } }
+@media (min-width: 900px) and (min-aspect-ratio: 13/10) { .cs-slip:nth-child(3) { top: 37.832%; height: 7.864%; animation-delay: 0.24s; } }
+@media (min-width: 900px) and (min-aspect-ratio: 13/10) { .cs-slip:nth-child(4) { top: 48.247%; height: 7.864%; animation-delay: 0.32s; } }
+@media (min-width: 900px) and (min-aspect-ratio: 13/10) { .cs-slip:nth-child(5) { top: 58.661%; height: 7.864%; animation-delay: 0.40s; } }
+@media (min-width: 900px) and (min-aspect-ratio: 13/10) { .cs-slip { font-size: 2.9cqh; white-space: nowrap; gap: 1.2cqw; } }

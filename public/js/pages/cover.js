@@ -48,11 +48,19 @@ export function mountCover(root, opts = {}) {
       h('nav', { class: 'ib-toc', 'aria-label': '탐구 순서' }, CHAPTERS.map(([k, t]) => h('div', { class: 'ib-slip' }, icon(k), h('span', null, t))))),
     h('button', { class: 'ib-teacher', type: 'button', onClick: () => openBook('teacher') }, '교사 관리실'),
     leaf);
-  root.append(h('main', { class: 'intro-screen' }, book));
+  // 넓은 화면: 사용자가 보낸 표지 그림을 배경으로 한 장면
+  const cs = h('div', { class: 'cover-scene' },
+    h('div', { class: 'cs-titlebox' }, h('h1', { class: 'sr-only' }, '꺾은선그래프 연구소'), h('img', { class: 'cs-title', src: A('title'), alt: '꺾은선그래프 연구소' })),
+    h('p', { class: 'cs-sub' }, '우리의 경험을 숫자로 기록하고, 변화를 읽어요'),
+    h('nav', { class: 'cs-toc', 'aria-label': '탐구 순서' }, CHAPTERS.map(([k, t]) => h('div', { class: 'cs-slip' }, h('img', { src: iconSrc(k), alt: '' }), h('span', null, t)))),
+    h('button', { class: 'cs-cta', type: 'button', onClick: () => openBook() }, '탐험 시작하기 ›'),
+    h('button', { class: 'cs-teacher', type: 'button', onClick: () => openBook('teacher') }, '교사 관리실'),
+    h('div', { class: 'cs-leaf' }, h('div', { class: 'cs-leaf-face front' }), h('div', { class: 'cs-leaf-face back' })));
+  root.append(h('main', { class: 'intro-screen' }, book, cs));
   function openBook(tab) {
     ss.set('kgl-opened', '1');
     if (reducedMotion()) { root.replaceChildren(); mountLogin(root, tab); return; }
-    book.classList.add('turning');
+    book.classList.add('turning'); cs.classList.add('turning');
     setTimeout(() => { root.replaceChildren(); mountLogin(root, tab); }, 1000);
   }
 }
