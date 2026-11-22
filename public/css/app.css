@@ -1002,3 +1002,41 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
 .turn-canvas { position: absolute; opacity: 0; } .turn-canvas.show { opacity: 1; }
 .book-wrap.turning .flip-btn, .book-wrap.turning .dots button { pointer-events: none; cursor: progress; }
 .scene:has(.book-wrap.turning) .side-tab { pointer-events: none; }
+
+/* ═════════ 학급 만들기 마법사·학교 검색·QR ═════════ */
+.wizard { width: min(820px, 100%); }
+.wiz-steps { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 0; margin: 4px 0 16px; }
+.wiz-steps li { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; background: rgba(255,250,236,.7); border: 1px solid #c9ad80; font-family: var(--f-title); font-size: .98rem; color: var(--ink-3); }
+.wiz-steps li .n { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #c9ad80; color: #fff; font-size: .9rem; flex: 0 0 auto; }
+.wiz-steps li.on { background: #7b2620; color: #fbecc9; border-color: #5a1710; } .wiz-steps li.on .n { background: #e2b55c; color: #3a1810; }
+.wiz-steps li.done { color: var(--ok); } .wiz-steps li.done .n { background: var(--ok); }
+.wiz-body { min-height: 300px; }
+.wiz-mini { display: flex; justify-content: center; gap: 22px; padding: 0; margin: 10px 0 18px; list-style: none; counter-reset: w; font-family: var(--f-title); }
+.wiz-mini li { counter-increment: w; } .wiz-mini li::before { content: counter(w) '. '; color: var(--red); }
+.school-list { display: grid; gap: 6px; max-height: 280px; overflow: auto; }
+.school-item { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 8px; text-align: left; padding: 10px 12px; border: 1.5px solid #c4a676; border-radius: 6px; background: rgba(255,250,238,.9); cursor: pointer; }
+.school-item b { font-family: var(--f-title); font-weight: 400; font-size: 1.08rem; }
+.school-item .small { grid-column: 1 / -1; }
+.school-item[aria-selected="true"] { border-color: var(--green); background: #e5efe6; box-shadow: 0 0 0 2px rgba(44,74,58,.3); }
+.code-input { font-family: monospace; font-size: 1.6rem !important; letter-spacing: .25em; text-transform: uppercase; max-width: 260px; text-align: center; }
+.qr-card { display: grid; grid-template-columns: minmax(200px, 300px) 1fr; gap: 20px; align-items: start; }
+.qr-frame { background: #fffdf6; padding: 10px; border: 3px solid #4a2a18; border-radius: 8px; box-shadow: 0 0 0 3px #c9963f, 0 6px 14px rgba(0,0,0,.25); }
+.qr-svg { display: block; width: 100%; height: auto; }
+.qr-missing { display: grid; place-items: center; aspect-ratio: 1; text-align: center; font-size: .95rem; color: var(--ink-3); }
+.qr-code-big { margin-top: 10px; text-align: center; font-family: monospace; font-size: 2rem; letter-spacing: .3em; color: #3a1810; }
+.qr-url { font-family: monospace; font-size: .85rem; word-break: break-all; padding: 6px 8px; background: #fffaf0; border: 1px dashed #a88a62; border-radius: 4px; }
+.qr-big { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; background: #f1e0b8 url(../assets/01_background_parchment_1920x1080.webp) center / cover; cursor: pointer; }
+.qr-big-inner { display: grid; justify-items: center; gap: 2vh; }
+.qr-big-title { font-family: var(--f-title); font-size: 4.5vh; color: #2a1810; }
+.qr-big .qr-frame { width: min(62vh, 80vw); padding: 2vh; }
+.qr-big-code { font-family: var(--f-title); font-size: 4vh; } .qr-big-code b { font-family: monospace; letter-spacing: .25em; color: #7b2620; }
+.join-note { margin: 0; }
+.qr-print { display: none; }
+@media print {
+  body.printing-qr > *:not(.qr-print) { display: none !important; }
+  body.printing-qr { background: #fff !important; }
+  body.printing-qr .qr-print { display: grid !important; justify-items: center; gap: 8mm; padding: 16mm; border: 2px solid #000; margin: 10mm auto; width: 150mm; font-family: var(--f-title); }
+  .qr-print-head { font-size: 14pt; } .qr-print-name { font-size: 22pt; } .qr-print .qr-frame { width: 95mm; box-shadow: none; border: 1px solid #000; }
+  .qr-print-code { font-size: 18pt; } .qr-print-code b { font-family: monospace; letter-spacing: .2em; } .qr-print-help { font-size: 12pt; }
+}
+@media (max-width: 700px) { .qr-card { grid-template-columns: 1fr; } .wiz-steps { grid-template-columns: repeat(2, 1fr); } }

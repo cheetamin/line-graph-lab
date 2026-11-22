@@ -6,6 +6,7 @@ import { logout } from '../main.js';
 import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js';
 import { renderStatic } from '../graph.js';
 import { makeHeader } from '../shell.js';
+import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js';
 
 const TABS = [['progress', '진행 현황'], ['picker', '학생 뽑기'], ['roster', '학생 명단'], ['topics', '주제·투표'], ['settings', '단계·조사 설정'], ['aggregate', '학급 집계'], ['works', '작품 승인'], ['export', '자료 내려받기'], ['account', '계정']];
 let classes = []; let cur = null; let tab = 'progress';
@@ -26,25 +27,32 @@ async function loadClasses(selectId) {
 
 function drawSide() {
   const side = document.getElementById('side');
-  const name = h('input', { type: 'text', placeholder: '예: 4학년 2반', maxlength: 40, 'aria-label': '새 학급 이름' });
   side.replaceChildren(
     h('div', { class: 'sheet', style: { padding: '14px' } },
       h('h3', null, '나의 학급'),
       h('div', { class: 'stack', style: { gap: '6px' } }, classes.length ? classes.map((c) => h('button', { type: 'button', class: 'class-pill', 'aria-current': String(c.id === cur?.id), onClick: () => { cur = c; drawSide(); drawMain(); } },
-        h('b', null, c.name, c.isDemo ? ' (체험용)' : ''), h('span', { class: 'code' }, `코드 ${c.code}`), h('span', { class: 'small' }, `학생 ${c.students}명`, c.pending ? ` · 승인 대기 ${c.pending}` : ''))) : h('p', { class: 'small' }, '아직 학급이 없어요. 아래에서 만들어 주세요.')),
-      h('form', { class: 'stack', style: { marginTop: '12px', gap: '6px' }, onSubmit: async (e) => {
-        e.preventDefault();
-        try { const r = await api('POST', '/api/teacher/classes', { name: name.value }); toast(`학급을 만들었어요. 학급 코드: ${r.code}`, 'ok'); tab = 'roster'; await loadClasses(r.id); } catch (ex) { toast(ex.message, 'bad'); }
-      } }, h('label', { class: 'field' }, h('span', null, '새 학급 만들기'), name), btn('학급 만들기', null, { variant: 'green small', type: 'submit' }))));
+        h('b', null, c.name, c.isDemo ? ' (체험용)' : ''),
+        c.settings.school?.name && !c.name.includes(c.settings.school.name) ? h('span', { class: 'small' }, c.settings.school.name) : null,
+        c.settings.nickname ? h('span', { class: 'small' }, `「${c.settings.nickname}」`) : null,
+        h('span', { class: 'code' }, `코드 ${c.code}`), h('span', { class: 'small' }, `학생 ${c.students}명`, c.pending ? ` · 승인 대기 ${c.pending}` : ''))) : h('p', { class: 'small' }, '아직 학급이 없어요.')),
+      h('div', { style: { marginTop: '12px' } }, btn('＋ 새 학급 만들기', () => openClassWizard(), { variant: 'gold small' }))));
 }
 
 function drawMain() {
   const main = document.getElementById('main');
-  if (!cur) { main.replaceChildren(h('div', { class: 'sheet' }, h('h2', null, '교사 관리실에 오신 것을 환영합니다'), h('p', null, '왼쪽에서 학급을 먼저 만들어 주세요. 학급을 만들면 학생 명단을 등록하고 학생별 PIN을 나누어 줄 수 있어요.'))); return; }
+  if (!cur) {
+    main.replaceChildren(h('div', { class: 'sheet center' }, h('h2', null, '교사 관리실에 오신 것을 환영합니다'),
+      h('p', null, '학교를 찾아 학급을 만들고, 학급 코드와 QR을 학생들에게 나누어 주세요.'),
+      h('ol', { class: 'wiz-mini' }, h('li', null, '학교 검색'), h('li', null, '학년·반'), h('li', null, '학급 코드'), h('li', null, 'QR 완성')),
+      btn('＋ 새 학급 만들기', () => openClassWizard(), { variant: 'gold big' })));
+    return;
+  }
   const body = h('div');
   main.replaceChildren(
     h('div', { class: 'sheet', style: { paddingBottom: '12px' } },
-      h('div', { class: 'row between' }, h('h2', { style: { margin: 0 } }, cur.name), h('div', { class: 'row' }, h('span', null, '학급 코드 '), h('b', { style: { fontFamily: 'monospace', fontSize: '1.5rem', letterSpacing: '.15em' } }, cur.code))),
+      h('div', { class: 'row between' },
+        h('div', null, h('h2', { style: { margin: 0 } }, cur.name), cur.settings.school ? h('div', { class: 'small muted' }, [cur.settings.school.office, cur.settings.school.address].filter(Boolean).join(' · ')) : null),
+        h('div', { class: 'row' }, h('span', null, '학급 코드 '), h('b', { style: { fontFamily: 'monospace', fontSize: '1.5rem', letterSpacing: '.15em' } }, cur.code), btn('학생 접속 QR', () => openQr(cur), { variant: 'small green' }))),
       h('div', { class: 'admin-tabs', role: 'tablist', style: { marginTop: '12px', marginBottom: 0 } }, TABS.map(([k, l]) => h('button', { type: 'button', role: 'tab', class: 'admin-tab', 'aria-selected': String(tab === k), onClick: () => { tab = k; drawMain(); } }, l)))),
     body);
   const fn = { progress, picker, roster, topics, settings, aggregate, works, exporter, account }[tab === 'export' ? 'exporter' : tab];
@@ -175,12 +183,14 @@ async function settings(el) {
       h('label', { class: 'field' }, h('span', null, '포털 주소'), url),
       h('label', { class: 'field' }, h('span', null, '학생에게 보여 줄 찾는 방법(누리집이 바뀌면 고쳐 주세요)'), guide),
       btn('안내 저장', () => saveSettings({ kmaUrl: url.value, kmaGuide: guide.value }), { variant: 'green small' })),
+    schoolSheet(),
+    codeSheet(),
     sheet(h('h3', null, '학급 정보'),
       h('label', { class: 'field' }, h('span', null, '학급 이름'), cname),
       h('label', { class: 'field' }, h('span', null, '학생 알림'), notice),
       h('div', { class: 'row', style: { marginTop: '8px' } },
         btn('저장', async () => { try { await api('PUT', `/api/teacher/classes/${cur.id}`, { name: cname.value, settings: { notice: notice.value } }); toast('저장했어요.', 'ok'); loadClasses(); } catch (e) { toast(e.message, 'bad'); } }, { variant: 'green small' }),
-        btn('학급 코드 새로 만들기', async () => { if (!(await confirmBox('학급 코드 바꾸기', '새 코드를 만들면 예전 코드로는 들어올 수 없어요. 바꿀까요?'))) return; await api('POST', `/api/teacher/classes/${cur.id}/code`); loadClasses(); }, { variant: 'small' }),
+
         btn('학급 삭제', async () => { if (!(await confirmBox('학급 삭제', `${cur.name}과 학생·응답·작품을 모두 지울까요? 되돌릴 수 없어요.`, '삭제'))) return; await api('DELETE', `/api/teacher/classes/${cur.id}`); cur = null; loadClasses(); }, { variant: 'small' }))));
 }
 
@@ -305,4 +315,237 @@ async function picker(el) {
         btn('처음부터 다시', async () => { if (picked.length && !(await confirmBox('처음부터 다시', '뽑힌 학생 기록을 지우고 처음부터 다시 뽑을까요?', '다시 시작'))) return; picked = []; nameEl.textContent = '?'; subEl.textContent = '버튼을 눌러 한 명을 뽑아요'; stage.classList.remove('done'); draw(); save(); }, { variant: 'small' })),
       h('h3', { style: { marginTop: '18px' } }, '뽑힌 순서'), hist));
   draw();
+}
+
+// ───────── 학교 찾기(나이스) — 학급 만들기와 학급 정보 고치기에서 함께 사용 ─────────
+function schoolPicker(onPick, initial = null) {
+  let chosen = initial;
+  const q = h('input', { type: 'search', placeholder: '학교 이름 (예: 행복초)', 'aria-label': '학교 이름', maxlength: 30 });
+  const list = h('div', { class: 'school-list', role: 'listbox', 'aria-label': '검색한 학교' });
+  const note = h('div', { class: 'small', role: 'status' });
+  const manualName = h('input', { type: 'text', placeholder: '예: 행복초등학교', maxlength: 40 });
+  const manualRegion = h('input', { type: 'text', placeholder: '예: 경상남도 (선택)', maxlength: 20 });
+  const manual = h('div', { class: 'stack hidden', style: { gap: '6px', marginTop: '8px' } },
+    h('label', { class: 'field' }, h('span', null, '학교 이름 직접 적기'), manualName),
+    h('label', { class: 'field' }, h('span', null, '지역'), manualRegion),
+    btn('이 이름으로 정하기', () => {
+      const name = manualName.value.trim();
+      if (name.length < 2) return toast('학교 이름을 적어 주세요.', 'bad');
+      pick({ name, region: manualRegion.value.trim(), manual: true });
+    }, { variant: 'small green' }));
+  const chosenEl = h('div', { class: 'school-chosen' });
+  const pick = (sc) => { chosen = sc; showChosen(); onPick(sc); };
+  const showChosen = () => {
+    chosenEl.replaceChildren(chosen ? h('div', { class: 'note green' }, h('b', null, '선택한 학교 '), chosen.name, chosen.kind ? ` (${chosen.kind})` : '', chosen.region || chosen.address ? h('div', { class: 'small' }, [chosen.office || chosen.region, chosen.address].filter(Boolean).join(' · ')) : null, chosen.manual ? h('div', { class: 'small muted' }, '직접 적은 학교') : null) : '');
+  };
+  const search = async () => {
+    const v = q.value.trim();
+    if (v.length < 2) { note.textContent = '학교 이름을 두 글자 이상 적어 주세요.'; return; }
+    note.textContent = '찾는 중…'; list.replaceChildren();
+    try {
+      const r = await api('GET', `/api/teacher/schools?q=${encodeURIComponent(v)}`);
+      if (!r.available) {
+        note.replaceChildren(h('span', { class: 'err-text' }, r.error || '이 환경에서는 학교 검색을 쓸 수 없어요(체험판이거나 인터넷이 막혀 있어요). 학교 이름을 직접 적어 주세요.'));
+        manual.classList.remove('hidden'); manualName.value = manualName.value || v; return;
+      }
+      if (!r.schools.length) { note.textContent = '찾는 학교가 없어요. 이름을 줄여서(예: 행복초) 다시 찾거나 직접 적어 주세요.'; manual.classList.remove('hidden'); return; }
+      note.textContent = `${r.schools.length}개 학교를 찾았어요.${r.schools.length >= 5 ? ' 원하는 학교가 없으면 지역 이름을 함께 적어 보세요.' : ''}`;
+      list.replaceChildren(...r.schools.map((sc) => h('button', { type: 'button', class: 'school-item', role: 'option', 'aria-selected': String(chosen?.code === sc.code), onClick: (e) => {
+        list.querySelectorAll('.school-item').forEach((b) => b.setAttribute('aria-selected', String(b === e.currentTarget))); pick(sc);
+      } }, h('b', null, sc.name), sc.kind ? h('span', { class: `badge ${sc.kind === '초등학교' ? 'green' : ''}` }, sc.kind) : null, h('span', { class: 'small muted' }, [sc.office, sc.address].filter(Boolean).join(' · ')))));
+    } catch (e) { note.replaceChildren(h('span', { class: 'err-text' }, e.message)); manual.classList.remove('hidden'); }
+  };
+  q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
+  showChosen();
+  return h('div', { class: 'stack', style: { gap: '8px' } },
+    h('div', { class: 'row', style: { flexWrap: 'nowrap' } }, q, btn('검색', () => search(), { variant: 'small' })),
+    note, list,
+    h('button', { type: 'button', class: 'link-btn', style: { justifySelf: 'start' }, onClick: () => manual.classList.toggle('hidden') }, '목록에 없나요? 학교 이름 직접 적기'),
+    manual, chosenEl);
+}
+
+function randomCode() {
+  const C = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = '';
+  for (let i = 0; i < 6; i++) c += C[Math.floor(Math.random() * C.length)];
+  return c;
+}
+
+// 학급 코드 입력 + 사용 가능 여부 바로 확인
+function codeField(initial, classId, onState) {
+  const input = h('input', { type: 'text', value: initial, maxlength: 8, autocapitalize: 'characters', class: 'code-input', 'aria-label': '학급 코드', spellcheck: 'false' });
+  const msg = h('div', { class: 'small', role: 'status' });
+  let timer; let seq = 0;
+  const check = async () => {
+    const v = input.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); input.value = v;
+    const my = ++seq; msg.textContent = '확인 중…'; onState(null, v);
+    try {
+      const r = await api('GET', `/api/teacher/code-check?code=${encodeURIComponent(v)}${classId ? `&classId=${classId}` : ''}`);
+      if (my !== seq) return;
+      msg.replaceChildren(r.available ? h('span', { class: 'ok-text' }, '✔ 사용할 수 있는 코드예요.') : h('span', { class: 'err-text' }, r.error || '✗ 이미 다른 학급이 쓰고 있어요.'));
+      input.classList.toggle('ok', !!r.available); input.classList.toggle('err', !r.available);
+      onState(!!r.available, v);
+    } catch (e) { msg.replaceChildren(h('span', { class: 'err-text' }, e.message)); onState(false, v); }
+  };
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(check, 350); });
+  setTimeout(check, 0);
+  return { el: h('div', { class: 'stack', style: { gap: '6px' } },
+    h('div', { class: 'row', style: { flexWrap: 'nowrap' } }, input, btn('다시 만들기', () => { input.value = randomCode(); check(); }, { variant: 'small green' })),
+    msg, h('p', { class: 'small muted', style: { margin: 0 } }, '영문 대문자와 숫자 4~8자리. 헷갈리는 O·0, I·1은 피하는 게 좋아요.')), input };
+}
+
+// ───────── 새 학급 만들기 마법사: ① 학교 → ② 학년·반 → ③ 학급 코드 → ④ QR ─────────
+function openClassWizard() {
+  const W = { school: null, grade: 4, classNo: 1, nickname: '', name: '', nameEdited: false, code: randomCode(), codeOk: null };
+  const STEPS = ['학교 찾기', '학년·반', '학급 코드', 'QR 완성'];
+  let step = 0; let created = null;
+  const bar = h('ol', { class: 'wiz-steps' });
+  const body = h('div', { class: 'wiz-body' });
+  const actions = h('div', { class: 'actions' });
+  const box = h('div', { class: 'modal wide wizard', role: 'dialog', 'aria-modal': 'true', 'aria-label': '새 학급 만들기' }, h('h3', null, '새 학급 만들기'), bar, body, actions);
+  const back = h('div', { class: 'modal-back' }, box);
+  const close = () => { back.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape' && !created) close(); };
+  document.addEventListener('keydown', onKey);
+  document.body.append(back);
+  const autoName = () => (W.school ? `${W.school.name} ${W.grade}학년 ${W.classNo}반` : `${W.grade}학년 ${W.classNo}반`);
+
+  const render = () => {
+    bar.replaceChildren(...STEPS.map((t, i) => h('li', { class: i === step ? 'on' : i < step ? 'done' : '' }, h('span', { class: 'n' }, i < step ? '✓' : i + 1), t)));
+    actions.replaceChildren();
+    if (step === 0) {
+      const nextBtn = btn('다음 ›', () => { step = 1; render(); }, { variant: 'small', disabled: !W.school });
+      body.replaceChildren(h('p', null, '우리 학교를 찾아 골라 주세요. (나이스 교육정보 개방 포털의 학교 정보를 써요)'),
+        schoolPicker((sc) => { W.school = sc; if (!W.nameEdited) W.name = ''; nextBtn.disabled = false; }, W.school));
+      actions.append(btn('취소', close, { variant: 'small green' }), nextBtn);
+    } else if (step === 1) {
+      const g = h('select', { 'aria-label': '학년', onChange: (e) => { W.grade = +e.target.value; refreshName(); } }, [1, 2, 3, 4, 5, 6].map((n) => h('option', { value: n, selected: W.grade === n ? true : undefined }, `${n}학년`)));
+      const c = h('input', { type: 'number', min: 1, max: 30, value: W.classNo, 'aria-label': '반', style: { maxWidth: '110px' }, onInput: (e) => { W.classNo = Math.max(1, Math.min(30, +e.target.value || 1)); refreshName(); } });
+      const nick = h('input', { type: 'text', value: W.nickname, maxlength: 20, placeholder: '예: 꿈나무반 (선택)', onInput: (e) => { W.nickname = e.target.value.trim(); } });
+      const name = h('input', { type: 'text', value: W.name || autoName(), maxlength: 40, onInput: (e) => { W.name = e.target.value; W.nameEdited = true; } });
+      const refreshName = () => { if (!W.nameEdited) { W.name = autoName(); name.value = W.name; } };
+      body.replaceChildren(
+        h('div', { class: 'note green small' }, h('b', null, W.school.name), W.school.region || W.school.office ? ` · ${W.school.office || W.school.region}` : ''),
+        h('div', { class: 'row', style: { marginTop: '10px', gap: '14px' } }, h('label', { class: 'field' }, h('span', null, '학년'), g), h('label', { class: 'field' }, h('span', null, '반'), c)),
+        h('label', { class: 'field', style: { marginTop: '10px' } }, h('span', null, '학급 별명'), nick),
+        h('label', { class: 'field', style: { marginTop: '10px' } }, h('span', null, '학급 이름 (학생 화면과 관리실에 보여요)'), name));
+      W.name = W.name || autoName();
+      actions.append(btn('‹ 이전', () => { step = 0; render(); }, { variant: 'small green' }), btn('다음 ›', () => { if (!W.name.trim()) return toast('학급 이름을 적어 주세요.', 'bad'); step = 2; render(); }, { variant: 'small' }));
+    } else if (step === 2) {
+      const next = btn('학급 만들기', () => create(), { variant: 'small gold', disabled: true });
+      const f = codeField(W.code, null, (ok, v) => { W.code = v; W.codeOk = ok; next.disabled = ok !== true; });
+      body.replaceChildren(h('p', null, '학생들이 들어올 때 쓰는 학급 코드예요. 그대로 써도 되고, 기억하기 쉬운 코드로 바꿔도 돼요.'), f.el,
+        h('div', { class: 'note small', style: { marginTop: '10px' } }, h('b', null, '만들 학급 '), W.name, W.nickname ? ` 「${W.nickname}」` : ''));
+      actions.append(btn('‹ 이전', () => { step = 1; render(); }, { variant: 'small green' }), next);
+      setTimeout(() => f.input.focus(), 30);
+    } else {
+      body.replaceChildren(qrCard(created));
+      actions.append(btn('학생 명단 등록하러 가기 ›', async () => { close(); tab = 'roster'; await loadClasses(created.id); }, { variant: 'small gold' }), btn('닫기', async () => { close(); await loadClasses(created.id); }, { variant: 'small green' }));
+    }
+  };
+  async function create() {
+    try {
+      const r = await api('POST', '/api/teacher/classes', { school: W.school, grade: W.grade, classNo: W.classNo, nickname: W.nickname, name: W.name.trim(), code: W.code });
+      created = { id: r.id, code: r.code, name: r.name, settings: { school: W.school, nickname: W.nickname } };
+      toast('학급을 만들었어요!', 'ok'); step = 3; render();
+    } catch (e) { toast(e.message, 'bad'); }
+  }
+  render();
+}
+
+// ───────── 학생 접속 QR 카드 ─────────
+function qrCard(cls) {
+  const wrap = h('div', { class: 'qr-card' });
+  const draw = () => {
+    const url = joinUrl(cls.code);
+    const baseIn = h('input', { type: 'text', value: getBase(), placeholder: 'https://우리학교서버주소/', 'aria-label': '학생 접속 주소' });
+    wrap.replaceChildren(
+      h('div', { class: 'qr-left' },
+        url ? h('div', { class: 'qr-frame' }, qrSvg(url, { label: `${cls.name} 접속 QR` })) : h('div', { class: 'qr-frame qr-missing' }, '아래에 학생 접속 주소를 적으면 QR이 만들어져요.'),
+        h('div', { class: 'qr-code-big' }, cls.code)),
+      h('div', { class: 'qr-right stack' },
+        h('h3', { style: { margin: 0 } }, cls.name),
+        cls.settings?.school?.name && !cls.name.includes(cls.settings.school.name) ? h('div', { class: 'small' }, cls.settings.school.name) : null,
+        h('ol', { class: 'steps-list small' },
+          h('li', null, h('span', null, '태블릿·휴대전화 카메라로 QR을 비춰요.')),
+          h('li', null, h('span', null, '학급 코드가 자동으로 들어간 입장 화면이 열려요.')),
+          h('li', null, h('span', null, '내 번호와 PIN 4자리만 적으면 들어와요.'))),
+        h('p', { class: 'small muted', style: { margin: 0 } }, 'QR을 못 쓰는 기기는 연구소 첫 화면에서 학급 코드를 직접 적어요.'),
+        isDemo() ? h('div', { class: 'note gold small' }, '체험판은 자료가 이 브라우저에만 저장돼서, 다른 기기에서 QR로 들어와도 이 학급이 보이지 않아요. 학교 서버나 호스팅에 올리면 QR이 그대로 작동해요.') : null,
+        url ? h('div', { class: 'qr-url' }, url) : null,
+        h('div', { class: 'row' },
+          url ? btn('주소 복사', () => navigator.clipboard?.writeText(url).then(() => toast('주소를 복사했어요.', 'ok')).catch(() => toast('주소를 직접 선택해 복사해 주세요.')), { variant: 'small green' }) : null,
+          url ? btn('크게 보기', () => bigQr(cls, url), { variant: 'small green' }) : null,
+          url ? btn('인쇄용 카드', () => printQr(cls, url), { variant: 'small' }) : null),
+        h('details', { class: 'small' }, h('summary', null, '학생 접속 주소 바꾸기'),
+          h('div', { class: 'stack', style: { gap: '6px', marginTop: '6px' } },
+            h('p', { style: { margin: 0 } }, '학생들이 여는 연구소 주소예요. 보통은 지금 주소 그대로 쓰면 돼요.'),
+            baseIn,
+            h('div', { class: 'row' },
+              btn('저장', () => { const v = baseIn.value.trim(); if (v && !/^https?:\/\//.test(v)) return toast('http:// 또는 https://로 시작하는 주소를 적어 주세요.', 'bad'); setBase(v); draw(); }, { variant: 'small green' }),
+              defaultBase() ? btn('지금 주소로', () => { setBase(''); draw(); }, { variant: 'small' }) : null)))));
+  };
+  draw();
+  return wrap;
+}
+
+function openQr(cls) {
+  modal({ wide: true, title: '학생 접속 QR', body: qrCard(cls), actions: [{ label: '닫기', value: null, variant: 'green' }] });
+}
+
+function bigQr(cls, url) {
+  const view = h('div', { class: 'qr-big', role: 'dialog', 'aria-modal': 'true', 'aria-label': '학생 접속 QR 크게 보기', onClick: () => close() },
+    h('div', { class: 'qr-big-inner' },
+      h('div', { class: 'qr-big-title' }, cls.name),
+      h('div', { class: 'qr-frame' }, qrSvg(url)),
+      h('div', { class: 'qr-big-code' }, '학급 코드 ', h('b', null, cls.code)),
+      h('div', { class: 'small muted' }, '화면을 누르면 닫혀요')));
+  const close = () => { view.remove(); document.removeEventListener('keydown', onKey); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  document.body.append(view);
+  view.requestFullscreen?.().catch(() => {});
+}
+
+function printQr(cls, url) {
+  const card = h('div', { class: 'qr-print' },
+    h('div', { class: 'qr-print-head' }, '꺾은선그래프 연구소'),
+    h('div', { class: 'qr-print-name' }, cls.name),
+    h('div', { class: 'qr-frame' }, qrSvg(url)),
+    h('div', { class: 'qr-print-code' }, '학급 코드 ', h('b', null, cls.code)),
+    h('div', { class: 'qr-print-help' }, '카메라로 QR을 비추고, 내 번호와 PIN을 적어요.'));
+  document.body.append(card); document.body.classList.add('printing-qr');
+  const done = () => { card.remove(); document.body.classList.remove('printing-qr'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  try { window.print(); } catch { /* */ }
+  setTimeout(() => { if (document.body.classList.contains('printing-qr')) { done(); toast('이 화면에서는 인쇄 창을 열 수 없어요. [크게 보기]를 화면에 띄워 주세요.'); } }, 1500);
+}
+
+
+// 설정 탭: 학교·학년·반 고치기
+function schoolSheet() {
+  const st = cur.settings;
+  let picked = st.school || null;
+  const g = h('select', { 'aria-label': '학년' }, h('option', { value: '' }, '학년'), [1, 2, 3, 4, 5, 6].map((n) => h('option', { value: n, selected: st.grade === n ? true : undefined }, `${n}학년`)));
+  const c = h('input', { type: 'number', min: 1, max: 30, value: st.classNo || '', placeholder: '반', 'aria-label': '반', style: { maxWidth: '100px' } });
+  const nick = h('input', { type: 'text', value: st.nickname || '', maxlength: 20, placeholder: '예: 꿈나무반', 'aria-label': '학급 별명' });
+  return sheet(h('h3', null, '학교·학년·반'),
+    h('details', null, h('summary', null, picked ? `학교: ${picked.name}${picked.kind ? ` (${picked.kind})` : ''} — 바꾸기` : '학교를 아직 정하지 않았어요 — 학교 찾기'),
+      h('div', { style: { marginTop: '8px' } }, schoolPicker((sc) => { picked = sc; }, picked))),
+    h('div', { class: 'row', style: { marginTop: '10px', gap: '12px' } }, g, c, h('label', { class: 'field grow' }, h('span', null, '학급 별명'), nick)),
+    h('div', { class: 'row', style: { marginTop: '8px' } }, btn('학교·학년·반 저장', async () => {
+      if (await saveSettings({ school: picked, grade: g.value ? +g.value : null, classNo: c.value ? +c.value : null, nickname: nick.value.trim() }, '학교 정보를 저장했어요.')) loadClasses();
+    }, { variant: 'small green' })));
+}
+
+// 설정 탭: 학급 코드 직접 정하기
+function codeSheet() {
+  let state = { ok: null, v: cur.code };
+  const save = btn('이 코드로 바꾸기', async () => {
+    if (state.v === cur.code) return toast('지금 쓰는 코드와 같아요.');
+    if (!(await confirmBox('학급 코드 바꾸기', `학급 코드를 ${state.v}(으)로 바꿀까요? 예전 코드와 예전 QR로는 더 이상 들어올 수 없어요. 이미 들어와 있는 학생은 그대로예요.`, '바꾸기'))) return;
+    try { await api('POST', `/api/teacher/classes/${cur.id}/code`, { code: state.v }); toast('학급 코드를 바꾸었어요. 새 QR을 나누어 주세요.', 'ok'); await loadClasses(); } catch (e) { toast(e.message, 'bad'); }
+  }, { variant: 'small', disabled: true });
+  const f = codeField(cur.code, cur.id, (ok, v) => { state = { ok, v }; save.disabled = ok !== true || v === cur.code; });
+  return sheet(h('h3', null, '학급 코드와 QR'), f.el,
+    h('div', { class: 'row', style: { marginTop: '8px' } }, save, btn('학생 접속 QR 보기', () => openQr(cur), { variant: 'small green' })));
 }

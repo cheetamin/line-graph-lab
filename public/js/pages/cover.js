@@ -21,7 +21,7 @@ const D = (n) => `assets/art/${n}.png`;
 const deco = (n, style, cls = '') => h('img', { class: `deco ${cls}`, src: D(n), alt: '', style, draggable: 'false' });
 
 export function mountCover(root, opts = {}) {
-  if (opts.skipCover || ss.get('kgl-opened') === '1') return mountLogin(root, opts.tab);
+  if (opts.skipCover || ss.get('kgl-opened') === '1') return mountLogin(root, opts.tab, opts.joinCode);
   const pages = h('div', { class: 'ib-pages' },
     h('div', { class: 'ib-page l' }), h('div', { class: 'ib-page r' }), h('div', { class: 'ib-fold' }), h('div', { class: 'ib-edge' }));
   const leaf = h('div', { class: 'ib-leaf' }, h('div', { class: 'ib-leaf-face front' }), h('div', { class: 'ib-leaf-face back' }));
@@ -72,7 +72,7 @@ function demoHint(kind, fill) {
     ' ', h('button', { class: 'link-btn', type: 'button', onClick: fill }, '자동으로 채우기'));
 }
 
-export function mountLogin(root, tab = 'student') {
+export function mountLogin(root, tab = 'student', joinCode = null) {
   const header = makeHeader({ onLogo: () => { ss.del('kgl-opened'); root.replaceChildren(); mountCover(root); }, right: h('b', null, '연구소 입구') });
   const book = new Book({ onPrev: () => { ss.del('kgl-opened'); root.replaceChildren(); mountCover(root); }, onNext: () => {} });
   const tabsRO = h('nav', { class: 'side-tabs login-tabs', 'aria-label': '탐구 순서(입장 후 열려요)' },
@@ -103,7 +103,7 @@ export function mountLogin(root, tab = 'student') {
       tabs.replaceChildren(
         h('button', { class: `chip-btn ${t === 'student' ? 'on' : ''}`, role: 'tab', 'aria-selected': String(t === 'student'), type: 'button', onClick: () => show('student') }, '학생 입장'),
         h('button', { class: `chip-btn ${t === 'teacher' ? 'on' : ''}`, role: 'tab', 'aria-selected': String(t === 'teacher'), type: 'button', onClick: () => show('teacher') }, '교사 관리실'));
-      body.replaceChildren(t === 'student' ? studentForm() : teacherForm());
+      body.replaceChildren(t === 'student' ? studentForm(joinCode) : teacherForm());
     };
     el.append(h('div', { class: 'center' }, h('h2', { class: 'plaque' }, '연구소 입장')), tabs, body);
     show(tab);
@@ -111,8 +111,8 @@ export function mountLogin(root, tab = 'student') {
   book.fill({ left, right, folio: ['一', '二'], canPrev: true, prevText: '표지로' });
 }
 
-function studentForm() {
-  const code = h('input', { type: 'text', name: 'classCode', autocomplete: 'off', autocapitalize: 'characters', maxlength: 8, required: true, placeholder: '예: AB12CD', value: lsGet('kgl-code') || '' });
+function studentForm(joinCode = null) {
+  const code = h('input', { type: 'text', name: 'classCode', autocomplete: 'off', autocapitalize: 'characters', maxlength: 8, required: true, placeholder: '예: AB12CD', value: joinCode || lsGet('kgl-code') || '' });
   const num = h('input', { type: 'number', name: 'number', inputmode: 'numeric', min: 1, max: 99, required: true, placeholder: '번호' });
   const pin = h('input', { type: 'password', name: 'pin', class: 'pin-input', inputmode: 'numeric', maxlength: 4, autocomplete: 'off', required: true, placeholder: '••••' });
   const err = h('p', { class: 'err-text', role: 'alert' });
@@ -125,12 +125,14 @@ function studentForm() {
       boot();
     } catch (ex) { err.textContent = ex.message; pin.value = ''; pin.focus(); }
   } },
+  joinCode ? h('div', { class: 'note green small join-note' }, h('b', null, 'QR로 들어왔어요 '), `학급 코드 ${joinCode}가 입력되었어요. 내 번호와 PIN만 적으면 돼요.`) : null,
   h('label', { class: 'field' }, h('span', null, '학급 코드'), code),
   h('label', { class: 'field' }, h('span', null, '내 번호'), num),
   h('label', { class: 'field' }, h('span', null, '비밀번호(PIN 4자리)'), pin),
   err,
   btn('연구소 들어가기', null, { variant: 'gold', type: 'submit' }),
-  demoHint('student', () => { code.value = 'DEMO26'; num.value = 1; pin.value = '1234'; }));
+  joinCode ? null : demoHint('student', () => { code.value = 'DEMO26'; num.value = 1; pin.value = '1234'; }));
+  if (joinCode) setTimeout(() => num.focus(), 400);
   return form;
 }
 

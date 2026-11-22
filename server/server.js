@@ -48,7 +48,30 @@ export const sec = {
   sha256: async (text) => crypto.createHash('sha256').update(String(text)).digest('hex'),
 };
 
-const api = createApi({ db, sec, options: { signupCode: process.env.TEACHER_SIGNUP_CODE || '' } });
+// 나이스 교육정보 개방 포털 — 학교기본정보. 인증키(NEIS_API_KEY)가 없으면 나이스 정책상 검색 결과가 5개로 제한됩니다.
+const schoolCache = new Map();
+async function searchSchools(q) {
+  const hit = schoolCache.get(q);
+  if (hit && Date.now() - hit.at < 6 * 3600 * 1000) return hit.list;
+  const key = process.env.NEIS_API_KEY || '';
+  const base = process.env.NEIS_BASE || 'https://open.neis.go.kr/hub/schoolInfo';
+  const url = `${base}?Type=json&pIndex=1&pSize=${key ? 50 : 5}&SCHUL_NM=${encodeURIComponent(q)}${key ? `&KEY=${encodeURIComponent(key)}` : ''}`;
+  const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+  if (!r.ok) throw new Error(`NEIS ${r.status}`);
+  const j = await r.json();
+  if (j.RESULT && j.RESULT.CODE === 'INFO-200') { schoolCache.set(q, { at: Date.now(), list: [] }); return []; }
+  if (j.RESULT && j.RESULT.CODE !== 'INFO-000') throw new Error(j.RESULT.MESSAGE || 'NEIS error');
+  const rows = (j.schoolInfo && j.schoolInfo[1] && j.schoolInfo[1].row) || [];
+  const order = { 초등학교: 0, 중학교: 1, 고등학교: 2 };
+  const list = rows.map((x) => ({
+    name: x.SCHUL_NM, code: x.SD_SCHUL_CODE, officeCode: x.ATPT_OFCDC_SC_CODE, office: x.ATPT_OFCDC_SC_NM,
+    kind: x.SCHUL_KND_SC_NM, region: x.LCTN_SC_NM, address: (x.ORG_RDNMA || '').trim(),
+  })).sort((a, b) => (order[a.kind] ?? 9) - (order[b.kind] ?? 9) || a.name.localeCompare(b.name, 'ko'));
+  schoolCache.set(q, { at: Date.now(), list });
+  return list;
+}
+
+const api = createApi({ db, sec, options: { signupCode: process.env.TEACHER_SIGNUP_CODE || '', searchSchools } });
 api.init();
 if (process.env.DEMO_SEED === '1') {
   seedDemo({ db, sec }).then((made) => made && console.log('체험용 학급(DEMO26)을 만들었습니다.'));
@@ -63,7 +86,7 @@ const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'same-origin',
   'X-Frame-Options': 'SAMEORIGIN',
-  'Content-Security-Policy': "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self'; frame-ancestors 'self'",
+  'Content-Security-Policy': "default-src 'self'; media-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self'; frame-ancestors 'self'",
 };
 
 function getCookie(req, name) {

@@ -50,9 +50,23 @@ const int = (v) => (Number.isInteger(Number(v)) ? Number(v) : NaN);
 function mergeSettings(raw) {
   const s = { ...DEFAULT_SETTINGS, ...raw };
   s.stages = { ...DEFAULT_SETTINGS.stages, ...(raw?.stages || {}) };
+  if (raw?.school === undefined) s.school = null;
   s.picked = Array.isArray(s.picked) ? s.picked.map(Number) : [];
   s.activeTopics = Array.isArray(s.activeTopics) ? s.activeTopics.filter((id) => topicById(id)).map(Number) : [];
   return s;
+}
+
+
+const normCode = (v) => (typeof v === 'string' ? v : '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+function codeError(code) {
+  if (code.length < 4 || code.length > 8) return '학급 코드는 영문 대문자와 숫자로 4~8자리로 정해 주세요.';
+  if (!/[A-Z]/.test(code) && code.length < 6) return '숫자만 쓸 때는 6자리 이상으로 정해 주세요.';
+  return null;
+}
+function cleanSchool(v) {
+  if (!v || typeof v !== 'object') return null;
+  const name = str(v.name, 40); if (!name) return null;
+  return { name, code: str(v.code, 12), officeCode: str(v.officeCode, 6), office: str(v.office, 30), kind: str(v.kind, 12), region: str(v.region, 20), address: str(v.address, 120), manual: !!v.manual };
 }
 
 export function createApi({ db, sec, options = {} }) {
@@ -385,7 +399,7 @@ export function createApi({ db, sec, options = {} }) {
             stages: s.stages, voteOpen: s.voteOpen, surveyOpen: s.surveyOpen, allowEdit: s.allowEdit,
             activeTopics: s.activeTopics, monthFrom: s.monthFrom, monthTo: s.monthTo,
             savingsMode: s.savingsMode, tableRefMode: s.tableRefMode, tableRefVisible: s.tableRefVisible,
-            kmaUrl: s.kmaUrl, kmaGuide: s.kmaGuide, notice: s.notice, displayName: s.displayName,
+            kmaUrl: s.kmaUrl, kmaGuide: s.kmaGuide, notice: s.notice, displayName: s.displayName, schoolName: s.school?.name || '', nickname: s.nickname || '',
           },
         },
         state, gates: g, vote: vote?.topic_id ?? null, responses, works,
@@ -648,12 +662,42 @@ export function createApi({ db, sec, options = {} }) {
     return { body: { classes: rows.map((c) => ({ id: c.id, name: c.name, code: c.code, students: c.students, pending: c.pending, isDemo: !!c.is_demo, settings: mergeSettings(parse(c.settings)) })) } };
   });
 
+  // 학교 검색(나이스 학교기본정보) — 서버가 searchSchools를 넘겨준 경우에만 동작
+  route('GET', '/api/teacher/schools', 'teacher', async ({ query }) => {
+    const q = str(query.q, 30);
+    if (q.length < 2) fail(400, '학교 이름을 두 글자 이상 적어 주세요.');
+    if (!options.searchSchools) return { body: { available: false, schools: [] } };
+    try {
+      const schools = await options.searchSchools(q);
+      return { body: { available: true, schools } };
+    } catch (e) {
+      return { body: { available: false, error: '지금은 학교 검색을 할 수 없어요. 학교 이름을 직접 적어 주세요.', schools: [] } };
+    }
+  });
+
+  route('GET', '/api/teacher/code-check', 'teacher', async ({ query }) => {
+    const code = normCode(query.code);
+    const err = codeError(code);
+    if (err) return { body: { available: false, error: err } };
+    const used = db.get('SELECT id FROM classes WHERE code = ?', [code]);
+    return { body: { available: !used || (!!query.classId && used.id === int(query.classId)), code } };
+  });
+
   route('POST', '/api/teacher/classes', 'teacher', async ({ ctx, body }) => {
-    const name = str(body.name, 40);
+    const school = cleanSchool(body.school);
+    const grade = int(body.grade); const classNo = int(body.classNo);
+    let name = str(body.name, 40);
+    if (!name && school && grade >= 1 && grade <= 6 && classNo >= 1) name = `${school.name} ${grade}학년 ${classNo}반`;
     if (!name) fail(400, '학급 이름을 적어 주세요.');
-    const code = genCode();
-    const r = db.run('INSERT INTO classes(teacher_id, name, code, settings, created_at) VALUES (?,?,?,?,?)', [ctx.teacher.id, name, code, JSON.stringify(DEFAULT_SETTINGS), now()]);
-    return { body: { id: Number(r.lastInsertRowid), code } };
+    let code;
+    if (body.code) {
+      code = normCode(body.code);
+      const err = codeError(code); if (err) fail(400, err);
+      if (db.get('SELECT id FROM classes WHERE code = ?', [code])) fail(409, '이미 다른 학급이 쓰고 있는 코드예요. 다른 코드를 정해 주세요.');
+    } else code = genCode();
+    const settings = { ...DEFAULT_SETTINGS, school, grade: grade >= 1 && grade <= 6 ? grade : null, classNo: classNo >= 1 && classNo <= 30 ? classNo : null, nickname: str(body.nickname, 20) };
+    const r = db.run('INSERT INTO classes(teacher_id, name, code, settings, created_at) VALUES (?,?,?,?,?)', [ctx.teacher.id, name, code, JSON.stringify(settings), now()]);
+    return { body: { id: Number(r.lastInsertRowid), code, name } };
   });
 
   route('PUT', '/api/teacher/classes/:id', 'teacher', async ({ ctx, params, body }) => {
@@ -679,6 +723,10 @@ export function createApi({ db, sec, options = {} }) {
     if (p.kmaUrl !== undefined) { const u = str(p.kmaUrl, 300); if (u && !/^https?:\/\//.test(u)) fail(400, '주소는 http:// 또는 https://로 시작해야 해요.'); s.kmaUrl = u || DEFAULT_SETTINGS.kmaUrl; }
     if (p.kmaGuide !== undefined) s.kmaGuide = str(p.kmaGuide, 2000) || DEFAULT_KMA_GUIDE;
     if (p.notice !== undefined) s.notice = str(p.notice, 300);
+    if (p.school !== undefined) s.school = cleanSchool(p.school);
+    if (p.grade !== undefined) { const g = int(p.grade); s.grade = g >= 1 && g <= 6 ? g : null; }
+    if (p.classNo !== undefined) { const n = int(p.classNo); s.classNo = n >= 1 && n <= 30 ? n : null; }
+    if (p.nickname !== undefined) s.nickname = str(p.nickname, 20);
     if (p.pickNoRepeat !== undefined) s.pickNoRepeat = !!p.pickNoRepeat;
     if (p.picked !== undefined) {
       const ids = new Set(db.all('SELECT id FROM students WHERE class_id = ?', [c.id]).map((r) => r.id));
@@ -697,9 +745,15 @@ export function createApi({ db, sec, options = {} }) {
     return { body: { ok: true } };
   });
 
-  route('POST', '/api/teacher/classes/:id/code', 'teacher', async ({ ctx, params }) => {
+  route('POST', '/api/teacher/classes/:id/code', 'teacher', async ({ ctx, params, body }) => {
     const c = teacherClass(ctx.teacher, params.id);
-    const code = genCode();
+    let code;
+    if (body.code) {
+      code = normCode(body.code);
+      const err = codeError(code); if (err) fail(400, err);
+      const used = db.get('SELECT id FROM classes WHERE code = ?', [code]);
+      if (used && used.id !== c.id) fail(409, '이미 다른 학급이 쓰고 있는 코드예요. 다른 코드를 정해 주세요.');
+    } else code = genCode();
     db.run('UPDATE classes SET code = ? WHERE id = ?', [code, c.id]);
     return { body: { code } };
   });
