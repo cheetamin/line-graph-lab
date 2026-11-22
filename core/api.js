@@ -34,6 +34,8 @@ export const DEFAULT_SETTINGS = {
   kmaUrl: 'https://data.kma.go.kr/',
   kmaGuide: DEFAULT_KMA_GUIDE,
   notice: '',
+  picked: [], // 학생 뽑기에서 이미 뽑힌 학생 id(학급마다)
+  pickNoRepeat: true,
 };
 
 class HttpError extends Error {
@@ -48,6 +50,7 @@ const int = (v) => (Number.isInteger(Number(v)) ? Number(v) : NaN);
 function mergeSettings(raw) {
   const s = { ...DEFAULT_SETTINGS, ...raw };
   s.stages = { ...DEFAULT_SETTINGS.stages, ...(raw?.stages || {}) };
+  s.picked = Array.isArray(s.picked) ? s.picked.map(Number) : [];
   s.activeTopics = Array.isArray(s.activeTopics) ? s.activeTopics.filter((id) => topicById(id)).map(Number) : [];
   return s;
 }
@@ -676,6 +679,11 @@ export function createApi({ db, sec, options = {} }) {
     if (p.kmaUrl !== undefined) { const u = str(p.kmaUrl, 300); if (u && !/^https?:\/\//.test(u)) fail(400, '주소는 http:// 또는 https://로 시작해야 해요.'); s.kmaUrl = u || DEFAULT_SETTINGS.kmaUrl; }
     if (p.kmaGuide !== undefined) s.kmaGuide = str(p.kmaGuide, 2000) || DEFAULT_KMA_GUIDE;
     if (p.notice !== undefined) s.notice = str(p.notice, 300);
+    if (p.pickNoRepeat !== undefined) s.pickNoRepeat = !!p.pickNoRepeat;
+    if (p.picked !== undefined) {
+      const ids = new Set(db.all('SELECT id FROM students WHERE class_id = ?', [c.id]).map((r) => r.id));
+      s.picked = [...new Set((Array.isArray(p.picked) ? p.picked : []).map(Number))].filter((id) => ids.has(id)).slice(0, 100);
+    }
     db.run('UPDATE classes SET settings = ? WHERE id = ?', [JSON.stringify(s), c.id]);
     return { body: { ok: true, settings: s } };
   });

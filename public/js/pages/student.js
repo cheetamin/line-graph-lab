@@ -4,6 +4,7 @@ import { Book } from '../book.js';
 import { S, loadStudent, saveUi } from '../store.js';
 import { logout } from '../main.js';
 import { makeHeader, deskProps, lanternImg, scene } from '../shell.js';
+import { PageTurner } from '../pageturn.js';
 import * as home from './home.js';
 import * as weather from './weather.js';
 import * as topics from './topics.js';
@@ -53,7 +54,10 @@ export async function mountStudent(root) {
   });
   const tabs = h('nav', { class: 'side-tabs', 'aria-label': '장 목록' });
   const book = new Book({ onPrev: () => app.step(-1), onNext: () => app.step(1) });
-  root.append(scene(top, h('main', { class: 'stage' }, h('div', { class: 'side-col' }, tabs, lanternImg()), book.wrap)));
+  const sceneEl = scene(top, h('main', { class: 'stage' }, h('div', { class: 'side-col' }, tabs, lanternImg()), book.wrap));
+  root.append(sceneEl);
+  book.turner = new PageTurner(sceneEl);
+  window.__kglTurner = book.turner; // 자동 검증용
   deskProps(root);
 
   const app = {
@@ -105,8 +109,8 @@ export async function mountStudent(root) {
     },
     queue: [],
     step(delta) {
-      // 연속 클릭: 넘기는 중이면 한 장씩 차례로(최대 3장까지 대기)
-      if (book.busy) { if (this.queue.length < 3) this.queue.push(delta); return; }
+      // 재생 중에는 중복 클릭을 받지 않음
+      if (book.busy) return;
       return this.stepNow(delta);
     },
     stepNow(delta) {

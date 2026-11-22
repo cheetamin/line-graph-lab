@@ -7,7 +7,7 @@ import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js';
 import { renderStatic } from '../graph.js';
 import { makeHeader } from '../shell.js';
 
-const TABS = [['progress', '진행 현황'], ['roster', '학생 명단'], ['topics', '주제·투표'], ['settings', '단계·조사 설정'], ['aggregate', '학급 집계'], ['works', '작품 승인'], ['export', '자료 내려받기'], ['account', '계정']];
+const TABS = [['progress', '진행 현황'], ['picker', '학생 뽑기'], ['roster', '학생 명단'], ['topics', '주제·투표'], ['settings', '단계·조사 설정'], ['aggregate', '학급 집계'], ['works', '작품 승인'], ['export', '자료 내려받기'], ['account', '계정']];
 let classes = []; let cur = null; let tab = 'progress';
 
 export async function mountTeacher(root) {
@@ -47,12 +47,12 @@ function drawMain() {
       h('div', { class: 'row between' }, h('h2', { style: { margin: 0 } }, cur.name), h('div', { class: 'row' }, h('span', null, '학급 코드 '), h('b', { style: { fontFamily: 'monospace', fontSize: '1.5rem', letterSpacing: '.15em' } }, cur.code))),
       h('div', { class: 'admin-tabs', role: 'tablist', style: { marginTop: '12px', marginBottom: 0 } }, TABS.map(([k, l]) => h('button', { type: 'button', role: 'tab', class: 'admin-tab', 'aria-selected': String(tab === k), onClick: () => { tab = k; drawMain(); } }, l)))),
     body);
-  const fn = { progress, roster, topics, settings, aggregate, works, exporter, account }[tab === 'export' ? 'exporter' : tab];
+  const fn = { progress, picker, roster, topics, settings, aggregate, works, exporter, account }[tab === 'export' ? 'exporter' : tab];
   fn(body).catch?.((e) => body.replaceChildren(h('div', { class: 'sheet' }, h('p', { class: 'err-text' }, e.message))));
 }
 
 async function saveSettings(patch, msg = '저장했어요.') {
-  try { const r = await api('PUT', `/api/teacher/classes/${cur.id}`, { settings: patch }); cur.settings = r.settings; toast(msg, 'ok'); return true; } catch (e) { toast(e.message, 'bad'); return false; }
+  try { const r = await api('PUT', `/api/teacher/classes/${cur.id}`, { settings: patch }); cur.settings = r.settings; if (msg) toast(msg, 'ok'); return true; } catch (e) { toast(e.message, 'bad'); return false; }
 }
 const sheet = (...kids) => h('div', { class: 'sheet' }, ...kids);
 const toggle = (label, checked, on) => h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked, onChange: (e) => on(e.target.checked) }), label);
@@ -245,4 +245,64 @@ async function account(el) {
   el.replaceChildren(sheet(h('h3', null, '비밀번호 바꾸기'),
     h('form', { class: 'stack', style: { maxWidth: '360px' }, onSubmit: async (e) => { e.preventDefault(); try { await api('POST', '/api/teacher/password', { current: c.value, next: n.value }); toast('비밀번호를 바꾸었어요.', 'ok'); c.value = ''; n.value = ''; } catch (ex) { toast(ex.message, 'bad'); } } },
       h('label', { class: 'field' }, h('span', null, '현재 비밀번호'), c), h('label', { class: 'field' }, h('span', null, '새 비밀번호'), n), btn('바꾸기', null, { variant: 'green', type: 'submit' }))));
+}
+
+
+// ───────── 학생 뽑기: 등록한 학생 중 버튼을 누를 때마다 한 명씩 무작위로 ─────────
+async function picker(el) {
+  const list = (await api('GET', `/api/teacher/classes/${cur.id}/students`)).students;
+  if (!list.length) { el.replaceChildren(sheet(h('h3', null, '학생 뽑기'), h('p', null, '학생 명단을 먼저 등록해 주세요.'), btn('학생 명단으로', () => { tab = 'roster'; drawMain(); }, { variant: 'small green' }))); return; }
+  const st = cur.settings;
+  let picked = (st.picked || []).filter((id) => list.some((x) => x.id === id));
+  let noRepeat = st.pickNoRepeat !== false;
+  let rolling = false;
+  const label = (x) => `${x.number}번 ${x.name}`;
+  const nameEl = h('div', { class: 'pick-name', 'aria-live': 'assertive' }, '?');
+  const subEl = h('div', { class: 'pick-sub' }, '버튼을 눌러 한 명을 뽑아요');
+  const stage = h('div', { class: 'pick-stage' }, h('img', { class: 'pick-seal', src: 'assets/art/seal_wait.png', alt: '' }), nameEl, subEl);
+  const left = h('span', { class: 'badge' });
+  const hist = h('div', { class: 'pick-history' });
+  const pickBtn = btn('한 명 뽑기', () => roll(), { variant: 'gold big' });
+  const save = () => saveSettings({ picked, pickNoRepeat: noRepeat }, '').catch(() => {});
+  const pool = () => (noRepeat ? list.filter((x) => !picked.includes(x.id)) : list);
+  const draw = () => {
+    const remain = list.length - picked.length;
+    left.textContent = noRepeat ? `남은 학생 ${remain}명 / 전체 ${list.length}명` : `전체 ${list.length}명 (중복 허용)`;
+    hist.replaceChildren(...(picked.length ? picked.map((id, i) => { const x = list.find((y) => y.id === id); return h('span', { class: 'pick-chip' }, `${i + 1}. ${label(x)}`); }) : [h('span', { class: 'small muted' }, '아직 뽑힌 학생이 없어요.')]));
+    pickBtn.disabled = rolling || (noRepeat && remain === 0);
+    if (noRepeat && remain === 0 && !rolling) subEl.textContent = '모든 학생을 뽑았어요. [처음부터 다시]를 눌러요.';
+  };
+  async function roll() {
+    const cand = pool();
+    if (!cand.length || rolling) return;
+    rolling = true; draw();
+    const chosen = cand[Math.floor(Math.random() * cand.length)];
+    stage.classList.remove('done'); stage.classList.add('rolling');
+    subEl.textContent = '두근두근…';
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const steps = reduce ? 1 : 22;
+    for (let i = 0; i < steps; i++) {
+      const x = i === steps - 1 ? chosen : cand[Math.floor(Math.random() * cand.length)];
+      nameEl.textContent = label(x);
+      nameEl.animate([{ transform: 'translateY(-30%)', opacity: 0.2 }, { transform: 'none', opacity: 1 }], { duration: 70 });
+      await new Promise((r) => setTimeout(r, 30 + i * i * 0.3)); // 점점 느려짐(약 1.6초)
+    }
+    stage.classList.remove('rolling'); stage.classList.add('done');
+    nameEl.animate([{ transform: 'scale(.7)', opacity: 0 }, { transform: 'scale(1.12)', opacity: 1, offset: 0.6 }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.3,1.4,.5,1)' });
+    subEl.textContent = '당첨!';
+    picked.push(chosen.id);
+    rolling = false; draw(); save();
+  }
+  const fullBtn = btn('전체 화면으로 보기', () => { const sh = el.querySelector('.pick-sheet'); (sh.requestFullscreen?.() || Promise.reject()).catch(() => toast('이 화면에서는 전체 화면을 쓸 수 없어요.')); }, { variant: 'small green' });
+  el.replaceChildren(
+    h('div', { class: 'sheet pick-sheet' },
+      h('div', { class: 'row between' }, h('h3', { style: { margin: 0 } }, '학생 뽑기'), h('div', { class: 'row' }, left, fullBtn)),
+      h('p', { class: 'small muted' }, '학생 명단에 등록한 학생 중에서 버튼을 누를 때마다 한 명씩 무작위로 뽑아요. 발표·순서 정하기에 써요.'),
+      stage,
+      h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '14px' } }, pickBtn),
+      h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '10px', gap: '14px' } },
+        h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: noRepeat, onChange: (e) => { noRepeat = e.target.checked; draw(); save(); } }), '한 번 뽑힌 학생은 다시 뽑지 않기'),
+        btn('처음부터 다시', async () => { if (picked.length && !(await confirmBox('처음부터 다시', '뽑힌 학생 기록을 지우고 처음부터 다시 뽑을까요?', '다시 시작'))) return; picked = []; nameEl.textContent = '?'; subEl.textContent = '버튼을 눌러 한 명을 뽑아요'; stage.classList.remove('done'); draw(); save(); }, { variant: 'small' })),
+      h('h3', { style: { marginTop: '18px' } }, '뽑힌 순서'), hist));
+  draw();
 }

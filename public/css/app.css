@@ -963,3 +963,42 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
 .turn-cast.from-left { background: linear-gradient(90deg, rgba(40,22,8,.6), rgba(40,22,8,.18) 18%, rgba(40,22,8,0) 45%); }
 .turn-cast.from-right { background: linear-gradient(-90deg, rgba(40,22,8,.6), rgba(40,22,8,.18) 18%, rgba(40,22,8,0) 45%); }
 @media (max-width: 900px) { .page-body { position: static; } }
+
+/* 학생 뽑기 */
+.pick-stage { position: relative; margin: 10px auto 0; max-width: 760px; min-height: 240px; display: grid; place-items: center; align-content: center; gap: 6px; padding: 28px 20px;
+  border: 22px solid transparent; border-image: url(../assets/art/btn_hyeonpan.png) 62 86 fill / 22px 30px stretch; text-align: center; }
+.pick-seal { position: absolute; right: 18px; top: 10px; width: 64px; height: 64px; opacity: .85; transition: transform .3s; }
+.pick-stage.done .pick-seal { content: url(../assets/art/seal_done.png); transform: rotate(-8deg) scale(1.1); }
+.pick-name { font-family: var(--f-title); font-size: clamp(2.4rem, 6vw, 4.6rem); color: #3a1810; line-height: 1.15; min-height: 1.2em; }
+.pick-stage.rolling .pick-name { color: #6b4a33; filter: blur(.4px); }
+.pick-stage.done .pick-name { color: #8a1f17; text-shadow: 0 0 18px rgba(240,190,90,.65); }
+.pick-sub { font-size: 1.1rem; color: var(--ink-3); }
+.pick-history { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-chip { padding: 4px 12px; border-radius: 999px; background: #f3e2bd; border: 1px solid #b89a68; font-size: .95rem; }
+.pick-sheet:fullscreen { display: grid; align-content: center; padding: 40px; overflow: auto; }
+.pick-sheet:fullscreen .pick-stage { max-width: 1100px; min-height: 50vh; }
+.pick-sheet:fullscreen .pick-name { font-size: 8vw; }
+
+/* ═════════ 모션 그래픽 전환(먹 번짐 붓질) ═════════ */
+.ink-layer { position: absolute; z-index: 10; pointer-events: none; overflow: hidden; }
+.ink-band { position: absolute; top: -4%; bottom: -4%; width: 46%; left: 27%; mix-blend-mode: multiply;
+  background:
+    radial-gradient(ellipse 30% 60% at 50% 50%, rgba(40,26,14,.30), rgba(40,26,14,0) 70%),
+    linear-gradient(90deg, rgba(60,38,18,0), rgba(60,38,18,.16) 30%, rgba(60,38,18,.24) 50%, rgba(60,38,18,.16) 70%, rgba(60,38,18,0));
+  filter: blur(6px); }
+.ink-band::before { content: ''; position: absolute; top: 0; bottom: 0; width: 18%; left: 41%;
+  background: linear-gradient(90deg, rgba(150,40,30,0), rgba(150,40,30,.16), rgba(150,40,30,0)); filter: blur(4px); }
+.ink-drop { position: absolute; left: 50%; width: 14px; height: 14px; border-radius: 50%; background: rgba(35,22,12,.35); filter: blur(1.5px);
+  opacity: 0; animation: inkDrop .45s ease-out forwards; }
+.ink-band.to-left .ink-drop { left: 30%; } .ink-band.to-right .ink-drop { left: 62%; }
+@keyframes inkDrop { 0% { opacity: 0; transform: scale(.2); } 40% { opacity: 1; transform: scale(1.4); } 100% { opacity: 0; transform: scale(2.4); } }
+@media (prefers-reduced-motion: reduce) { .ink-layer { display: none; } }
+
+/* ═════════ 책장 넘김 영상 층: 배경과 똑같이 장면 전체를 채움 ═════════ */
+.turn-video-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; visibility: hidden; }
+.turn-video-layer.on { visibility: visible; }
+.turn-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: 0; }
+.turn-video.show { opacity: 1; }
+.turn-canvas { position: absolute; opacity: 0; } .turn-canvas.show { opacity: 1; }
+.book-wrap.turning .flip-btn, .book-wrap.turning .dots button { pointer-events: none; cursor: progress; }
+.scene:has(.book-wrap.turning) .side-tab { pointer-events: none; }

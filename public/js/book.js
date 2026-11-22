@@ -92,10 +92,11 @@ export class Book {
     if (!dir || reducedMotion() || !this.el.isConnected) { this.fill(spread); this.focusTop(); return true; }
     this.busy = true;
     try {
+      this.wrap.classList.add('turning');
       if (dir === 'jump') await this.jump(spread);
-      else if (isNarrow()) await this.flipNarrow(spread, dir);
-      else await this.flipWide(spread, dir);
-    } finally { this.busy = false; }
+      else if (this.turner?.usable()) await this.videoTurn(spread, dir);
+      else await this.motion(spread, dir);
+    } finally { this.busy = false; this.wrap.classList.remove('turning'); }
     this.focusTop();
     return true;
   }
@@ -114,95 +115,51 @@ export class Book {
     await Promise.all(news.map((n) => n.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' }).finished.catch(() => {})));
   }
 
-  // 펼친 책: 한 장(앞면·뒷면)이 책등 접힌 선을 축으로 넘어감
-  async flipWide(spread, dir) {
-    const next = dir === 'next';
-    const b = this.el.getBoundingClientRect();
-    const lr = this.left.getBoundingClientRect(); const rr = this.right.getBoundingClientRect();
-    if (!lr.width || !rr.width) { this.fill(spread); return; }
-    const spine = (lr.right + rr.left) / 2;               // 그림 속 책등(두 쪽 사이) 위치
-    const top = Math.min(lr.top, rr.top); const bottom = Math.max(lr.bottom, rr.bottom);
-    const wFrom = next ? rr.right - spine : spine - lr.left;   // 넘어가는 종이 폭
-    const wTo = next ? spine - lr.left : rr.right - spine;     // 내려앉을 쪽 폭
-    const sc = wTo / wFrom;                                    // 내려앉으면서 맞출 가로 비율
-    const pct = (v, total) => `${(v / total) * 100}%`;
+  // 책장 넘김 영상: 종이가 넘어가는 쪽을 덮으면 그 쪽 글을 숨기고, 반대쪽에 완전히 내려앉는 순간 새 쪽으로 교체
+  async videoTurn(spread, dir) {
+    const side = dir === 'next' ? this.right : this.left; // 종이가 들려 올라가는 쪽(교체 뒤에는 열린 쪽)
+    const old = side.firstElementChild;
+    await this.turner.play(dir, {
+      cover: () => { old?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 40, fill: 'forwards' }); },
+      swap: () => {
+        this.fill(spread); // 내려앉은 쪽은 종이 아래에서 바뀌고, 종이가 사라지며 드러남
+        side.firstElementChild?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 170, easing: 'ease-out' });
+      },
+    });
+  }
 
-    // ① 지금 보이는 '넘어가는 쪽' 내용을 그대로 떠서 앞면에 붙임(실제 쪽은 아직 안 바뀜)
-    const fromPage = next ? this.right : this.left;
-    const frontClone = clonePage(fromPage.firstElementChild || h('div'));
-    const fromScroll = (next ? this.rightScroll : this.leftScroll)?.scrollTop || 0;
-
-    // ② 새 내용 그리기: 드러날 쪽은 실제 쪽에 바로(종이 아래), 내려앉을 쪽은 숨은 보관함에
-    const { holders } = this.fill(spread, next ? 'left' : 'right');
-    const landing = holders[0].part.body;
-    const backClone = clonePage(landing);
-
-    // ③ 움직이는 층
-    const layer = h('div', { class: 'turn-layer' });
-    layer.style.perspective = `${Math.round(b.width * 5)}px`;
-    layer.style.perspectiveOrigin = `${pct(spine - b.left, b.width)} 50%`;
-    const leafLeft = next ? spine : lr.left;
-    const leaf = h('div', { class: `turn-leaf ${next ? 'to-left' : 'to-right'}` });
-    Object.assign(leaf.style, { left: pct(leafLeft - b.left, b.width), top: pct(top - b.top, b.height), width: pct(wFrom, b.width), height: pct(bottom - top, b.height), transformOrigin: next ? 'left center' : 'right center' });
-
-    // 앞면: 현재 쪽의 내용(넘어가는 쪽 실제 위치·크기 그대로)
-    const fromRect = next ? rr : lr;
-    const frontBox = h('div', { class: 'turn-content' }, frontClone);
-    Object.assign(frontBox.style, { left: pct(fromRect.left - leafLeft, wFrom), top: pct(fromRect.top - top, bottom - top), width: pct(fromRect.width, wFrom), height: pct(fromRect.height, bottom - top) });
-    const front = h('div', { class: 'turn-face front' }, frontBox, h('div', { class: 'turn-shade' }), h('div', { class: 'turn-gloss' }));
-
-    // 뒷면: 다음 쪽 내용(거울 반전 없이). 내려앉은 뒤 실제 쪽과 정확히 겹치도록 위치·비율 계산
-    const toRect = next ? lr : rr;
-    const u0 = next ? wFrom - (spine - toRect.left) / sc : (toRect.left - spine) / sc;
-    const backBox = h('div', { class: 'turn-content' }, backClone);
-    Object.assign(backBox.style, { left: pct(u0, wFrom), top: pct(toRect.top - top, bottom - top), width: pct(toRect.width, wFrom), height: pct(toRect.height, bottom - top), transform: `scaleX(${1 / sc})`, transformOrigin: 'left center' });
-    const back = h('div', { class: 'turn-face back' }, backBox, h('div', { class: 'turn-shade' }));
-    leaf.append(front, back);
-
-    // 종이 아래 그림자: 드러나는 쪽(책등 쪽)과 내려앉을 쪽
-    const revealRect = next ? rr : lr; const landRect = next ? lr : rr;
-    const shadeBox = (r, cls) => { const d = h('div', { class: `turn-cast ${cls}` }); Object.assign(d.style, { left: pct(r.left - b.left, b.width), top: pct(r.top - b.top, b.height), width: pct(r.width, b.width), height: pct(r.height, b.height) }); return d; };
-    const castReveal = shadeBox(revealRect, next ? 'from-left' : 'from-right');
-    const castLand = shadeBox(landRect, next ? 'from-right' : 'from-left');
-    layer.append(castReveal, castLand, leaf);
+  // 모션 그래픽 전환(영상을 쓸 수 없는 좁은 화면용): 배경은 그대로, 글만 먹 번짐 속으로 사라졌다가 다음 쪽 글이 붓질 뒤를 따라 나타남
+  async motion(spread, dir) {
+    const next = dir === 'next'; const sx = next ? 1 : -1;
+    const pages = isNarrow() ? [this.left, this.right] : (next ? [this.left, this.right] : [this.right, this.left]);
+    const olds = pages.map((p) => p.firstElementChild).filter(Boolean);
+    // 먹 번짐 띠
+    const layer = h('div', { class: 'ink-layer' });
+    const band = h('div', { class: `ink-band ${next ? 'to-left' : 'to-right'}` });
+    const drops = [0, 1, 2, 3, 4].map((i) => h('span', { class: 'ink-drop', style: { top: `${14 + i * 17 + (i % 2) * 6}%`, animationDelay: `${60 + i * 35}ms` } }));
+    band.append(...drops);
+    layer.append(band);
+    const rects = [this.left, this.right].map((p) => this.rectPct(p));
+    Object.assign(layer.style, { left: rects[0].left, top: rects[0].top, right: `${100 - parseFloat(rects[1].left) - parseFloat(rects[1].width)}%`, bottom: `${100 - parseFloat(rects[0].top) - parseFloat(rects[0].height)}%` });
     this.el.append(layer);
-    const fsc = frontBox.querySelector('.page-scroll'); if (fsc) fsc.scrollTop = fromScroll;
-
-    // ④ 움직임: 바깥쪽이 먼저 들리고(빠른 출발), 넘어간 뒤 부드럽게 내려앉음
-    const D = 500; const sign = next ? -1 : 1;
-    const anim = leaf.animate([
-      { transform: 'rotateY(0deg) scaleX(1)', easing: 'cubic-bezier(.3,.0,.6,1)' },
-      { transform: `rotateY(${sign * 24}deg) translateZ(6px) scaleX(1)`, offset: 0.18, easing: 'cubic-bezier(.35,.15,.55,1)' },
-      { transform: `rotateY(${sign * 90}deg) translateZ(8px) scaleX(1)`, offset: 0.52, easing: 'cubic-bezier(.3,.3,.4,1)' },
-      { transform: `rotateY(${sign * 180}deg) scaleX(${sc})` },
-    ], { duration: D, fill: 'forwards' });
-    front.querySelector('.turn-shade').animate([{ opacity: 0 }, { opacity: 0.12, offset: 0.18 }, { opacity: 0.42, offset: 0.52 }, { opacity: 0.42 }], { duration: D, fill: 'forwards' });
-    front.querySelector('.turn-gloss').animate([{ opacity: 0 }, { opacity: 0.55, offset: 0.2 }, { opacity: 0, offset: 0.52 }, { opacity: 0 }], { duration: D, fill: 'forwards' });
-    back.querySelector('.turn-shade').animate([{ opacity: 0.42 }, { opacity: 0.42, offset: 0.52 }, { opacity: 0.08, offset: 0.85 }, { opacity: 0 }], { duration: D, fill: 'forwards' });
-    castReveal.animate([{ opacity: 0.55 }, { opacity: 0.35, offset: 0.4 }, { opacity: 0 }], { duration: D, fill: 'forwards' });
-    castLand.animate([{ opacity: 0 }, { opacity: 0, offset: 0.5 }, { opacity: 0.45, offset: 0.88 }, { opacity: 0 }], { duration: D, fill: 'forwards' });
-    await anim.finished.catch(() => {});
-    // ⑤ 같은 프레임에서: 보관해 둔 쪽을 실제 쪽에 붙이고 움직이는 층을 걷음 → 깜빡임 없음
-    this.commit(holders);
-    layer.remove();
-  }
-
-  async flipNarrow(spread, dir) {
-    const rect = this.el.getBoundingClientRect();
-    const snap = this.el.cloneNode(true);
-    snap.removeAttribute('id'); snap.inert = true;
-    snap.style.position = 'absolute'; snap.style.left = `${rect.left}px`; snap.style.top = `${rect.top}px`; snap.style.width = `${rect.width}px`; snap.style.margin = 0;
-    const layer = h('div', { style: { position: 'fixed', inset: 0, zIndex: 40, pointerEvents: 'none', perspective: '1600px', overflow: 'hidden' } }, snap);
-    snap.style.transformOrigin = dir === 'next' ? 'left center' : 'right center';
-    document.body.append(layer);
+    const D = 560;
+    const bandAnim = band.animate([{ transform: `translateX(${sx * 105}%)` }, { transform: `translateX(${-sx * 105}%)` }], { duration: D, easing: 'cubic-bezier(.55,.1,.35,1)' });
+    // ① 지금 글이 붓질 방향으로 흩어지며 사라짐
+    await Promise.all(olds.map((n, i) => n.animate([
+      { opacity: 1, transform: 'none', filter: 'blur(0)' },
+      { opacity: 0, transform: `translateX(${-sx * 26}px)`, filter: 'blur(3px)' },
+    ], { duration: 190, delay: i * 50, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {})));
+    // ② 글이 완전히 사라진 뒤에만 새 쪽으로 교체
     this.fill(spread);
-    const top = this.wrap.getBoundingClientRect().top + window.scrollY - 70;
-    window.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
-    const anim = snap.animate([
-      { transform: 'rotateY(0deg)', opacity: 1, filter: 'brightness(1)' },
-      { transform: `rotateY(${dir === 'next' ? -100 : 100}deg)`, opacity: 0.2, filter: 'brightness(.7)' },
-    ], { duration: 560, easing: 'cubic-bezier(.5,.05,.4,1)' });
-    await anim.finished.catch(() => {});
+    const news = pages.map((p) => p.firstElementChild).filter(Boolean);
+    news.forEach((n) => { n.style.opacity = '0'; });
+    // ③ 붓질 뒤를 따라 새 글이 차례로 나타남
+    await Promise.all(news.map((n, i) => n.animate([
+      { opacity: 0, transform: `translateX(${sx * 30}px)`, filter: 'blur(3px)' },
+      { opacity: 1, transform: 'none', filter: 'blur(0)' },
+    ], { duration: 260, delay: 40 + i * 70, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'backwards' }).finished.then(() => { n.style.opacity = ''; }).catch(() => { n.style.opacity = ''; })));
+    await bandAnim.finished.catch(() => {});
     layer.remove();
   }
+
 }
