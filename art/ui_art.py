@@ -2,34 +2,30 @@
 from defs import *
 
 
-def plate(name, fill_top, fill_bot, line, deco, w=600, h=140, text_dark=False, pattern=True, band=True):
-    """명패 모양(오목하게 깎은 모서리) 판 + 양 끝 단청 띠 + 바깥을 향한 여의두. 가운데(150~450)는 늘려도 되는 영역"""
+def plate(name, fill_top, fill_bot, line, deco, w=600, h=160, text_dark=False, pattern=True, band=True):
+    """명패 모양 버튼: 그림 전체가 버튼 크기와 같고, 장식(단청 띠·여의두)은 양 끝 70px 안에만 있음.
+    가운데(70~530)는 무늬 없는 글자 자리 → 9칸 자르기: 위아래 36, 좌우 70"""
     uid = name
-    x0, x1, y0, y1, c = 70, w - 70, 22, h - 22, 16
+    x0, x1, y0, y1, c = 6, w - 6, 8, h - 10, 18
     shape = lambda i: (f"M{x0+c+i} {y0+i} H{x1-c-i} A{c} {c} 0 0 0 {x1-i} {y0+c+i} V{y1-c-i} A{c} {c} 0 0 0 {x1-c-i} {y1-i} "
                        f"H{x0+c+i} A{c} {c} 0 0 0 {x0+i} {y1-c-i} V{y0+c+i} A{c} {c} 0 0 0 {x0+c+i} {y0+i}Z")
-    pat = ''
-    if pattern:
-        for x in range(150, w - 140, 20):
-            pat += f'<path d="M{x} {y0+12} l4 -3.5 l4 3.5 l-4 3.5z" fill="{deco}" opacity=".6"/>'
-            pat += f'<path d="M{x} {y1-12} l4 -3.5 l4 3.5 l-4 3.5z" fill="{deco}" opacity=".6"/>'
-    bands = ''
-    if band:
-        for side in (0, 1):
-            bx = x0 + 18 if side == 0 else x1 - 18 - 30
-            cols = ['#2f6f62', GOLD, '#b8402f', GOLD, '#2f6f62'] if side == 0 else ['#2f6f62', GOLD, '#b8402f', GOLD, '#2f6f62']
-            for i, col in enumerate(cols):
-                bands += f'<rect x="{bx + i*6}" y="{y0+6}" width="6" height="{y1-y0-12}" fill="{col}" opacity=".95"/>'
-            bands += f'<rect x="{bx}" y="{y0+6}" width="30" height="{y1-y0-12}" fill="none" stroke="{INK}" stroke-width="1.6"/>'
+    ends = ''
+    for side in (0, 1):
+        if band:
+            bx = 22 if side == 0 else w - 22 - 25
+            for i, col in enumerate(['#2f6f62', GOLD, '#b8402f', GOLD, '#2f6f62']):
+                ends += f'<rect x="{bx + i*5}" y="{y0+12}" width="5" height="{y1-y0-24}" fill="{col}"/>'
+            ends += f'<rect x="{bx}" y="{y0+12}" width="25" height="{y1-y0-24}" fill="none" stroke="{INK}" stroke-width="1.6"/>'
+        cx = 58 if side == 0 else w - 58
+        ends += f'<path d="M{cx} {h/2-16} l9 16 l-9 16 l-9 -16z" fill="{deco}" stroke="{INK}" stroke-width="1.6"/>'
     body = f'''
   <linearGradient id="g{uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{fill_top}"/><stop offset=".6" stop-color="{fill_bot}"/><stop offset="1" stop-color="{fill_bot}"/></linearGradient>
-  <linearGradient id="hl{uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
-  <g filter="url(#shadow{uid})"><path d="{shape(0)}" fill="url(#g{uid})" stroke="{INK}" stroke-width="3.2" filter="url(#grain{uid})"/></g>
-  <path d="{shape(7)}" fill="none" stroke="{deco}" stroke-width="2.4"/>
+  <linearGradient id="hl{uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  <path d="{shape(0)}" transform="translate(0 2)" fill="#1a0d06" opacity=".35"/>
+  <path d="{shape(0)}" fill="url(#g{uid})" stroke="{INK}" stroke-width="3.4" filter="url(#grain{uid})"/>
+  <path d="{shape(8)}" fill="none" stroke="{deco}" stroke-width="2.4"/>
   <path d="{shape(0)}" fill="url(#hl{uid})"/>
-  {pat}{bands}
-  {cloud_scroll(40, h/2, 30, deco, INK, 2.6)}
-  {cloud_scroll(w-40, h/2, 30, deco, INK, 2.6, flip=True)}
+  {ends}
 '''
     return svg(w, h, body, uid)
 

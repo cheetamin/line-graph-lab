@@ -806,3 +806,15 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
   .ib-teacher { right: auto; left: 12%; }
 }
 .login-card .btn { min-height: 56px; }
+
+/* 버튼 글자가 판 안에 들어가도록: 그림 전체 = 버튼 크기, 가운데는 무늬 없는 글자 자리 */
+.btn { border-width: 12px 24px; border-image: var(--img) 36 70 fill / 12px 24px stretch; padding: 2px 14px; min-height: 54px; line-height: 1.25; white-space: nowrap; }
+.btn.small { min-height: 42px; border-width: 9px 18px; border-image-width: 9px 18px; padding: 1px 10px; font-size: .95rem; }
+.btn.big { min-height: 74px; border-width: 16px 32px; border-image-width: 16px 32px; padding: 2px 24px; font-size: 1.45rem; }
+.ib-eyebrow { border-width: 10px 22px; border-image: url(../assets/art/btn_hanji.png) 36 70 fill / 10px 22px stretch; padding: .1em .9em; }
+.ib-teacher { border-width: 8px 18px; border-image: url(../assets/art/btn_jade.png) 36 70 fill / 8px 18px stretch; padding: .1em .6em; }
+@media (max-width: 1000px), (max-aspect-ratio: 4/5) { .ib-eyebrow { border-width: 8px 18px; border-image-width: 8px 18px; padding: 0 .7em; } }
+@media (max-width: 900px) { .btn.small { border-width: 8px 16px; border-image-width: 8px 16px; } }
+@media (max-width: 560px) { .btn { white-space: normal; } }
+.side-tab { border-image-width: 12px 30px 12px 12px !important; border-width: 12px 30px 12px 12px !important; font-size: .93rem; padding: 0 4px 0 2px; word-break: keep-all; }
+@media (max-width: 900px) { .side-tab { border-width: 8px 22px 8px 8px !important; border-image-width: 8px 22px 8px 8px !important; white-space: nowrap; } }
