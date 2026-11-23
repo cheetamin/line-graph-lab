@@ -3,7 +3,7 @@ import { sealImg, h, icon, btn, fmt } from '../ui.js';
 import { api } from '../api.js';
 import { renderStatic } from '../graph.js';
 
-let cache = null; let filter = 'all';
+let cache = null; let filter = 'all'; let who = null; // who: 한 연구원(학생)의 작품만 보기
 const PER = 6;
 
 export function spreads(app) {
@@ -12,7 +12,8 @@ export function spreads(app) {
     api('GET', '/api/gallery').then((r) => { cache = r.items; app.refresh(); }).catch((e) => { cache = []; cache.error = e.message; app.refresh(); });
     return [{ left: (el) => el.append(h('h2', null, '작품 전시관'), h('p', null, '작품을 불러오는 중…')), right: () => {} }];
   }
-  const items = cache.filter((x) => filter === 'all' || (filter === 'weather' ? x.kind === 'weather' : x.kind === 'topic'));
+  if (who !== null && !cache.some((x) => x.sid === who)) who = null;
+  const items = cache.filter((x) => (who === null || x.sid === who) && (filter === 'all' || x.kind === filter));
   if (!items.length) {
     return [{
       left: (el) => header(el, app, items),
@@ -39,7 +40,12 @@ export function spreads(app) {
       const u = w.data.yUnit || '';
       const fmtL = (labels) => labels.join(', ');
       el.append(
-        h('div', { class: 'center' }, h('div', { class: 'author-plaque' }, `${w.author}의 그래프`)),
+        h('div', { class: 'center' }, (() => {
+          const n = cache.filter((x) => x.sid === w.sid).length;
+          return who === null && n > 1
+            ? h('button', { type: 'button', class: 'author-plaque as-btn', title: `${w.author}의 작품 ${n}개 모두 보기`, onClick: () => { who = w.sid; filter = 'all'; app.go('gallery', 0, 'jump'); } }, `${w.author}의 그래프`, h('span', { class: 'plaque-more' }, `작품 ${n}개 모두 보기 ›`))
+            : h('div', { class: 'author-plaque' }, `${w.author}의 그래프`);
+        })()),
         h('div', { class: 'row', style: { margin: '10px 0' } }, h('span', { class: 'label-tag' }, '주제'), h('b', { style: { fontFamily: 'var(--f-title)', fontSize: '1.2rem' } }, w.topicName)),
         h('div', { class: 'graph-frame' }, renderStatic(w.data, { showValues: true })),
         st ? h('div', { class: 'panel', style: { marginTop: '10px' } },
@@ -54,9 +60,14 @@ export function spreads(app) {
 }
 
 function header(el, app, items) {
+  const authors = [...new Map(cache.map((x) => [x.sid, x])).values()].sort((a, b) => (a.mine ? -1 : b.mine ? 1 : 0) || a.author.localeCompare(b.author, 'ko', { numeric: true }));
+  const sel = h('select', { class: 'who-select', 'aria-label': '연구원 이름으로 보기', onChange: (e) => { who = e.target.value === '' ? null : Number(e.target.value); app.go('gallery', 0, 'jump'); } },
+    h('option', { value: '' }, '모든 연구원'), authors.map((a) => h('option', { value: a.sid, selected: a.sid === who ? true : undefined }, `${a.author}${a.mine ? ' (나)' : ''} · ${cache.filter((x) => x.sid === a.sid).length}개`)));
   el.append(
-    h('div', { class: 'page-head' }, icon('gallery'), h('div', null, h('div', { class: 'kicker' }, '제5장'), h('h2', null, '작품 전시관')), h('span', { class: 'badge', style: { marginLeft: 'auto' } }, `우리 반 작품 ${cache.length}개`)),
+    h('div', { class: 'page-head' }, icon('gallery'), h('div', null, h('div', { class: 'kicker' }, '1차·2차·3차 작품'), h('h2', null, '작품 전시관')), h('span', { class: 'badge', style: { marginLeft: 'auto' } }, `우리 반 작품 ${cache.length}개`)),
     h('p', { class: 'small' }, '친구들이 만든 꺾은선그래프를 책장을 넘기며 감상해요. 선생님이 승인한 우리 반 작품만 보여요.'),
-    h('div', { class: 'cat-tabs' }, [['all', '전체'], ['topic', '조사 주제'], ['weather', '폭염일수']].map(([k, l]) => h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': String(filter === k), onClick: () => { filter = k; app.go('gallery', 0, null); } }, l)),
-      h('button', { type: 'button', class: 'link-btn', onClick: () => { cache = null; app.go('gallery', 0, null); } }, '새로고침')));
+    h('div', { class: 'cat-tabs' }, [['all', '전체'], ['weather', '1차 폭염일수'], ['topic', '2차 나의 주제'], ['life', '3차 우리 고장']].map(([k, l]) => h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': String(filter === k), onClick: () => { filter = k; app.go('gallery', 0, null); } }, l)),
+      h('button', { type: 'button', class: 'link-btn', onClick: () => { cache = null; app.go('gallery', 0, null); } }, '새로고침')),
+    h('div', { class: 'row who-row' }, h('span', { class: 'small' }, '연구원 이름으로 보기'), sel,
+      who !== null ? h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': 'true', onClick: () => { who = null; app.go('gallery', 0, 'jump'); } }, `${items[0]?.author || ''}의 작품만 보는 중 ✕`) : null));
 }

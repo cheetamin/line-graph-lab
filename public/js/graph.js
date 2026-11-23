@@ -1,28 +1,30 @@
 // 꺾은선그래프 모눈종이: 정적 그리기 + 학생이 직접 점 찍고 선 잇는 편집기
 import { s, h } from './ui.js';
-import { snapStep } from '../shared/topics.js';
+import { snapStep, MAJOR, MAX_CELLS, SCALE_OPTIONS } from '../shared/topics.js';
 
+// scale = 작은 눈금 한 칸(점선 한 칸)의 크기. 작은 칸 MAJOR(5)개가 모여 큰 눈금(실선) 한 칸이 되고, 큰 눈금마다 수를 적어요.
 export function layout({ labels, scale, yStart = 0, maxV = 0, title = '' }) {
   const n = labels.length;
   const hasScale = !!scale;
-  let cells = hasScale ? Math.ceil((Math.max(maxV, yStart) - yStart) / scale) + 1 : 10;
-  const tooMany = cells > 40;
-  cells = Math.min(40, Math.max(4, cells));
-  const rowH = cells <= 10 ? 36 : cells <= 16 ? 28 : cells <= 24 ? 22 : 16;
+  let cells = hasScale ? Math.ceil((Math.ceil((Math.max(maxV, yStart) - yStart) / scale - 1e-9) + 1) / MAJOR) * MAJOR : 10;
+  const tooMany = cells > MAX_CELLS;
+  cells = Math.min(MAX_CELLS, Math.max(MAJOR, cells));
+  const rowH = cells <= 10 ? 30 : cells <= 20 ? 20 : cells <= 30 ? 15 : cells <= 45 ? 11 : 9;
   const wave = yStart > 0 ? 1 : 0;
+  const waveH = wave ? Math.max(22, rowH * 2) : 0;
   const topVal = hasScale ? yStart + cells * scale : 0;
   const labelChars = hasScale ? Math.max(String(topVal.toLocaleString()).length, 2) : 2;
   const ml = 46 + labelChars * 9;
   const colW = n > 8 ? 54 : 84;
   const mt = title ? 72 : 46; const mb = 70; const mr = 52;
   const plotW = colW * n;
-  const plotH = rowH * (cells + wave);
+  const plotH = rowH * cells + waveH;
   const W = ml + plotW + mr; const H = mt + plotH + mb;
   const x = (i) => ml + colW * (i + 0.5);
   const baseY = mt + plotH;
-  const y = (v) => baseY - wave * rowH - ((v - yStart) / scale) * rowH;
-  const v = (py) => yStart + ((baseY - wave * rowH - py) / rowH) * scale;
-  return { n, cells, rowH, colW, ml, mt, mb, mr, plotW, plotH, W, H, x, y, v, baseY, wave, hasScale, tooMany, scale, yStart, topVal };
+  const y = (v) => baseY - waveH - ((v - yStart) / scale) * rowH;
+  const v = (py) => yStart + ((baseY - waveH - py) / rowH) * scale;
+  return { n, cells, rowH, colW, ml, mt, mb, mr, plotW, plotH, W, H, x, y, v, baseY, wave, waveH, hasScale, tooMany, scale, yStart, topVal };
 }
 
 export function drawFrame(svg, L, d, { labels }) {
@@ -30,21 +32,12 @@ export function drawFrame(svg, L, d, { labels }) {
   const g = s('g');
   const left = L.ml; const right = L.ml + L.plotW; const top = L.mt; const bottom = L.baseY;
   g.append(s('rect', { x: left, y: top, width: L.plotW, height: L.plotH, fill: '#fffdf6' }));
-  // 보조선
-  if (L.hasScale) {
-    const st = snapStep(L.scale);
-    const sub = Math.round(L.scale / st);
-    if (sub > 1 && sub <= 10 && L.rowH / sub >= 4) {
-      for (let k = 0; k < L.cells; k++) for (let j = 1; j < sub; j++) {
-        const yy = L.y(L.yStart + (k + j / sub) * L.scale);
-        g.append(s('line', { x1: left, x2: right, y1: yy, y2: yy, class: 'g-grid minor' }));
-      }
-    }
-  }
+  // 가로 눈금: 작은 눈금(점선)마다, 큰 눈금(실선·수)은 작은 칸 5개마다
   for (let k = 0; k <= L.cells; k++) {
-    const yy = L.hasScale ? L.y(L.yStart + k * L.scale) : bottom - L.wave * L.rowH - k * L.rowH;
-    g.append(s('line', { x1: left, x2: right, y1: yy, y2: yy, class: 'g-grid' }));
-    if (L.hasScale) {
+    const yy = L.hasScale ? L.y(L.yStart + k * L.scale) : bottom - L.waveH - k * L.rowH;
+    const major = k % MAJOR === 0;
+    g.append(s('line', { x1: left, x2: right, y1: yy, y2: yy, class: major ? 'g-grid' : 'g-grid minor' }));
+    if (L.hasScale && major) {
       const val = L.yStart + k * L.scale;
       g.append(s('text', { x: left - 8, y: yy + 5, 'text-anchor': 'end', class: 'g-label' }, Number(val.toFixed(2)).toLocaleString()));
     }
@@ -55,7 +48,7 @@ export function drawFrame(svg, L, d, { labels }) {
   }
   // 물결선
   if (L.wave && L.hasScale) {
-    const y0 = bottom; const y1 = bottom - L.rowH;
+    const y0 = bottom; const y1 = bottom - L.waveH;
     g.append(s('text', { x: left - 8, y: y0 + 5, 'text-anchor': 'end', class: 'g-label' }, '0'));
     const mid = (y0 + y1) / 2;
     g.append(s('path', { d: `M${left - 10} ${mid + 3} q 5 -8 10 0 t 10 0`, stroke: '#2a1c12', 'stroke-width': 2, fill: 'none' }));
@@ -123,8 +116,7 @@ function drawAnswer(svg, L, values) {
 }
 
 export function autoScale(maxV) {
-  const opts = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000];
-  return opts.find((o) => maxV / o <= 15) || 100000;
+  return SCALE_OPTIONS.find((o) => maxV / o <= 25) || SCALE_OPTIONS[SCALE_OPTIONS.length - 1];
 }
 
 const ICON = {

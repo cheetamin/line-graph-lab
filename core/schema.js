@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS works (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
   student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  kind TEXT NOT NULL,             -- weather | topic
+  kind TEXT NOT NULL,             -- weather | topic:<주제 번호>
   topic_id INTEGER,
   data TEXT NOT NULL DEFAULT '{}',
   status TEXT NOT NULL DEFAULT 'draft', -- draft | submitted | approved | rejected
@@ -81,4 +81,13 @@ CREATE TABLE IF NOT EXISTS works (
   UNIQUE(student_id, kind)
 );
 CREATE INDEX IF NOT EXISTS idx_works_class ON works(class_id, status);
+CREATE TABLE IF NOT EXISTS surveys (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,              -- student | teacher
+  user_id INTEGER NOT NULL,
+  answers TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  UNIQUE(class_id, role, user_id)
+);
 `;

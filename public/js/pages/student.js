@@ -11,31 +11,50 @@ import * as topics from './topics.js';
 import * as table from './table.js';
 import * as graphCh from './graphpage.js';
 import * as gallery from './gallery.js';
+import * as life from './life.js';
+import * as survey from './survey.js';
 
 export const CHAPTERS = [
   { key: 'home', label: '목차', icon: 'home', mod: home },
   { key: 'weather', label: '기상자료 탐험실', icon: 'weather', mod: weather },
-  { key: 'topics', label: '주제 선택·투표', icon: 'vote', mod: topics },
+  { key: 'topics', label: '주제 선택·투표', labelLottery: '나의 주제·기록', labelOwn: '주제 고르기·기록', icon: 'vote', mod: topics },
   { key: 'table', label: '자료표 만들기', icon: 'table', mod: table },
   { key: 'graph', label: '꺾은선그래프 그리기', icon: 'graph', mod: graphCh },
+  { key: 'life', label: '우리 고장 그래프', icon: 'town', mod: life },
   { key: 'gallery', label: '작품 전시관', icon: 'gallery', mod: gallery },
+  { key: 'survey', label: '만족도 조사', icon: 'brush', mod: survey },
 ];
 
+// 왼쪽 책갈피 6개: 1차(기상자료) → 2차(내 주제: 주제·기록 / 표·그래프) → 3차(우리 고장) → 전시관
+export const TABS = [
+  { keys: ['home'], label: '목차', icon: 'home' },
+  { keys: ['weather'], no: '1차', label: '기상자료 탐험실', icon: 'weather' },
+  { keys: ['topics'], no: '2차', label: '나의 주제·기록', icon: 'vote' },
+  { keys: ['table', 'graph'], no: '2차', label: '자료표·그래프', icon: 'graph' },
+  { keys: ['life'], no: '3차', label: '우리 고장 그래프', icon: 'town' },
+  { keys: ['gallery'], label: '작품 전시관', icon: 'gallery' },
+];
+export const chLabel = (c) => { const m = S.data?.cls.settings.topicMode; return (m === 'lottery' && c.labelLottery) || (m === 'own' && c.labelOwn) || c.label; };
+// 제출(확인 대기·승인)한 주제 작품
+export const myDone = () => (S.data?.works || []).filter((w) => w.kind === 'topic' && ['submitted', 'approved'].includes(w.status));
 export function chapterDone(key) {
   const d = S.data; if (!d) return false;
   const g = d.gates;
-  const topicWork = d.works.find((w) => w.kind === 'topic');
+  const topicWork = d.works.find((w) => w.kind === 'topic' && w.topicId === g.research);
+  const own = d.cls.settings.topicMode === 'own';
   if (key === 'weather') return g.weatherDone;
-  if (key === 'topics') return d.vote !== null && g.research && g.submittedTopics.includes(g.research);
+  if (key === 'topics') return own ? myDone().length >= d.cls.settings.minWorks || !!(g.research && g.submittedTopics.includes(g.research)) : (d.cls.settings.topicMode === 'lottery' || d.vote !== null) && g.research && g.submittedTopics.includes(g.research);
   if (key === 'table') return !!(g.research && d.state.tables?.[g.research]?.verified);
-  if (key === 'graph') return !!topicWork && ['submitted', 'approved'].includes(topicWork.status);
+  if (key === 'survey') return false;
+  if (key === 'life') { const w = d.works.find((x) => x.kind === 'life'); return !!w && ['submitted', 'approved'].includes(w.status); }
+  if (key === 'graph') return own ? myDone().length >= d.cls.settings.minWorks : !!topicWork && ['submitted', 'approved'].includes(topicWork.status);
   return false;
 }
 export const lockReason = (key) => (key === 'home' ? null : S.data.gates[key] || null);
 
 export function lockedSpread(ch, reason, app) {
   return {
-    left: (el) => el.append(h('div', { class: 'page-head' }, icon(ch.icon), h('h2', null, ch.label)), h('div', { class: 'divider' }), h('p', null, '이 장은 아직 열리지 않았어요.')),
+    left: (el) => el.append(h('div', { class: 'page-head' }, icon(ch.icon), h('h2', null, chLabel(ch))), h('div', { class: 'divider' }), h('p', null, '이 장은 아직 열리지 않았어요.')),
     right: (el) => el.append(h('div', { class: 'lock-page' }, h('div', null,
       sealImg('封'),
       h('h3', null, '아직 봉인된 장이에요'), h('p', null, reason),
@@ -71,14 +90,18 @@ export async function mountStudent(root) {
       return ch.mod.spreads(this);
     },
     renderTabs() {
-      tabs.replaceChildren(...CHAPTERS.map((c) => {
-        const locked = !!lockReason(c.key);
-        const done = chapterDone(c.key);
+      tabs.replaceChildren(...TABS.map((t) => {
+        const first = t.keys[0];
+        // 자료표·그래프 칸: 표를 완성했으면 그래프 쪽으로 바로
+        const target = t.keys.length > 1 && !lockReason('graph') && S.data.state.tables?.[S.data.gates.research]?.verified ? 'graph' : first;
+        const locked = !!lockReason(first);
+        const done = chapterDone(t.keys[t.keys.length - 1]);
+        const here = t.keys.includes(this.ch);
         return h('button', {
-          class: `side-tab ${done ? 'done' : ''}`, type: 'button', 'aria-current': c.key === this.ch ? 'page' : undefined, 'aria-disabled': locked ? 'true' : undefined,
-          title: locked ? lockReason(c.key) : c.label,
-          onClick: () => { const cur = CHAPTERS.findIndex((x) => x.key === this.ch); const to = CHAPTERS.findIndex((x) => x.key === c.key); if (c.key === this.ch && this.idx === 0) return; const adjacent = to === cur + 1 && this.idx === this.list.length - 1; this.go(c.key, 0, adjacent ? 'next' : 'jump'); },
-        }, h('img', { src: iconSrc(c.icon), alt: '' }), h('span', null, c.label), locked ? h('span', { class: 'lock', 'aria-label': '잠김' }, '🔒') : null, done ? h('span', { class: 'tick' }, '완료') : null);
+          class: `side-tab ${done ? 'done' : ''}`, type: 'button', 'aria-current': here ? 'page' : undefined, 'aria-disabled': locked ? 'true' : undefined,
+          title: locked ? lockReason(first) : `${t.no ? `${t.no} ` : ''}${t.label}`,
+          onClick: () => { const cur = CHAPTERS.findIndex((x) => x.key === this.ch); const to = CHAPTERS.findIndex((x) => x.key === target); if (target === this.ch && this.idx === 0) return; const adjacent = to === cur + 1 && this.idx === this.list.length - 1; this.go(target, 0, adjacent ? 'next' : 'jump'); },
+        }, h('img', { src: iconSrc(t.icon), alt: '' }), h('span', null, t.no ? h('small', { class: 'tab-no' }, t.no) : null, t.label), locked ? h('span', { class: 'lock', 'aria-label': '잠김' }, '🔒') : null, done ? h('span', { class: 'tick' }, '완료') : null);
       }));
     },
     spreadMeta(i) {
@@ -123,7 +146,7 @@ export async function mountStudent(root) {
       if (reason) { this.queue = []; toast(reason, 'bad'); return; }
       return this.go(nc.key, delta > 0 ? 0 : -1, delta > 0 ? 'next' : 'prev');
     },
-    refresh() { return this.go(this.ch, this.idx, null, { keepScroll: true }); },
+    async refresh() { for (let i = 0; book.busy && i < 60; i++) await new Promise((r) => setTimeout(r, 50)); return this.go(this.ch, this.idx, null, { keepScroll: true }); },
     async reload(keep = true) { await loadStudent(); if (keep) return this.refresh(); return null; },
   };
 

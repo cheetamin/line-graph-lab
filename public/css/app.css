@@ -1040,3 +1040,146 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
   .qr-print-code { font-size: 18pt; } .qr-print-code b { font-family: monospace; letter-spacing: .2em; } .qr-print-help { font-size: 12pt; }
 }
 @media (max-width: 700px) { .qr-card { grid-template-columns: 1fr; } .wiz-steps { grid-template-columns: repeat(2, 1fr); } }
+
+/* 제비뽑기: 학생 제비 쪽지 */
+.lot-slip { position: relative; margin: 10px auto 0; max-width: 360px; padding: 26px 22px 22px; text-align: center; background: linear-gradient(#fbf1d6, #ecd6a4); border: 2px solid #8b6a3e; border-radius: 4px 4px 14px 14px / 4px 4px 24px 24px; box-shadow: 0 8px 18px rgba(60,30,10,.3), inset 0 0 0 5px rgba(255,248,230,.5), inset 0 0 0 6px rgba(139,106,62,.4); }
+.lot-slip::before { content: ''; position: absolute; left: 50%; top: -14px; width: 18px; height: 28px; transform: translateX(-50%); background: #a3302a; border-radius: 3px; box-shadow: 0 2px 4px rgba(0,0,0,.3); }
+.lot-head { font-family: var(--f-title); color: var(--red); letter-spacing: .2em; font-size: .95rem; }
+.lot-name { font-family: var(--f-title); font-size: 1.7rem; line-height: 1.3; margin: 8px 0; color: #2a1810; word-break: keep-all; }
+.lot-unit { font-size: .95rem; }
+.lot-seal { position: absolute; right: 10px; bottom: 8px; width: 46px; height: 46px; opacity: .9; transform: rotate(-8deg); }
+.topic-mini { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.topic-chip { font-size: .8rem; padding: 1px 8px; border-radius: 999px; background: rgba(255,250,236,.8); border: 1px solid #c9ad80; }
+.topic-chip.mine { background: #7b2620; color: #fbecc9; border-color: #5a1710; }
+
+/* 직접 고르기: 꼭 낼 그래프 칸, 내 주제 목록 */
+.quota { margin-top: 10px; padding: 10px 12px; border: 1.5px solid #b48a55; border-radius: 6px; background: rgba(255,248,228,.75); }
+.quota-head { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--f-title); }
+.quota-head b { color: var(--red); }
+.quota-seals { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.quota-slot { width: 74px; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+.quota-slot > span, .quota-slot > img { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; }
+.quota-slot > span { border: 2px dashed #b48a55; color: #9a7a50; font-family: var(--f-title); }
+.quota-slot.extra > span { border-color: #c9b48f; color: #b9a07a; }
+.quota-slot small { font-size: .72rem; line-height: 1.2; word-break: keep-all; color: #5a4632; }
+.my-topic { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; background: rgba(255,250,236,.7); border: 1px solid #d4bc92; }
+.my-topic.cur { border-color: #7b2620; box-shadow: inset 3px 0 0 #7b2620; }
+.my-topic-name { flex: 1; font-weight: 700; word-break: keep-all; }
+.topic-chip.pick { cursor: pointer; font: inherit; font-size: .85rem; padding: 3px 10px; min-height: 30px; color: #2a1810; }
+.topic-chip.pick:hover:not(:disabled) { background: #fff3d6; border-color: #8b6a3e; }
+.topic-chip.pick:disabled { opacity: .4; cursor: not-allowed; }
+.topic-chip.pick.mine { background: #e9d9b4; color: #2a1810; border-color: #8b6a3e; }
+.topic-chip.pick.cur { background: #7b2620; color: #fbecc9; border-color: #5a1710; }
+.topic-chip .chip-st { font-size: .75rem; opacity: .85; }
+.author-plaque.as-btn { cursor: pointer; font-family: var(--f-title); font-size: 1.35rem; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.author-plaque.as-btn:hover { filter: brightness(1.06); }
+.plaque-more { font-size: .78rem; font-family: var(--f-body, inherit); opacity: .9; }
+.who-row { margin-top: 6px; gap: 6px; align-items: center; }
+.who-select { min-height: 34px; padding: 2px 8px; max-width: 220px; }
+
+/* ───── 교사 관리실(책 장면) ───── */
+.teacher-who { display: flex; flex-direction: column; gap: 4px; align-items: center; font-size: .85rem; }
+.class-select { max-width: 200px; min-height: 30px; font-size: .8rem; padding: 1px 6px; }
+.side-tab .tab-count { margin-left: auto; min-width: 22px; height: 22px; border-radius: 11px; background: #a3302a; color: #fff; font-size: .75rem; display: grid; place-items: center; padding: 0 6px; }
+.teacher-book .sheet { background: rgba(255,250,236,.6); border: 1px solid #d6bf95; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; box-shadow: none; }
+.teacher-book .admin-table.compact th, .teacher-book .admin-table.compact td { padding: 4px 5px; font-size: .85rem; }
+.teacher-book .admin-table.compact input { min-height: 32px; padding: 2px 6px; width: 100%; min-width: 64px; }
+.roster-table-wrap { max-height: 46cqh; overflow: auto; border: 1px solid #c9ad80; border-radius: 4px; background: rgba(255,252,242,.8); }
+.roster-table { width: 100%; border-collapse: collapse; }
+.roster-table th { position: sticky; top: 0; background: #ead7ad; z-index: 1; font-family: var(--f-title); font-weight: 400; padding: 5px; }
+.roster-table td { padding: 2px 3px; border-top: 1px solid #e3d2ae; }
+.roster-table input { width: 100%; min-height: 34px; padding: 2px 6px; border: 1px solid transparent; background: transparent; }
+.roster-table input:focus { border-color: #8b6a3e; background: #fff; outline: none; }
+.roster-table .no-in { width: 58px; text-align: center; }
+.roster-table tr.bad td { background: #f7dcd4; }
+.roster-table .row-err { color: #a3302a; font-size: .78rem; white-space: nowrap; }
+.row-del { border: 0; background: none; color: #8b5a3e; font-size: 1.2rem; cursor: pointer; width: 30px; height: 30px; }
+.row-del:hover { color: #a3302a; }
+.mode-card { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1.5px solid #cdb488; border-radius: 6px; background: rgba(255,250,236,.6); cursor: pointer; }
+.mode-card.on { border-color: #7b2620; background: #fbefd2; box-shadow: inset 4px 0 0 #7b2620; }
+.mode-card input { margin-top: 4px; }
+.rec-item { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; text-align: left; padding: 5px 8px; border: 1px solid #d6bf95; border-radius: 5px; background: rgba(255,250,236,.6); cursor: pointer; font: inherit; color: inherit; }
+.rec-item[aria-pressed="true"] { border-color: #7b2620; background: #fbefd2; }
+.rec-item:disabled { opacity: .5; cursor: default; }
+.rec-block { margin-top: 10px; }
+.export-row { padding: 8px 0; border-bottom: 1px dashed #cdb488; }
+.lot-box { position: relative; margin: 10px auto 0; max-width: 380px; min-height: 150px; padding: 18px; text-align: center; border: 2px solid #8b6a3e; border-radius: 8px; background: linear-gradient(#fbf1d6, #ecd6a4); display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.lot-who { font-family: var(--f-title); color: var(--red); }
+.lot-topic { font-family: var(--f-title); font-size: 1.6rem; color: #2a1810; word-break: keep-all; }
+.teacher-book .pick-stage { min-height: 170px; }
+.teacher-book .pick-name { font-size: clamp(1.6rem, 4.5cqh, 2.6rem); }
+.teacher-book .roster-table input, .teacher-book .admin-table.compact input { height: 34px; min-height: 0; font-size: .9rem; }
+.teacher-book .admin-table.compact .btn { min-height: 0; }
+.teacher-book .admin-table td.wrap { white-space: normal; min-width: 180px; }
+.teacher-book .admin-table td.wrap .topic-chip { font-size: .74rem; padding: 0 6px; }
+
+/* 학생 입장: 학급 코드 → 우리 반 → 내 이름 */
+.class-find:empty { display: none; }
+.class-find { margin: 2px 0 6px; padding: 8px 10px; border: 1.5px solid #b48a55; border-radius: 6px; background: rgba(255,248,228,.85); }
+.class-title { font-family: var(--f-title); display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.class-title b { color: var(--red); font-size: 1.1rem; }
+.name-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 5px; max-height: 168px; overflow: auto; padding: 2px; }
+.name-chip { display: flex; align-items: center; gap: 5px; min-height: 38px; padding: 3px 7px; border: 1px solid #c9ad80; border-radius: 5px; background: #fffaf0; font: inherit; font-size: .9rem; color: #2a1810; cursor: pointer; text-align: left; word-break: keep-all; }
+.name-chip small { color: #8a6a44; font-size: .72rem; min-width: 14px; }
+.name-chip[aria-pressed="true"] { background: #7b2620; color: #fbecc9; border-color: #5a1710; }
+.name-chip[aria-pressed="true"] small { color: #f0d9a8; }
+.login-who { align-items: flex-end; gap: 10px; flex-wrap: nowrap; }
+.who-picked { font-family: var(--f-title); color: var(--red); padding-bottom: 12px; }
+.side-tab .tab-no { display: block; font-size: .72em; color: #8b2a20; font-weight: 700; letter-spacing: .05em; line-height: 1.1; }
+.side-tab[aria-current="page"] .tab-no { color: #f6d98e; }
+/* 3차: 우리 고장 자료 카드 */
+.life-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.life-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; padding: 9px 11px; border: 1.5px solid #c9ad80; border-radius: 7px; background: rgba(255,250,236,.85); font: inherit; color: #2a1810; cursor: pointer; }
+.life-card b { font-family: var(--f-title); font-size: 1.02rem; word-break: keep-all; }
+.life-card .small { line-height: 1.35; color: #4a3a2a; }
+.life-card:hover { border-color: #8b6a3e; background: #fff6df; }
+.life-card.on { border-color: #7b2620; box-shadow: inset 4px 0 0 #7b2620; background: #fbefd2; }
+.src-link { display: block; padding: 6px 10px; border-radius: 5px; background: #fff8e6; border: 1px solid #d6bf95; color: #5a1710; font-weight: 700; text-decoration: none; word-break: keep-all; }
+.src-link:hover { background: #fbecc9; }
+.life-table input { min-width: 0; width: 100%; }
+.act-list { display: flex; flex-direction: column; gap: 8px; }
+.act { border: 1.5px solid #c9ad80; border-radius: 7px; background: rgba(255,250,236,.75); padding: 7px 9px; }
+.act.done { border-color: #5d7f4f; }
+.act-head { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; }
+.act-head img { width: 34px; height: 34px; }
+.act-head b { font-family: var(--f-title); font-size: 1.05rem; }
+.act-steps { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; padding-left: 42px; }
+.act-step { font: inherit; font-size: .82rem; padding: 2px 8px; border-radius: 999px; border: 1px solid #c9ad80; background: #fffaf0; color: #2a1810; cursor: pointer; text-align: left; }
+.act-step.on { background: #e5efd9; border-color: #6d8f5d; }
+.act-step[aria-disabled="true"] { opacity: .6; }
+.act .tab-no { margin-right: 5px; }
+.life-table { width: 100%; max-width: 360px; margin: 0 auto; }
+.life-table td { padding: 3px 6px; }
+.life-table input { height: 36px; text-align: center; }
+.name-grid { max-height: 128px; }
+.life-cards.three { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.life-card.compact { padding: 6px 8px; gap: 2px; }
+.life-card.compact b { font-size: .92rem; }
+.life-card.compact .small { font-size: .74rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.life-group { margin: 10px 0 4px; font-size: 1rem; }
+.pub-data { margin-top: 10px; padding: 8px; border: 1.5px solid #8b6a3e; border-radius: 6px; background: rgba(255,252,240,.9); }
+.pub-head { margin-bottom: 4px; font-family: var(--f-title); color: #5a1710; }
+.pub-table th, .pub-table td { padding: 3px 5px; font-size: .82rem; white-space: nowrap; text-align: center; }
+.tick-guide { display: flex; gap: 10px; align-items: center; margin: 4px 0 8px; padding: 6px 8px; border: 1px dashed #b48a55; border-radius: 6px; background: rgba(255,250,236,.7); }
+.tick-svg { width: 172px; flex: 0 0 auto; }
+.warn-text { color: #a3302a; }
+
+/* 만족도 조사 */
+.sv-form { display: flex; flex-direction: column; gap: 10px; }
+.sv-item { padding: 8px 10px; border: 1px solid #d6bf95; border-radius: 6px; background: rgba(255,250,236,.75); }
+.sv-item.need { border-color: #a3302a; box-shadow: 0 0 0 2px rgba(163,48,42,.25); }
+.sv-q { display: flex; gap: 6px; font-weight: 700; margin-bottom: 6px; word-break: keep-all; }
+.sv-no { flex: 0 0 22px; height: 22px; border-radius: 50%; background: #7b2620; color: #fbecc9; display: grid; place-items: center; font-size: .8rem; }
+.sv-scales { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.sv-scale { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 2px; border: 1.5px solid #c9ad80; border-radius: 6px; background: #fffaf0; font: inherit; color: #2a1810; cursor: pointer; }
+.sv-scale b { font-family: var(--f-title); font-size: 1.1rem; }
+.sv-scale small { font-size: .68rem; line-height: 1.15; word-break: keep-all; text-align: center; }
+.sv-scale[aria-pressed="true"] { background: #7b2620; color: #fbecc9; border-color: #5a1710; }
+.sv-choices { display: flex; flex-wrap: wrap; gap: 5px; }
+.survey-call { border-color: #b8862f !important; background: #fff4d8 !important; }
+.sv-bar { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; margin-bottom: 8px; }
+.sv-bar .q { font-size: .86rem; word-break: keep-all; }
+.sv-bar .avg { font-family: var(--f-title); color: #7b2620; }
+.sv-dist { grid-column: 1 / -1; display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eadfc6; }
+.sv-dist i { display: block; height: 100%; }
+.sv-texts { margin: 4px 0 10px; padding-left: 18px; font-size: .86rem; }

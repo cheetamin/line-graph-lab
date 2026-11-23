@@ -38,6 +38,7 @@ test('교사 가입·학급·학생 등록', async () => {
   assert.equal(r.status, 200);
   r = await T('POST', '/api/teacher/classes', { name: '4학년 2반' });
   ctx.classId = r.body.id; ctx.code = r.body.code;
+  await T('PUT', `/api/teacher/classes/${ctx.classId}`, { settings: { topicMode: 'class' } }); // 이 테스트는 학급 공동 조사 방식
   r = await T('POST', `/api/teacher/classes/${ctx.classId}/students`, { students: [{ number: 1, name: '가람' }, { number: 2, name: '나래' }, { number: 3, name: '다솜' }] });
   assert.equal(r.body.created.length, 3);
   ctx.pins = Object.fromEntries(r.body.created.map((c) => [c.number, c.pin]));

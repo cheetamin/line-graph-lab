@@ -81,12 +81,17 @@ export function validateEntry(topic, month, value) {
   return null;
 }
 
-// 세로 눈금 한 칸 크기 후보
-export const SCALE_OPTIONS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 50000, 100000];
+// 세로 '작은 눈금 한 칸(점선 한 칸)' 크기 후보. 작은 칸 5개 = 큰 눈금(실선) 한 칸
+export const SCALE_OPTIONS = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000];
+export const MAJOR = 5;      // 큰 눈금 한 칸에 들어가는 작은 칸 수
+export const MAX_CELLS = 60; // 작은 칸 최대 개수
+export const MIN_CELLS = 3;  // 이보다 적으면 변화가 잘 안 보임
 
-// 모눈에서 점이 붙는 단위(눈금 한 칸 크기에 따라)
+// 모눈에서 점이 붙는 단위: 작은 눈금 한 칸을 10등분(자연수 자료는 1보다 작게 쪼개지 않음)
 export function snapStep(scale) {
   if (scale >= 10) return scale / 10;
-  if (scale >= 2) return 1;
-  return 0.5;
+  if (scale >= 1) return Math.min(scale, 0.5) === 0.5 && scale < 2 ? 0.5 : 1;
+  return 0.1;
 }
+// 작은 눈금이 몇 칸 필요한지
+export function cellsNeeded(maxV, yStart, scale) { return Math.ceil((maxV - (yStart || 0)) / scale - 1e-9); }

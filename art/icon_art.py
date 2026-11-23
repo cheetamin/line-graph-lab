@@ -134,6 +134,23 @@ def brush_icon():
   </g>''')
 
 
+def town():
+    # 우리 고장: 성문 누각 + 유등(등불) — 3차 생활 활동
+    u = 'it'
+    return wrap(u, f'''
+  <path d="M24 58 Q52 52 80 30 Q108 52 136 58 Q108 56 80 40 Q52 56 24 58Z" fill="{INK}" filter="url(#brush{u})"/>
+  {ink('M36 62 H124', 5, RED, u)}
+  {ink('M44 64 V96 M116 64 V96', 6, INK, u)}
+  <path d="M18 98 H142 V134 H18Z" fill="{HANJI}" stroke="{INK}" stroke-width="5" stroke-linejoin="round" filter="url(#brush{u})"/>
+  <path d="M64 134 V116 Q80 100 96 116 V134" fill="{INK2}" stroke="{INK}" stroke-width="4" filter="url(#brush{u})"/>
+  {ink('M26 110 H54 M106 110 H134 M26 122 H54 M106 122 H134', 2.5, INK2, u)}
+  <g transform="translate(128 26)">
+    {ink('M0 -12 V-4', 2.5, INK, u)}
+    <ellipse cx="0" cy="8" rx="11" ry="13" fill="{RED}" stroke="{INK}" stroke-width="3" filter="url(#brush{u})"/>
+    <ellipse cx="0" cy="8" rx="4" ry="6" fill="{GOLD}" opacity=".85"/>
+  </g>''')
+
+
 def seal(ch, bg=RED):
     u = 'isl' + ch
     return wrap(u, f'''
@@ -144,6 +161,6 @@ def seal(ch, bg=RED):
 
 ASSETS = {
     'icon_home': home, 'icon_weather': weather, 'icon_vote': vote, 'icon_table': table, 'icon_graph': graph,
-    'icon_gallery': gallery, 'icon_search': search, 'icon_book': book, 'icon_scroll': scroll, 'icon_brush': brush_icon,
+    'icon_gallery': gallery, 'icon_search': search, 'icon_book': book, 'icon_scroll': scroll, 'icon_brush': brush_icon, 'icon_town': town,
     'seal_lock': lambda: seal('封'), 'seal_done': lambda: seal('完'), 'seal_show': lambda: seal('展'), 'seal_wait': lambda: seal('待'), 'seal_table': lambda: seal('表'),
 }

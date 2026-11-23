@@ -1,8 +1,10 @@
 // 체험용(가상) 학급 데이터. 실제 운영 데이터와 구분되도록 학급 이름에 '체험용'을 붙이고 is_demo=1로 저장합니다.
-// 기상자료(폭염일수)는 실제 값을 지어내지 않도록 체험 데이터에 넣지 않습니다.
+// 모든 단계를 둘러볼 수 있도록 기상자료·우리 고장 자료도 '예시(가상) 값'으로 채웁니다. 실제 통계가 아니에요.
 import { topicById } from '../public/shared/topics.js';
 import { DEFAULT_SETTINGS } from './api.js';
 import { computeStats } from '../public/shared/stats.js';
+import { SCALE_OPTIONS } from '../public/shared/topics.js';
+import { DEFAULT_LIFE_SOURCES } from '../public/shared/life.js';
 
 const NAMES = ['체험학생', '김하늘', '이도윤', '박서연', '최지호', '정하은', '강민준', '조수아', '윤시우', '장예린',
   '임주원', '한지안', '오서준', '서다인', '신우진', '권나연', '황준서', '안채원', '송유찬', '전소율'];
@@ -17,80 +19,116 @@ export async function seedDemo({ db, sec, code = 'DEMO26', teacherUser = 'demo',
     const r = db.run('INSERT INTO teachers(username, name, pw_hash, created_at) VALUES (?,?,?,?)', [teacherUser, '체험 선생님', await sec.hash(teacherPw), t]);
     teacher = { id: Number(r.lastInsertRowid) };
   }
-  const settings = { ...DEFAULT_SETTINGS, activeTopics: [3, 7, 10, 19], notice: '체험용 가상 학급입니다. 친구들의 자료와 작품은 예시로 만든 가상 데이터예요.' };
+  const settings = { ...DEFAULT_SETTINGS, topicMode: 'own', minWorks: 3, school: { name: '체험초등학교', region: '체험시', manual: true }, grade: 4, classNo: 1, nickname: '체험반',
+    notice: '체험용 가상 학급입니다. 친구들의 자료와 작품은 예시로 만든 가상 데이터예요.' };
   const c = db.run('INSERT INTO classes(teacher_id, name, code, settings, is_demo, created_at) VALUES (?,?,?,?,1,?)', [teacher.id, '체험용 4학년 1반', code, JSON.stringify(settings), t]);
   const classId = Number(c.lastInsertRowid);
   const hash = await sec.hash(pin);
-  const R = rng(20261122);
+  const R = rng(20261123);
   const ids = [];
   for (let i = 0; i < NAMES.length; i++) {
     const r = db.run('INSERT INTO students(class_id, number, name, nickname, pin_hash, created_at) VALUES (?,?,?,?,?,?)', [classId, i + 1, NAMES[i], '', hash, t]);
     ids.push(Number(r.lastInsertRowid));
   }
-  const base = {
-    3: [6, 8, 10, 12, 14, 12, 9, 5, 11, 12, 13],
-    7: [8, 9, 14, 17, 20, 18, 12, 10, 18, 19, 15],
-    10: [3, 4, 6, 8, 10, 12, 12, 13, 16, 19, 22],
-    19: [3000, 2000, 2500, 3000, 4000, 2000, 1500, 5000, 3000, 3500, 4000],
-  };
-  const topicsVote = [3, 7, 7, 10, 6, 1, 3, 7, 21, 24, 10, 7, 3, 19, 11, 7, 3, 10, 16];
+  // 학생마다 스스로 고른 주제 1~4개(친구와 겹쳐도 됨). 1번(체험학생)은 아직 시작 전.
+  const pick = (n) => { const p = settings.assignPool.slice(); for (let i = p.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } return p.slice(0, n); };
+  // 계절 흐름(1~11월)을 주제 성격에 맞춰 크기만 바꿈
+  const shape = [0.45, 0.5, 0.7, 0.8, 1, 0.85, 0.6, 0.35, 0.8, 0.9, 0.75];
   const days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30];
-  for (let k = 1; k < ids.length; k++) {
-    const sid = ids[k];
-    db.run('INSERT INTO votes(class_id, student_id, topic_id, updated_at) VALUES (?,?,?,?)', [classId, sid, topicsVote[k - 1], t]);
-    for (const tid of [3, 7, 10, 19]) {
-      if (tid === 10 && k % 4 === 0) continue; // 일부 학생은 이 주제 미응답
-      const topic = topicById(tid);
-      for (let m = 1; m <= 11; m++) {
-        let status = 'value'; let v = base[tid][m - 1] + Math.round((R() - 0.5) * base[tid][m - 1] * 0.8);
-        if (tid === 19) v = Math.max(0, Math.round(v / 500) * 500);
-        if (topic.kind === 'days') v = Math.min(days[m - 1], Math.max(0, v));
-        v = Math.max(0, v);
-        if (R() < 0.04) { status = 'unknown'; v = null; }
-        db.run('INSERT INTO responses(class_id, student_id, topic_id, month, status, value, source, updated_at) VALUES (?,?,?,?,?,?,?,?)',
-          [classId, sid, tid, m, status, v, R() < 0.5 ? 'record' : 'memory', t]);
-      }
-      db.run('INSERT INTO submissions(class_id, student_id, topic_id, submitted_at) VALUES (?,?,?,?)', [classId, sid, tid, t]);
-    }
-    db.run('INSERT INTO student_state(student_id, class_id, state, updated_at) VALUES (?,?,?,?)', [sid, classId, JSON.stringify({ weatherDone: true, research: { topicId: [3, 7, 10][k % 3] } }), t]);
-  }
-  // 승인된 예시 작품(학급 집계값으로 그림)
-  const agg = (tid) => {
-    const topic = topicById(tid);
-    const out = [];
-    for (let m = 1; m <= 11; m++) {
-      const rows = db.all("SELECT value FROM responses WHERE class_id = ? AND topic_id = ? AND month = ? AND status = 'value'", [classId, tid, m]);
-      const sum = rows.reduce((a, r) => a + Number(r.value), 0);
-      out.push(rows.length ? (topic.agg === 'avg' ? Math.round((sum / rows.length) * 10) / 10 : sum) : null);
-    }
-    return out;
-  };
+  const own = (topic) => shape.map((f, m) => {
+    let v;
+    if (topic.kind === 'best') v = Math.round(3 + m * 1.8 + R() * 3);
+    else if (topic.kind === 'days') v = Math.min(days[m], Math.round(f * (10 + R() * 14)));
+    else if (topic.kind === 'hours') v = Math.round(f * (8 + R() * 14) * 2) / 2;
+    else v = Math.max(0, Math.round(f * (3 + R() * 9)));
+    return v;
+  });
   const labels = Array.from({ length: 11 }, (_, i) => `${i + 1}월`);
-  const samples = [
-    { k: 2, tid: 3, title: '우리 반 월별 감정 글쓰기를 한 날수', scale: 20, sentence: '5월에 감정 글쓰기를 가장 많이 했고 8월 방학에는 많이 줄었어요. 9월에 다시 크게 늘어났어요.' },
-    { k: 3, tid: 7, title: '우리 반이 운동한 날수의 변화', scale: 50, sentence: '봄이 되면서 운동한 날수가 점점 늘어났어요. 여름 방학인 8월에 가장 많이 줄었어요.' },
-    { k: 4, tid: 10, title: '배구 언더 서브 연속 성공 평균 기록', scale: 2, sentence: '연습을 할수록 평균 기록이 꾸준히 늘어났어요. 9월부터 늘어나는 폭이 더 커졌어요.' },
-    { k: 6, tid: 7, title: '월별 운동한 날수', scale: 50, sentence: '날씨가 따뜻한 5월에 운동을 가장 많이 했어요. 1월과 2월에는 운동한 날이 적었어요.' },
-    { k: 7, tid: 3, title: '감정 글쓰기 날수 변화', scale: 20, sentence: '학기 중에는 감정 글쓰기를 꾸준히 했지만 방학에는 줄었어요.' },
-    { k: 9, tid: 10, title: '서브 연속 성공 기록은 어떻게 변했을까?', scale: 2, sentence: '1월보다 11월의 평균 기록이 훨씬 높아졌어요. 꾸준히 연습한 결과라고 생각해요.' },
+  const sentences = [
+    '봄부터 점점 늘다가 여름 방학인 8월에 가장 많이 줄었어요. 9월에 다시 늘어났어요.',
+    '5월에 가장 많았어요. 날씨가 따뜻해서 더 많이 할 수 있었던 것 같아요.',
+    '1월과 2월에는 적었지만 학기가 시작되면서 꾸준히 늘어났어요.',
+    '8월에 크게 줄었다가 9월에 다시 늘어난 것이 가장 큰 변화예요.',
+    '연습할수록 기록이 꾸준히 좋아졌어요. 가을에 늘어나는 폭이 더 커졌어요.',
+    '여름보다 봄과 가을에 더 많이 했어요. 방학에는 생활 습관이 달라졌기 때문이라고 생각해요.',
   ];
-  for (const s of samples) {
-    const values = agg(s.tid);
-    const topic = topicById(s.tid);
-    const points = {}; values.forEach((v, i) => { if (v !== null) points[i] = v; });
-    const segments = []; for (let i = 1; i < values.length; i++) segments.push([i - 1, i]);
-    const st = computeStats(labels, values);
-    const data = {
-      title: s.title, xName: '월', xUnit: '월', yName: topic.unit === '일' ? '날수' : '횟수', yUnit: topic.unit, scale: s.scale, yStart: 0,
-      points, segments, labels, values, checked: true,
-      interp: { maxLabel: st.maxLabels[0], minLabel: st.minLabels[0], changeLabel: st.changeLabels[0], sentence: s.sentence },
+  let sampleNo = 0;
+  const EX = '체험용 예시 자료(실제 값 아님)';
+  // 그래프 작품 자료 만들기(모든 점·선분·해석이 맞는 완성 작품)
+  const workData = (lb, vals, title, unit, xUnit, yName, sentence) => {
+    const mx = Math.max(...vals); const mn = Math.min(...vals);
+    // 작은 눈금 한 칸(scale)은 작은 칸이 30칸 안쪽이 되게, 물결선 시작 값은 큰 눈금(작은 5칸) 단위로
+    const pickScale = (lo) => SCALE_OPTIONS.filter((o) => o >= 1).find((o) => (mx - lo) / o <= 30) || SCALE_OPTIONS[SCALE_OPTIONS.length - 1];
+    let scale = pickScale(0); let yStart = 0;
+    if (mn > mx * 0.5) { const s0 = pickScale(mn * 0.8); yStart = Math.floor((mn * 0.8) / (s0 * 5)) * s0 * 5; scale = pickScale(yStart); }
+    const points = {}; vals.forEach((v, i) => { points[i] = v; });
+    const segments = []; for (let i = 1; i < vals.length; i++) segments.push([i - 1, i]);
+    const st = computeStats(lb, vals);
+    return { title, xName: xUnit === '년' ? '연도' : '월', xUnit, yName, yUnit: unit, scale, yStart, points, segments, labels: lb, values: vals, checked: true,
+      interp: { maxLabel: st.maxLabels[0], minLabel: st.minLabels[0], changeLabel: st.changeLabels[0], sentence } };
+  };
+  const addWork = (sid, kind, topicId, data, status) => db.run('INSERT INTO works(class_id, student_id, kind, topic_id, data, status, updated_at, submitted_at) VALUES (?,?,?,?,?,?,?,?)',
+    [classId, sid, kind, topicId, JSON.stringify(data), status, t, status === 'draft' ? null : t]);
+  // 1차 기상자료(예시): 진주 2021~2025년 폭염일수
+  const wYears = [2021, 2022, 2023, 2024, 2025];
+  const weatherOf = () => { const base = [14, 17, 21, 33, 27]; return base.map((v) => Math.max(3, v + Math.round((R() - 0.5) * 6))); };
+  // 3차 우리 고장 자료(예시)
+  // 관광지 입장객 수는 공공데이터포털 실제 자료(DEFAULT_LIFE_SOURCES의 data), 공원 수·인구는 예시 값
+  const real = (id, from) => { const src = DEFAULT_LIFE_SOURCES.find((x) => x.id === id); const idx = src.data.years.map((y, i) => i).filter((i) => src.data.years[i] >= from && src.data.values[i] !== null);
+    return { sourceId: id, subject: src.title, unit: src.unit, years: idx.map((i) => src.data.years[i]), base: idx.map((i) => src.data.values[i]), real: true }; };
+  const LIFE = [
+    real('forest', 2017), real('zoo', 2017), real('wolasan', 2019), real('leesj', 2017), real('fortress', 2018), real('dino', 2020),
+    { sourceId: 'park', subject: '진주시 도시공원 수', unit: '곳', years: [2020, 2021, 2022, 2023, 2024], base: [262, 268, 275, 281, 290] },
+  ];
+  const lifeSentences = ['2020년에 입장객이 크게 줄었다가 2022년에 다시 많이 늘었어요.', '2019년에서 2020년 사이에 가장 많이 줄었어요. 감염병 때문인 것 같아요.', '해가 갈수록 조금씩 늘어났어요.'];
+  // 작품 수: 몇 명은 3개 이상, 몇 명은 1~2개 (1번 체험학생은 아래에서 따로)
+  const plan = [0, 3, 4, 2, 3, 1, 3, 2, 0, 3, 1, 0, 2, 0, 1, 0, 0, 1, 0, 0];
+  for (let k = 0; k < ids.length; k++) {
+    const sid = ids[k];
+    const me = k === 0; // 1번 체험학생: 모든 단계를 직접 둘러볼 수 있게
+    const nWorks = me ? 3 : plan[k] || 0;
+    const topics = pick(me ? 4 : Math.max(1, nWorks + (R() < 0.4 ? 1 : 0))).map(topicById);
+    if (me) topics.splice(0, topics.length, ...[3, 7, 11, 22].map(topicById));
+    const wv = weatherOf();
+    const state = {
+      weatherDone: true, tables: {}, research: { topicId: topics[topics.length - 1].id },
+      weather: { region: '진주', station: '진주', source: EX, visited: true, years: wYears, values: wv, tableChecked: true },
     };
-    db.run("INSERT INTO works(class_id, student_id, kind, topic_id, data, status, updated_at, submitted_at) VALUES (?,?,?,?,?,'approved',?,?)",
-      [classId, ids[s.k], 'topic', s.tid, JSON.stringify(data), t, t]);
-    const state = JSON.parse(db.get('SELECT state FROM student_state WHERE student_id = ?', [ids[s.k]]).state);
-    state.research = { topicId: s.tid };
-    state.tables = { [s.tid]: { values, verified: true } };
-    db.run('UPDATE student_state SET state = ? WHERE student_id = ?', [JSON.stringify(state), ids[s.k]]);
+    if (me || k % 3 === 1) addWork(sid, 'weather', null, workData(wYears.map((y) => `${y}년`), wv, '진주의 연도별 폭염일수', '일', '년', '폭염일수', '2024년에 폭염일수가 가장 많았어요. 2023년에서 2024년 사이에 가장 많이 늘었어요.'), 'approved');
+    topics.forEach((topic, ti) => {
+      const vals = own(topic);
+      for (let m = 1; m <= 11; m++) {
+        db.run('INSERT INTO responses(class_id, student_id, topic_id, month, status, value, source, updated_at) VALUES (?,?,?,?,?,?,?,?)',
+          [classId, sid, topic.id, m, 'value', vals[m - 1], R() < 0.5 ? 'record' : 'memory', t]);
+      }
+      db.run('INSERT INTO submissions(class_id, student_id, topic_id, submitted_at) VALUES (?,?,?,?)', [classId, sid, topic.id, t]);
+      if (me && ti === topics.length - 1) { state.tables[topic.id] = { values: vals, verified: true }; return; } // 표까지 완성 → 그래프는 직접 그려 보기
+      if (ti >= nWorks) return;
+      state.tables[topic.id] = { values: vals, verified: true };
+      const data = workData(labels, vals, `나의 ${topic.name.replace(/^월별 /, '')}`, topic.unit, '월', topic.unit === '일' ? '날수' : topic.unit === '시간' ? '시간' : '횟수', sentences[sampleNo++ % sentences.length]);
+      addWork(sid, `topic:${topic.id}`, topic.id, data, me ? (ti === 2 ? 'submitted' : 'approved') : (R() < 0.8 ? 'approved' : 'submitted'));
+    });
+    // 3차 우리 고장
+    if (me || k % 2 === 0 || k % 5 === 1) {
+      const ex = LIFE[me ? 0 : k % LIFE.length];
+      const vals = ex.real ? ex.base.slice() : ex.base.map((v) => v + Math.round((R() - 0.5) * 4));
+      state.life = { sourceId: ex.sourceId, subject: ex.subject, unit: ex.unit, source: ex.real ? '공공데이터포털 경상남도 주요관광지점 입장객 현황' : EX, visited: true, years: ex.years, values: vals, tableChecked: true,
+        predict: me ? '' : '다음 해에도 비슷하게 변할 것 같아요. 지금까지 같은 방향으로 꾸준히 변했기 때문이에요.' };
+      if (!me) addWork(sid, 'life', null, { ...workData(ex.years.map((y) => `${y}년`), vals, `연도별 ${ex.subject}`, ex.unit, '년', ex.unit === '곳' ? '공원 수' : '입장객 수', lifeSentences[k % lifeSentences.length]), subject: ex.subject }, R() < 0.8 ? 'approved' : 'submitted');
+    }
+    db.run('INSERT INTO student_state(student_id, class_id, state, updated_at) VALUES (?,?,?,?)', [sid, classId, JSON.stringify(state), t]);
   }
+  // 만족도 조사 예시: 세 활동을 다 낸 학생 중 일부(3번 이도윤은 직접 해 볼 수 있게 비워 둠)
+  const comments = ['진주 자료로 그래프를 그린 게 제일 재미있었어요.', '눈금 정하는 게 처음엔 어려웠지만 이제 알겠어요.', '', '친구 그래프를 보는 게 좋았어요.', ''];
+  const bests = ['1차 기상자료 탐험실', '2차 나의 주제 그래프', '3차 우리 고장 그래프', '작품 전시관 감상'];
+  ids.forEach((sid, k) => {
+    if (k === 2 || k === 0) return;
+    const ok = (like) => db.get(`SELECT 1 AS x FROM works WHERE student_id = ? AND kind LIKE ? AND status IN ('submitted','approved')`, [sid, like]);
+    if (!ok('topic:%') || !ok('life') || R() < 0.25) return;
+    const sc = () => Math.min(5, Math.max(2, Math.round(3.8 + (R() - 0.4) * 2.4)));
+    const ans = { fun: sc(), understand: sc(), draw: sc(), life: sc(), easy: sc(), best: bests[Math.floor(R() * bests.length)] };
+    const cm = comments[k % comments.length]; if (cm) ans.comment = cm;
+    db.run('INSERT INTO surveys(class_id, role, user_id, answers, updated_at) VALUES (?,?,?,?,?)', [classId, 'student', sid, JSON.stringify(ans), t]);
+  });
   return true;
 }

@@ -3,14 +3,16 @@ import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.
 import { api } from '../api.js';
 import { S, setSave, backup, clearBackup, getBackup } from '../store.js';
 import { GraphEditor } from '../graph.js';
-import { SCALE_OPTIONS } from '../../shared/topics.js';
+import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../../shared/topics.js';
 
-const UNITS = ['월', '년', '일', '회', '권', '편', '개', '시간', '원'];
+const UNITS = ['월', '년', '일', '회', '권', '편', '개', '시간', '원', '명', '만 명', '곳'];
 const STATUS = { draft: ['그리는 중', 'warn'], submitted: ['제출함 · 선생님 확인 중', 'ok'], approved: ['승인됨 · 전시 중', 'green'], rejected: ['다시 그려 보세요', 'red'] };
 
-export function graphSpread(app, { kind, labels, values, unit, xUnit, heading, intro, onSubmitted }) {
-  const existing = S.data.works.find((w) => w.kind === kind);
-  const bk = getBackup(`work-${kind}`);
+export function graphSpread(app, { kind, topicId = null, labels, values, unit, xUnit, heading, intro, onSubmitted, submitText }) {
+  const match = (w) => w.kind === kind && (kind !== 'topic' || w.topicId === topicId);
+  const BK = kind === 'topic' ? `work-topic-${topicId}` : `work-${kind}`;
+  const existing = S.data.works.find(match);
+  const bk = getBackup(BK);
   const W = {
     title: '', xName: '', xUnit: '', yName: '', yUnit: '', scale: null, yStart: 0, points: {}, segments: [], interp: { maxLabel: '', minLabel: '', changeLabel: '', sentence: '' },
     ...(existing?.data || {}), ...(bk && (!existing || bk.savedAt > Date.parse(existing.updatedAt)) ? bk.data : {}),
@@ -27,13 +29,13 @@ export function graphSpread(app, { kind, labels, values, unit, xUnit, heading, i
 
   const save = debounce(async () => {
     setSave('저장 중…');
-    backup(`work-${kind}`, { data: W, savedAt: Date.now() });
+    backup(BK, { data: W, savedAt: Date.now() });
     try {
       const r = await api('PUT', '/api/student/work', { kind, data: W });
       status = r.work.status; W.checked = r.work.data.checked;
-      const i = S.data.works.findIndex((w) => w.kind === kind);
+      const i = S.data.works.findIndex(match);
       if (i >= 0) S.data.works[i] = r.work; else S.data.works.push(r.work);
-      clearBackup(`work-${kind}`);
+      clearBackup(BK);
       setSave('저장됨 ✓');
       updateMarks();
     } catch (e) {
@@ -100,17 +102,21 @@ export function graphSpread(app, { kind, labels, values, unit, xUnit, heading, i
   const left = (el) => {
     stepEls = {};
     const titleIn = h('input', { type: 'text', maxlength: 60, value: W.title, placeholder: kind === 'weather' ? '예: ○○ 지역의 연도별 폭염일수' : '예: 우리 반 월별 운동한 날수', onInput: (e) => change({ title: e.target.value.trim() }) });
-    const sel = (val, key, ph) => h('select', { onChange: (e) => change({ [key]: e.target.value }) }, h('option', { value: '' }, ph), UNITS.map((u) => h('option', { value: u, selected: val === u ? true : undefined }, u)));
+    const sel = (val, key, ph) => h('select', { onChange: (e) => change({ [key]: e.target.value }) }, h('option', { value: '' }, ph), [...new Set([...UNITS, unit, xUnit].filter(Boolean))].map((u) => h('option', { value: u, selected: val === u ? true : undefined }, u)));
     const xName = h('input', { type: 'text', maxlength: 20, value: W.xName, placeholder: kind === 'weather' ? '예: 연도' : '예: 월', onInput: (e) => change({ xName: e.target.value.trim() }) });
     const yName = h('input', { type: 'text', maxlength: 20, value: W.yName, placeholder: kind === 'weather' ? '예: 폭염일수' : '예: 날수, 횟수', onInput: (e) => change({ yName: e.target.value.trim() }) });
     const scaleInfo = h('p', { class: 'small' });
     const showScaleInfo = () => {
-      if (!W.scale) { scaleInfo.textContent = `가장 큰 값은 ${fmt(maxValue)}${unit}예요. 몇씩 한 칸으로 하면 알맞을까요?`; return; }
-      const cells = Math.ceil((maxValue - (W.yStart || 0)) / W.scale);
-      scaleInfo.textContent = `한 칸 = ${fmt(W.scale)}${unit} → 가장 큰 값 ${fmt(maxValue)}${unit}까지 약 ${cells}칸이 필요해요. ${cells > 40 ? '칸이 너무 많아요. 더 큰 눈금을 골라 보세요.' : cells < 3 ? '칸이 너무 적어 변화가 잘 보이지 않을 수 있어요.' : ''}`;
+      const u = unit ? ` ${unit}` : '';
+      if (!W.scale) { scaleInfo.textContent = `가장 큰 값은 ${fmt(maxValue)}${u}예요. 작은 눈금 한 칸을 몇으로 하면 알맞을까요?`; return; }
+      const cells = cellsNeeded(maxValue, W.yStart, W.scale);
+      scaleInfo.replaceChildren(
+        h('b', null, `작은 눈금 한 칸 = ${fmt(W.scale)}${u}`), ` → 큰 눈금 한 칸(작은 칸 ${MAJOR}개) = ${fmt(W.scale * MAJOR)}${u}`, h('br'),
+        `가장 큰 값 ${fmt(maxValue)}${u}까지 작은 칸 약 ${cells}칸이 필요해요. `,
+        cells > MAX_CELLS ? h('b', { class: 'warn-text' }, '칸이 너무 많아요. 더 큰 수를 골라 보세요.') : cells < MIN_CELLS ? h('b', { class: 'warn-text' }, '칸이 너무 적어 변화가 잘 보이지 않아요. 더 작은 수를 골라 보세요.') : '');
     };
     showScaleInfo();
-    const scaleOpts = SCALE_OPTIONS.filter((o) => { const c = Math.ceil(maxValue / o); return c <= 60 && (c >= 2 || o === SCALE_OPTIONS[0]); });
+    const scaleOpts = SCALE_OPTIONS.filter((o) => { const c = Math.ceil(maxValue / o); return c <= MAX_CELLS * 1.5 && c >= 2 && (o >= 1 || values.some((v) => v !== null && !Number.isInteger(Number(v)))); });
     const scaleBtns = h('div', { class: 'row' }, scaleOpts.map((o) => h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': String(W.scale === o), onClick: (e) => {
       change({ scale: o });
       e.target.parentElement.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === e.target)));
@@ -140,7 +146,10 @@ export function graphSpread(app, { kind, labels, values, unit, xUnit, heading, i
           h('div', { class: 'row' }, h('label', { class: 'field grow' }, h('span', null, '가로축 이름'), xName), h('label', { class: 'field', style: { width: '120px' } }, h('span', null, '가로 단위'), sel(W.xUnit, 'xUnit', '고르기'))),
           h('div', { class: 'row' }, h('label', { class: 'field grow' }, h('span', null, '세로축 이름'), yName), h('label', { class: 'field', style: { width: '120px' } }, h('span', null, '세로 단위'), sel(W.yUnit, 'yUnit', '고르기'))),
           h('p', { class: 'small muted' }, '가로에는 변화하는 때(연도, 월)를, 세로에는 조사한 수량을 나타내요.')),
-        step('scale', 3, '세로 눈금 한 칸의 크기', scaleInfo, scaleBtns,
+        step('scale', 3, '세로 작은 눈금 한 칸의 크기',
+          h('div', { class: 'tick-guide' }, tickDiagram(),
+            h('p', { class: 'small', style: { margin: 0 } }, h('b', null, '점선 한 칸'), '이 작은 눈금 한 칸이에요. 작은 눈금 ', h('b', null, `${MAJOR}칸`), '이 모이면 ', h('b', null, '실선 한 칸(큰 눈금)'), '이 되고, 실선마다 수를 적어요. 작은 눈금 한 칸을 몇으로 할지 골라요.')),
+          scaleInfo, scaleBtns,
           h('details', null, h('summary', { class: 'small' }, '물결선으로 필요 없는 부분 줄이기(선택)'),
             h('div', { class: 'row', style: { marginTop: '6px' } }, h('span', { class: 'small' }, '세로축 시작 값'), yStart, h('span', { class: 'small muted' }, '0이면 물결선 없이 그려요.')))),
         step('points', 4, '자료값에 맞게 점 찍기', h('p', { class: 'small' }, '오른쪽 모눈종이에서 [점 찍기]를 고르고, 표의 수에 맞는 곳을 눌러요. 누른 채 움직이면 위치와 값이 말풍선으로 보여요. 손을 떼면 점이 찍혀요.')),
@@ -154,7 +163,7 @@ export function graphSpread(app, { kind, labels, values, unit, xUnit, heading, i
           h('p', { class: 'small' }, '제목, 축, 눈금, 점의 위치, 선분, 해석을 한꺼번에 확인해요. 틀린 곳은 알려 주지만 정답 수는 알려 주지 않아요.'),
           h('div', { class: 'row' }, btn('중간 저장', () => save.flush(), { variant: 'green small' }), btn('확인하기', () => check(), { variant: 'small' })),
           checkBox),
-        step('submit', 8, '작품 제출하기', h('p', { class: 'small' }, kind === 'weather' ? '확인을 통과하면 제출할 수 있어요. 제출하면 기상자료 탐험실이 완료되고 다음 장이 열려요.' : '확인을 통과하면 제출할 수 있어요. 선생님이 승인하면 작품 전시관에 걸려요.'), submitBtn)),
+        step('submit', 8, '작품 제출하기', h('p', { class: 'small' }, kind === 'weather' ? '확인을 통과하면 제출할 수 있어요. 제출하면 기상자료 탐험실이 완료되고 다음 장이 열려요.' : (submitText || '확인을 통과하면 제출할 수 있어요. 선생님이 승인하면 작품 전시관에 걸려요.')), submitBtn)),
     );
     updateMarks();
   };
@@ -200,7 +209,7 @@ export function graphSpread(app, { kind, labels, values, unit, xUnit, heading, i
     try {
       const r = await api('POST', '/api/student/work/submit', { kind });
       status = r.work.status;
-      const i = S.data.works.findIndex((w) => w.kind === kind);
+      const i = S.data.works.findIndex(match);
       if (i >= 0) S.data.works[i] = r.work; else S.data.works.push(r.work);
       updateMarks();
       await onSubmitted?.();
@@ -212,4 +221,29 @@ export function graphSpread(app, { kind, labels, values, unit, xUnit, heading, i
 
 export async function celebrate(title, text) {
   await modal({ title, body: h('div', { class: 'center' }, sealImg('完', 96), h('p', null, text)), actions: [{ label: '다음 장으로 ›', value: true, variant: 'gold' }] });
+}
+
+// 작은 눈금(점선) 5칸 = 큰 눈금(실선) 1칸 설명 그림
+function tickDiagram() {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', '0 0 214 128'); svg.setAttribute('class', 'tick-svg'); svg.setAttribute('aria-hidden', 'true');
+  const add = (tag, a, t) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); if (t !== undefined) e.textContent = t; svg.append(e); };
+  const x0 = 26; const x1 = 96; const y0 = 116; const step = 20;
+  add('rect', { x: x0, y: y0 - step * 5, width: x1 - x0, height: step * 5, fill: '#fffdf6' });
+  for (let k = 0; k <= 5; k++) {
+    const y = y0 - k * step; const major = k % 5 === 0;
+    add('line', { x1: x0, x2: x1, y1: y, y2: y, stroke: major ? '#4f7059' : '#9fb8a6', 'stroke-width': major ? 2 : 1.2, 'stroke-dasharray': major ? '' : '4 3' });
+  }
+  add('line', { x1: x0, x2: x0, y1: y0 - step * 5 - 6, y2: y0, stroke: '#2a1c12', 'stroke-width': 2 });
+  add('text', { x: x0 - 5, y: y0 + 4, 'text-anchor': 'end', 'font-size': 12, fill: '#2a1c12' }, '0');
+  add('text', { x: x0 - 5, y: y0 - step * 5 + 4, 'text-anchor': 'end', 'font-size': 12, fill: '#2a1c12' }, '5');
+  // 작은 1칸 괄호(맨 아래 칸)
+  add('path', { d: `M${x1 + 4} ${y0} h5 v${-step} h-5`, fill: 'none', stroke: '#a3302a', 'stroke-width': 1.6 });
+  add('text', { x: x1 + 12, y: y0 - step / 2 + 4, 'font-size': 11, fill: '#a3302a', 'font-weight': 700 }, '작은 1칸');
+  // 큰 1칸 괄호(작은 5칸 전체)
+  const bx = x1 + 62;
+  add('path', { d: `M${bx} ${y0 - step * 5} h6 v${step * 5} h-6`, fill: 'none', stroke: '#5a1710', 'stroke-width': 1.6 });
+  add('text', { x: bx + 10, y: y0 - step * 2.5, 'font-size': 11, fill: '#5a1710', 'font-weight': 700 }, '큰 1칸');
+  add('text', { x: bx + 10, y: y0 - step * 2.5 + 14, 'font-size': 10, fill: '#5a1710' }, '=작은 5칸');
+  return svg;
 }

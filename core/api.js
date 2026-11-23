@@ -3,7 +3,9 @@
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
 import { SCHEMA } from './schema.js';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, MONTH_DAYS } from '../public/shared/topics.js';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources } from '../public/shared/life.js';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../public/shared/survey.js';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../public/shared/topics.js';
 import { computeStats, round1 } from '../public/shared/stats.js';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -20,7 +22,9 @@ export const DEFAULT_KMA_GUIDE = [
 ].join('\n');
 
 export const DEFAULT_SETTINGS = {
-  stages: { weather: true, topics: true, table: true, graph: true, gallery: true },
+  stages: { weather: true, topics: true, table: true, graph: true, life: true, gallery: true, survey: true },
+  lifeRegion: DEFAULT_LIFE_REGION, // 3차 활동(생활 속 꺾은선그래프) 고장 이름
+  lifeSources: DEFAULT_LIFE_SOURCES,
   voteOpen: true,
   surveyOpen: true,
   allowEdit: true,
@@ -35,6 +39,10 @@ export const DEFAULT_SETTINGS = {
   kmaGuide: DEFAULT_KMA_GUIDE,
   notice: '',
   picked: [], // 학생 뽑기에서 이미 뽑힌 학생 id(학급마다)
+  topicMode: 'own', // own(학생이 25개 중 직접 골라 내 기록으로, 여러 개) | lottery(제비뽑기로 1개) | class(학급 공동 조사)
+  minWorks: 3, // own: 한 사람이 꼭 제출할 그래프 수(나머지는 시간 남는 학생이 더)
+  assign: {}, // 학생 id → 주제 id
+  assignPool: TOPICS.filter((t) => !t.private).map((t) => t.id), // 제비뽑기 주제 묶음(저축 금액은 개인 정보라 기본 제외)
   pickNoRepeat: true,
 };
 
@@ -52,6 +60,12 @@ function mergeSettings(raw) {
   s.stages = { ...DEFAULT_SETTINGS.stages, ...(raw?.stages || {}) };
   if (raw?.school === undefined) s.school = null;
   s.picked = Array.isArray(s.picked) ? s.picked.map(Number) : [];
+  s.topicMode = ['own', 'lottery', 'class'].includes(s.topicMode) ? s.topicMode : 'own';
+  s.minWorks = Math.min(10, Math.max(1, int(s.minWorks) || 3));
+  s.lifeSources = cleanLifeSources(raw?.lifeSources);
+  s.lifeRegion = str(s.lifeRegion, 20) || DEFAULT_LIFE_REGION;
+  s.assign = s.assign && typeof s.assign === 'object' ? Object.fromEntries(Object.entries(s.assign).filter(([, t]) => topicById(t)).map(([k, t]) => [String(k), Number(t)])) : {};
+  s.assignPool = Array.isArray(s.assignPool) ? s.assignPool.map(Number).filter((id) => topicById(id)) : DEFAULT_SETTINGS.assignPool.slice();
   s.activeTopics = Array.isArray(s.activeTopics) ? s.activeTopics.filter((id) => topicById(id)).map(Number) : [];
   return s;
 }
@@ -74,6 +88,8 @@ export function createApi({ db, sec, options = {} }) {
 
   function init() {
     db.exec(SCHEMA);
+    // 예전 자료: 학생당 주제 작품 1개(kind='topic') → 주제마다 따로(kind='topic:번호')
+    db.run("UPDATE works SET kind = 'topic:' || topic_id WHERE kind = 'topic' AND topic_id IS NOT NULL");
   }
 
   // ───────────── 공통 도우미 ─────────────
@@ -175,12 +191,59 @@ export function createApi({ db, sec, options = {} }) {
     return st.name;
   }
 
+  const isLottery = (s) => s.topicMode === 'lottery';
+  const isOwn = (s) => s.topicMode === 'own';
+  const isPersonal = (s) => s.topicMode !== 'class'; // 내 기록으로 표·그래프
+  const tkind = (topicId) => `topic:${topicId}`;
+  // 이 학생이 지금 만드는 주제: 제비뽑기=배정 주제, 직접 고르기=고른 주제(주제 묶음 안), 학급 공동=연 주제
+  function researchOf(student, s, state) {
+    if (isLottery(s)) { const t = s.assign[String(student.id)]; return t ? Number(t) : null; }
+    const t = Number(state.research?.topicId);
+    return t && (isOwn(s) ? s.assignPool : s.activeTopics).includes(t) ? t : null;
+  }
+  function canSurvey(student, s, topicId, state) {
+    if (isLottery(s)) return researchOf(student, s, state) === topicId;
+    return (isOwn(s) ? s.assignPool : s.activeTopics).includes(topicId);
+  }
+  // 제출(승인 대기·승인)한 주제 그래프 수
+  function doneWorks(studentId) {
+    return db.all("SELECT topic_id, status FROM works WHERE student_id = ? AND kind LIKE 'topic:%' AND status IN ('submitted','approved')", [studentId]);
+  }
+  function ownSeries(studentId, topic, s) {
+    const rows = db.all('SELECT month, status, value, source FROM responses WHERE student_id = ? AND topic_id = ?', [studentId, topic.id]);
+    return months(s).map((m) => { const r = rows.find((x) => x.month === m); return { month: m, status: r?.status || 'blank', value: r && r.status === 'value' ? Number(r.value) : null, source: r?.source || null }; });
+  }
+  // 그래프·자료표의 정답 값: 제비뽑기면 내 기록, 아니면 학급 집계
+  function targetValues(classId, studentId, topic, s) {
+    if (isPersonal(s)) return ownSeries(studentId, topic, s).map((r) => ({ month: r.month, value: r.value }));
+    return aggregate(classId, topic, s).map((a) => ({ month: a.month, value: a.value }));
+  }
+
+  // 세 활동 모두 제출: 1차(기상자료 완료) + 2차 주제 그래프 1개 이상 + 3차 우리 고장 그래프
+  function allThree(studentId, wd) {
+    if (!wd) return false;
+    const done = (kindLike) => !!db.get(`SELECT 1 AS x FROM works WHERE student_id = ? AND kind LIKE ? AND status IN ('submitted','approved') LIMIT 1`, [studentId, kindLike]);
+    return done('topic:%') && done('life');
+  }
+  function surveyRow(classId, role, userId) {
+    const r = db.get('SELECT answers, updated_at FROM surveys WHERE class_id = ? AND role = ? AND user_id = ?', [classId, role, userId]);
+    return r ? { answers: parse(r.answers), at: r.updated_at } : null;
+  }
+  function saveSurvey(classId, role, userId, items, raw) {
+    const { answers, missing } = cleanSurvey(items, raw);
+    if (missing.length) fail(400, `${missing.join(', ')}번 문항에 답해 주세요.`, { missing });
+    db.run(`INSERT INTO surveys(class_id, role, user_id, answers, updated_at) VALUES (?,?,?,?,?)
+      ON CONFLICT(class_id, role, user_id) DO UPDATE SET answers = excluded.answers, updated_at = excluded.updated_at`, [classId, role, userId, JSON.stringify(answers), now()]);
+    return surveyRow(classId, role, userId);
+  }
+  const approvedCount = (classId) => db.get("SELECT COUNT(*) AS n FROM works WHERE class_id = ? AND status = 'approved'", [classId]).n;
+
   function weatherDone(student, state) { return !!(state.weatherDone || student.weather_override); }
 
   function gates(student, cls, state) {
     const s = cls.settings;
     const wd = weatherDone(student, state);
-    const research = state.research?.topicId && s.activeTopics.includes(Number(state.research.topicId)) ? Number(state.research.topicId) : null;
+    const research = researchOf(student, s, state);
     const submitted = db.all('SELECT topic_id FROM submissions WHERE student_id = ?', [student.id]).map((r) => r.topic_id);
     const tableOk = research ? !!state.tables?.[research]?.verified : false;
     const lock = (open, ok, why) => (!open ? '선생님이 아직 열지 않은 단계예요.' : !ok ? why : null);
@@ -190,8 +253,10 @@ export function createApi({ db, sec, options = {} }) {
       submittedTopics: submitted,
       weather: lock(s.stages.weather, true, null),
       topics: lock(s.stages.topics, wd, '기상자료 탐험실을 먼저 완료해야 들어갈 수 있어요.'),
-      table: lock(s.stages.table, wd && research && submitted.includes(research), !wd ? '기상자료 탐험실을 먼저 완료해야 해요.' : '연구 주제를 고르고 그 주제의 월별 조사를 제출해야 해요.'),
+      table: lock(s.stages.table, wd && research && submitted.includes(research), !wd ? '기상자료 탐험실을 먼저 완료해야 해요.' : !research && isLottery(s) ? '선생님이 제비뽑기로 연구 주제를 정해 주면 열려요.' : !research && isOwn(s) ? '2장에서 주제를 고르고 내 기록을 먼저 제출해야 해요.' : isPersonal(s) ? '내 주제의 월별 기록을 먼저 제출해야 해요.' : '연구 주제를 고르고 그 주제의 월별 조사를 제출해야 해요.'),
       graph: lock(s.stages.graph, wd && tableOk, !wd ? '기상자료 탐험실을 먼저 완료해야 해요.' : '자료표 만들기를 먼저 완성해야 해요.'),
+      life: lock(s.stages.life, wd, '기상자료 탐험실을 먼저 완료해야 들어갈 수 있어요.'),
+      survey: lock(s.stages.survey, allThree(student.id, wd), '1차·2차·3차 꺾은선그래프를 모두 제출하면 만족도 조사가 열려요.'),
       gallery: lock(s.stages.gallery, true, null),
     };
   }
@@ -210,13 +275,17 @@ export function createApi({ db, sec, options = {} }) {
       if (!w.tableChecked) fail(400, '기상자료 표를 먼저 완성해 주세요.');
       return { labels: w.years.map((y) => `${y}년`), values: w.values.map(Number), xUnit: '년', yUnit: '일', topicId: null };
     }
-    const topicId = state.research?.topicId;
-    const topic = topicById(topicId);
-    if (!topic) fail(400, '연구 주제를 먼저 골라 주세요.');
+    if (kind === 'life') {
+      const L = state.life || {};
+      if (!L.tableChecked) fail(400, '우리 고장 자료 표를 먼저 완성해 주세요.');
+      return { labels: L.years.map((y) => `${y}년`), values: L.values.map(Number), xUnit: '년', yUnit: L.unit || '', topicId: null };
+    }
+    const topic = topicById(researchOf(ctx.student, s, state));
+    if (!topic) fail(400, '연구 주제를 먼저 정해야 해요.');
     const t = state.tables?.[topic.id];
     if (!t?.verified) fail(400, '자료표를 먼저 완성해 주세요.');
-    const agg = aggregate(ctx.cls.id, topic, s);
-    return { labels: agg.map((a) => `${a.month}월`), values: agg.map((a) => a.value), xUnit: '월', yUnit: topic.unit, topicId: topic.id, topic };
+    const tv = targetValues(ctx.cls.id, ctx.student.id, topic, s);
+    return { labels: tv.map((a) => `${a.month}월`), values: tv.map((a) => a.value), xUnit: '월', yUnit: topic.unit, topicId: topic.id, topic };
   }
 
   function sanitizeWork(data, n) {
@@ -267,10 +336,11 @@ export function createApi({ db, sec, options = {} }) {
     if (data.yUnit !== target.yUnit) issues.push({ step: 'axis', msg: `세로축 단위가 조사한 자료의 단위와 같은지 확인해 보세요.` });
     const finite = values.filter((v) => v !== null);
     const maxV = finite.length ? Math.max(...finite) : 0;
-    if (!data.scale) issues.push({ step: 'scale', msg: '세로 눈금 한 칸의 크기를 정해 주세요.' });
+    if (!data.scale) issues.push({ step: 'scale', msg: '세로 작은 눈금 한 칸의 크기를 정해 주세요.' });
     else {
-      const cells = Math.ceil((maxV - data.yStart) / data.scale);
-      if (cells > 40) issues.push({ step: 'scale', msg: '눈금 한 칸의 크기가 너무 작아 칸이 너무 많아요. 더 큰 크기를 골라 보세요.' });
+      const cells = cellsNeeded(maxV, data.yStart, data.scale);
+      if (cells > MAX_CELLS) issues.push({ step: 'scale', msg: '작은 눈금 한 칸의 크기가 너무 작아 칸이 너무 많아요. 더 큰 수를 골라 보세요.' });
+      else if (cells < MIN_CELLS && maxV > 0) issues.push({ step: 'scale', msg: '작은 눈금 한 칸의 크기가 너무 커서 변화가 잘 보이지 않아요. 더 작은 수를 골라 보세요.' });
       if (data.yStart > 0 && finite.some((v) => v < data.yStart)) issues.push({ step: 'scale', msg: '물결선 위 시작 값이 가장 작은 값보다 커요. 시작 값을 낮춰 주세요.' });
     }
     const tol = data.scale ? snapStep(data.scale) / 2 + 1e-6 : 0.5;
@@ -305,12 +375,17 @@ export function createApi({ db, sec, options = {} }) {
     return issues;
   }
 
+  function workName(r, d) {
+    if (r.kind === 'weather') return '연도별 폭염일수';
+    if (r.kind === 'life') return d?.subject ? `우리 고장: ${d.subject}` : '우리 고장 자료';
+    return topicById(r.topic_id)?.name;
+  }
   function workRow(studentId, kind) {
     return db.get('SELECT * FROM works WHERE student_id = ? AND kind = ?', [studentId, kind]);
   }
   function publicWork(w) {
     if (!w) return null;
-    return { id: w.id, kind: w.kind, topicId: w.topic_id, data: parse(w.data), status: w.status, feedback: w.feedback, updatedAt: w.updated_at, submittedAt: w.submitted_at };
+    return { id: w.id, kind: w.kind === 'weather' || w.kind === 'life' ? w.kind : 'topic', topicId: w.topic_id, data: parse(w.data), status: w.status, feedback: w.feedback, updatedAt: w.updated_at, submittedAt: w.submitted_at };
   }
 
   // ───────────── 라우트 ─────────────
@@ -345,6 +420,43 @@ export function createApi({ db, sec, options = {} }) {
     clearLimit('t:' + username);
     const token = await newSession('teacher', t.id, null, 7);
     return { token, body: { ok: true } };
+  });
+
+  // ── 만족도 조사 ──
+  route('GET', '/api/student/survey', 'student', async ({ ctx }) => {
+    const g = gates(ctx.student, ctx.cls, getState(ctx.student.id));
+    return { body: { open: !g.survey, reason: g.survey, items: STUDENT_SURVEY, mine: surveyRow(ctx.cls.id, 'student', ctx.student.id) } };
+  });
+  route('PUT', '/api/student/survey', 'student', async ({ ctx, body }) => {
+    requireGate(ctx, 'survey');
+    return { body: { ok: true, mine: saveSurvey(ctx.cls.id, 'student', ctx.student.id, STUDENT_SURVEY, body.answers) } };
+  });
+  route('GET', '/api/teacher/classes/:id/survey', 'teacher', async ({ ctx, params }) => {
+    const c = teacherClass(ctx.teacher, params.id);
+    const list = db.all("SELECT answers FROM surveys WHERE class_id = ? AND role = 'student' ORDER BY updated_at", [c.id]).map((r) => parse(r.answers));
+    const total = db.get('SELECT COUNT(*) AS n FROM students WHERE class_id = ?', [c.id]).n;
+    const n = approvedCount(c.id);
+    return { body: {
+      students: { total, responded: list.length, summary: summarize(STUDENT_SURVEY, list) },
+      teacher: { open: n > 0, reason: n > 0 ? null : '학생 작품을 한 개 이상 승인(전시)하면 선생님 만족도 조사가 열려요.', items: TEACHER_SURVEY, mine: surveyRow(c.id, 'teacher', ctx.teacher.id) },
+    } };
+  });
+  route('PUT', '/api/teacher/classes/:id/survey', 'teacher', async ({ ctx, params, body }) => {
+    const c = teacherClass(ctx.teacher, params.id);
+    if (!approvedCount(c.id)) fail(403, '학생 작품을 한 개 이상 승인(전시)하면 선생님 만족도 조사를 할 수 있어요.');
+    return { body: { ok: true, mine: saveSurvey(c.id, 'teacher', ctx.teacher.id, TEACHER_SURVEY, body.answers) } };
+  });
+
+  // 학생 입장 1단계: 학급 코드로 학교·학년·반과 이름 목록 보기(내 이름을 눌러 들어가기)
+  route('GET', '/api/student/class-lookup', null, async ({ query }) => {
+    const code = str(query.code, 10).toUpperCase().replace(/\s/g, '');
+    limit('lookup:all', 400);
+    limit(`lookup:${code}`, 40);
+    const cls = code.length >= 4 ? db.get('SELECT * FROM classes WHERE code = ?', [code]) : null;
+    if (!cls) fail(404, '학급 코드를 다시 확인해 주세요.');
+    const s = mergeSettings(parse(cls.settings));
+    const students = db.all('SELECT number, name FROM students WHERE class_id = ? ORDER BY number', [cls.id]);
+    return { body: { name: cls.name, school: s.school?.name || '', grade: s.grade || null, classNo: s.classNo || null, nickname: s.nickname || '', isDemo: !!cls.is_demo, students } };
   });
 
   route('POST', '/api/student/login', null, async ({ body }) => {
@@ -399,7 +511,7 @@ export function createApi({ db, sec, options = {} }) {
             stages: s.stages, voteOpen: s.voteOpen, surveyOpen: s.surveyOpen, allowEdit: s.allowEdit,
             activeTopics: s.activeTopics, monthFrom: s.monthFrom, monthTo: s.monthTo,
             savingsMode: s.savingsMode, tableRefMode: s.tableRefMode, tableRefVisible: s.tableRefVisible,
-            kmaUrl: s.kmaUrl, kmaGuide: s.kmaGuide, notice: s.notice, displayName: s.displayName, schoolName: s.school?.name || '', nickname: s.nickname || '',
+            kmaUrl: s.kmaUrl, kmaGuide: s.kmaGuide, notice: s.notice, displayName: s.displayName, schoolName: s.school?.name || '', nickname: s.nickname || '', topicMode: s.topicMode, minWorks: s.minWorks, topicPool: s.assignPool, lifeRegion: s.lifeRegion, lifeSources: s.lifeSources,
           },
         },
         state, gates: g, vote: vote?.topic_id ?? null, responses, works,
@@ -427,13 +539,35 @@ export function createApi({ db, sec, options = {} }) {
         tableChecked: changed ? false : !!w.tableChecked,
       };
     }
+    if (p.life && typeof p.life === 'object') {
+      const L = state.life || {};
+      const yrs = Array.isArray(p.life.years) ? p.life.years.slice(0, 8).map((y) => (y === '' || y === null ? '' : int(y))) : L.years;
+      const vals = Array.isArray(p.life.values) ? p.life.values.slice(0, 8).map((v) => (v === '' || v === null ? '' : Number(v))) : L.values;
+      const next = {
+        ...L,
+        sourceId: p.life.sourceId !== undefined ? str(p.life.sourceId, 20) : L.sourceId,
+        subject: p.life.subject !== undefined ? str(p.life.subject, 40) : L.subject,
+        unit: p.life.unit !== undefined ? str(p.life.unit, 10) : L.unit,
+        source: p.life.source !== undefined ? str(p.life.source, 120) : L.source,
+        visited: p.life.visited !== undefined ? !!p.life.visited : L.visited,
+        predict: p.life.predict !== undefined ? str(p.life.predict, 300) : L.predict,
+        relation: p.life.relation !== undefined ? str(p.life.relation, 300) : L.relation,
+        years: yrs, values: vals,
+      };
+      const changed = ['subject', 'unit'].some((k) => next[k] !== L[k]) || JSON.stringify(yrs) !== JSON.stringify(L.years) || JSON.stringify(vals) !== JSON.stringify(L.values);
+      next.tableChecked = changed ? false : !!L.tableChecked;
+      state.life = next;
+    }
     if (p.research && p.research.topicId !== undefined) {
       const tid = int(p.research.topicId);
-      if (!ctx.cls.settings.activeTopics.includes(tid)) fail(400, '선생님이 연 조사 주제 중에서 골라 주세요.');
-      const t = topicById(tid);
-      if (t.private && ctx.cls.settings.savingsMode === 'hidden') fail(400, '이 주제는 선생님이 결과를 공개하지 않아 연구 주제로 고를 수 없어요.');
-      const work = workRow(ctx.student.id, 'topic');
-      if (work && ['submitted', 'approved'].includes(work.status) && work.topic_id !== tid) fail(409, '이미 제출한 작품이 있어요. 주제를 바꾸려면 선생님께 요청하세요.');
+      if (isLottery(ctx.cls.settings)) fail(403, '연구 주제는 선생님이 제비뽑기로 정해 줘요.');
+      if (isOwn(ctx.cls.settings)) {
+        if (!ctx.cls.settings.assignPool.includes(tid)) fail(400, '선생님이 열어 둔 주제 중에서 골라 주세요.');
+      } else {
+        if (!ctx.cls.settings.activeTopics.includes(tid)) fail(400, '선생님이 연 조사 주제 중에서 골라 주세요.');
+        const t = topicById(tid);
+        if (t.private && ctx.cls.settings.savingsMode === 'hidden') fail(400, '이 주제는 선생님이 결과를 공개하지 않아 연구 주제로 고를 수 없어요.');
+      }
       state.research = { topicId: tid };
     }
     if (p.tableDraft && typeof p.tableDraft === 'object') {
@@ -446,6 +580,37 @@ export function createApi({ db, sec, options = {} }) {
       }
     }
     if (p.ui && typeof p.ui === 'object') state.ui = { chapter: str(p.ui.chapter, 20), spread: int(p.ui.spread) || 0 };
+    putState(ctx.student.id, ctx.cls.id, state);
+    return { body: { ok: true, state } };
+  });
+
+  route('POST', '/api/student/life/check-table', 'student', async ({ ctx }) => {
+    requireGate(ctx, 'life');
+    const state = getState(ctx.student.id);
+    const L = state.life || {};
+    const issues = [];
+    if (!L.subject) issues.push('무엇을 조사했는지(자료 이름)를 적어 주세요.');
+    if (!L.unit) issues.push('자료의 단위(명, 만 명, 곳 등)를 적어 주세요.');
+    if (!L.source) issues.push('자료를 찾은 곳(누리집·기사 이름)을 출처에 적어 주세요.');
+    const thisYear = new Date().getFullYear();
+    const pairs = (L.years || []).map((y, i) => [y, (L.values || [])[i]]).filter(([y, v]) => y !== '' || (v !== '' && v !== undefined));
+    if (pairs.length < 3) issues.push('연도와 값을 3개 이상 적어 주세요(최대 8개).');
+    else {
+      const ys = pairs.map(([y]) => y);
+      if (ys.some((y) => !Number.isInteger(y))) issues.push('연도를 모두 적어 주세요.');
+      else {
+        if (ys.some((y) => y < 1950 || y > thisYear)) issues.push(`연도는 1950년부터 ${thisYear}년 사이로 적어 주세요.`);
+        for (let i = 1; i < ys.length; i++) if (ys[i] <= ys[i - 1]) { issues.push('연도는 왼쪽부터 차례대로(작은 연도부터) 적어 주세요.'); break; }
+      }
+      const vs = pairs.map(([, v]) => v);
+      if (vs.some((v) => v === '' || v === undefined || !Number.isFinite(Number(v)))) issues.push('값을 모두 숫자로 적어 주세요.');
+      else if (vs.some((v) => v < 0 || v > 100000000)) issues.push('값은 0보다 크거나 같고 1억보다 작아야 해요.');
+      else if (vs.some((v) => Math.abs(Math.round(v * 10) - v * 10) > 1e-6)) issues.push('값은 소수 첫째 자리까지만 적어요. 큰 수는 ‘만 명’처럼 단위를 바꾸어 어림해도 돼요.');
+    }
+    if (issues.length) return { body: { ok: false, issues } };
+    L.years = pairs.map(([y]) => y); L.values = pairs.map(([, v]) => Number(v));
+    L.tableChecked = true;
+    state.life = L;
     putState(ctx.student.id, ctx.cls.id, state);
     return { body: { ok: true, state } };
   });
@@ -496,7 +661,7 @@ export function createApi({ db, sec, options = {} }) {
     const s = ctx.cls.settings;
     if (!s.surveyOpen) fail(403, '지금은 월별 조사 기간이 아니에요.');
     const topic = topicById(body.topicId);
-    if (!topic || !s.activeTopics.includes(topic.id)) fail(400, '선생님이 연 조사 주제가 아니에요.');
+    if (!topic || !canSurvey(ctx.student, s, topic.id, getState(ctx.student.id))) fail(400, isLottery(s) ? '제비뽑기로 받은 내 주제만 기록할 수 있어요.' : isOwn(s) ? '선생님이 열어 둔 주제가 아니에요.' : '선생님이 연 조사 주제가 아니에요.');
     const already = db.get('SELECT 1 AS x FROM submissions WHERE student_id = ? AND topic_id = ?', [ctx.student.id, topic.id]);
     if (already && !s.allowEdit) fail(403, '이미 제출했어요. 지금은 수정할 수 없어요.');
     const ms = months(s);
@@ -531,7 +696,8 @@ export function createApi({ db, sec, options = {} }) {
     requireGate(ctx, 'table');
     const s = ctx.cls.settings;
     const topic = topicById(query.topicId);
-    if (!topic || !s.activeTopics.includes(topic.id)) fail(400, '조사 주제를 다시 골라 주세요.');
+    if (!topic || !canSurvey(ctx.student, s, topic.id, getState(ctx.student.id))) fail(400, '조사 주제를 다시 골라 주세요.');
+    if (isPersonal(s)) return { body: { visible: true, mode: 'own', list: false, rows: ownSeries(ctx.student.id, topic, s) } };
     if (!s.tableRefVisible) return { body: { visible: false } };
     const agg = aggregate(ctx.cls.id, topic, s);
     const mode = aggMode(topic, s);
@@ -551,8 +717,8 @@ export function createApi({ db, sec, options = {} }) {
     requireGate(ctx, 'table');
     const s = ctx.cls.settings;
     const topic = topicById(body.topicId);
-    if (!topic || !s.activeTopics.includes(topic.id)) fail(400, '조사 주제를 다시 골라 주세요.');
-    const agg = aggregate(ctx.cls.id, topic, s);
+    if (!topic || !canSurvey(ctx.student, s, topic.id, getState(ctx.student.id))) fail(400, '조사 주제를 다시 골라 주세요.');
+    const agg = targetValues(ctx.cls.id, ctx.student.id, topic, s);
     const vals = Array.isArray(body.values) ? body.values : [];
     const result = agg.map((a, i) => {
       const v = vals[i];
@@ -569,15 +735,17 @@ export function createApi({ db, sec, options = {} }) {
   });
 
   route('PUT', '/api/student/work', 'student', async ({ ctx, body }) => {
-    const kind = body.kind === 'weather' ? 'weather' : 'topic';
-    const { state } = requireGate(ctx, kind === 'weather' ? 'weather' : 'graph');
+    const kind = ['weather', 'life'].includes(body.kind) ? body.kind : 'topic';
+    const { state } = requireGate(ctx, kind === 'topic' ? 'graph' : kind);
+    const key = kind === 'topic' ? tkind(researchOf(ctx.student, ctx.cls.settings, state)) : kind;
     const target = workTarget(ctx, kind, state);
-    const existing = workRow(ctx.student.id, kind);
+    const existing = workRow(ctx.student.id, key);
     const data = sanitizeWork(body.data, target.labels.length);
     const prev = existing ? parse(existing.data) : {};
     data.checked = false;
     data.labels = target.labels;
     data.values = target.values;
+    if (kind === 'life') data.subject = state.life?.subject || '';
     const sig = (x) => JSON.stringify(['title', 'xName', 'xUnit', 'yName', 'yUnit', 'scale', 'yStart', 'points', 'segments', 'interp', 'labels', 'values'].map((k) => x?.[k] ?? null));
     const same = !!prev.checked && sig(prev) === sig(data);
     if (same) { data.checked = true; data.checkedAt = prev.checkedAt; }
@@ -590,16 +758,17 @@ export function createApi({ db, sec, options = {} }) {
       db.run('UPDATE works SET data = ?, status = ?, topic_id = ?, updated_at = ? WHERE id = ?', [JSON.stringify(data), status, target.topicId, now(), existing.id]);
     } else {
       db.run('INSERT INTO works(class_id, student_id, kind, topic_id, data, status, updated_at) VALUES (?,?,?,?,?,?,?)',
-        [ctx.cls.id, ctx.student.id, kind, target.topicId, JSON.stringify(data), status, now()]);
+        [ctx.cls.id, ctx.student.id, key, target.topicId, JSON.stringify(data), status, now()]);
     }
-    return { body: { ok: true, work: publicWork(workRow(ctx.student.id, kind)) } };
+    return { body: { ok: true, work: publicWork(workRow(ctx.student.id, key)) } };
   });
 
   route('POST', '/api/student/work/check', 'student', async ({ ctx, body }) => {
-    const kind = body.kind === 'weather' ? 'weather' : 'topic';
-    const { state } = requireGate(ctx, kind === 'weather' ? 'weather' : 'graph');
+    const kind = ['weather', 'life'].includes(body.kind) ? body.kind : 'topic';
+    const { state } = requireGate(ctx, kind === 'topic' ? 'graph' : kind);
+    const key = kind === 'topic' ? tkind(researchOf(ctx.student, ctx.cls.settings, state)) : kind;
     const target = workTarget(ctx, kind, state);
-    const w = workRow(ctx.student.id, kind);
+    const w = workRow(ctx.student.id, key);
     if (!w) fail(400, '먼저 그래프를 그려 주세요.');
     const data = parse(w.data);
     const issues = checkWork(data, target);
@@ -607,13 +776,14 @@ export function createApi({ db, sec, options = {} }) {
     data.checked = issues.length === 0;
     data.checkedAt = data.checked ? now() : null;
     db.run('UPDATE works SET data = ?, updated_at = ? WHERE id = ?', [JSON.stringify(data), now(), w.id]);
-    return { body: { ok: issues.length === 0, issues, answer: issues.length === 0 ? { labels: target.labels, values: target.values } : null, work: publicWork(workRow(ctx.student.id, kind)) } };
+    return { body: { ok: issues.length === 0, issues, answer: issues.length === 0 ? { labels: target.labels, values: target.values } : null, work: publicWork(workRow(ctx.student.id, key)) } };
   });
 
   route('POST', '/api/student/work/submit', 'student', async ({ ctx, body }) => {
-    const kind = body.kind === 'weather' ? 'weather' : 'topic';
-    const { state } = requireGate(ctx, kind === 'weather' ? 'weather' : 'graph');
-    const w = workRow(ctx.student.id, kind);
+    const kind = ['weather', 'life'].includes(body.kind) ? body.kind : 'topic';
+    const { state } = requireGate(ctx, kind === 'topic' ? 'graph' : kind);
+    const key = kind === 'topic' ? tkind(researchOf(ctx.student, ctx.cls.settings, state)) : kind;
+    const w = workRow(ctx.student.id, key);
     const data = parse(w?.data);
     if (!w || !data.checked) fail(400, '[확인하기]를 통과한 뒤에 제출할 수 있어요.');
     if (['submitted', 'approved'].includes(w.status)) return { body: { ok: true, work: publicWork(w) } };
@@ -622,7 +792,7 @@ export function createApi({ db, sec, options = {} }) {
       state.weatherDone = true;
       putState(ctx.student.id, ctx.cls.id, state);
     }
-    return { body: { ok: true, work: publicWork(workRow(ctx.student.id, kind)) } };
+    return { body: { ok: true, work: publicWork(workRow(ctx.student.id, key)) } };
   });
 
   route('GET', '/api/gallery', 'any', async ({ ctx, query }) => {
@@ -640,13 +810,13 @@ export function createApi({ db, sec, options = {} }) {
       const d = parse(r.data);
       const topic = topicById(r.topic_id);
       return {
-        id: r.id, kind: r.kind, topicId: r.topic_id,
-        topicName: r.kind === 'weather' ? '연도별 폭염일수' : topic?.name,
+        id: r.id, kind: r.kind === 'weather' || r.kind === 'life' ? r.kind : 'topic', topicId: r.topic_id, sid: r.student_id,
+        topicName: workName(r, d),
         author: displayName(r, settings),
         mine: ctx.role === 'student' && r.student_id === ctx.student.id,
         data: {
           title: d.title, xName: d.xName, xUnit: d.xUnit, yName: d.yName, yUnit: d.yUnit, scale: d.scale, yStart: d.yStart,
-          labels: d.labels, values: d.values, points: d.points, segments: d.segments, interp: { sentence: d.interp?.sentence || '' },
+          labels: d.labels, values: d.values, points: d.points, segments: d.segments, interp: { sentence: d.interp?.sentence || '' }, subject: d.subject || '',
         },
         stats: computeStats(d.labels || [], d.values || []),
       };
@@ -721,6 +891,8 @@ export function createApi({ db, sec, options = {} }) {
     if (['total', 'average', 'hidden'].includes(p.savingsMode)) s.savingsMode = p.savingsMode;
     if (['list', 'total'].includes(p.tableRefMode)) s.tableRefMode = p.tableRefMode;
     if (p.kmaUrl !== undefined) { const u = str(p.kmaUrl, 300); if (u && !/^https?:\/\//.test(u)) fail(400, '주소는 http:// 또는 https://로 시작해야 해요.'); s.kmaUrl = u || DEFAULT_SETTINGS.kmaUrl; }
+    if (p.lifeSources !== undefined) s.lifeSources = cleanLifeSources(p.lifeSources);
+    if (p.lifeRegion !== undefined) s.lifeRegion = str(p.lifeRegion, 20) || DEFAULT_LIFE_REGION;
     if (p.kmaGuide !== undefined) s.kmaGuide = str(p.kmaGuide, 2000) || DEFAULT_KMA_GUIDE;
     if (p.notice !== undefined) s.notice = str(p.notice, 300);
     if (p.school !== undefined) s.school = cleanSchool(p.school);
@@ -728,6 +900,9 @@ export function createApi({ db, sec, options = {} }) {
     if (p.classNo !== undefined) { const n = int(p.classNo); s.classNo = n >= 1 && n <= 30 ? n : null; }
     if (p.nickname !== undefined) s.nickname = str(p.nickname, 20);
     if (p.pickNoRepeat !== undefined) s.pickNoRepeat = !!p.pickNoRepeat;
+    if (['own', 'lottery', 'class'].includes(p.topicMode)) s.topicMode = p.topicMode;
+    if (p.minWorks !== undefined) { const n = int(p.minWorks); if (!(n >= 1 && n <= 10)) fail(400, '꼭 낼 그래프 수는 1~10개로 정해 주세요.'); s.minWorks = n; }
+    if (p.assignPool !== undefined) { const pool = (Array.isArray(p.assignPool) ? p.assignPool : []).map(Number).filter((id) => topicById(id)); if (!pool.length) fail(400, '주제를 한 개 이상 골라 주세요.'); s.assignPool = [...new Set(pool)]; }
     if (p.picked !== undefined) {
       const ids = new Set(db.all('SELECT id FROM students WHERE class_id = ?', [c.id]).map((r) => r.id));
       s.picked = [...new Set((Array.isArray(p.picked) ? p.picked : []).map(Number))].filter((id) => ids.has(id)).slice(0, 100);
@@ -756,6 +931,91 @@ export function createApi({ db, sec, options = {} }) {
     } else code = genCode();
     db.run('UPDATE classes SET code = ? WHERE id = ?', [code, c.id]);
     return { body: { code } };
+  });
+
+  // ───────── 주제 제비뽑기: 학생 한 명당 주제 한 개, 서로 겹치지 않게 ─────────
+  function assignView(c) {
+    const st = db.all('SELECT id, number, name FROM students WHERE class_id = ? ORDER BY number', [c.id]);
+    const s = c.settings;
+    const taken = new Set(Object.values(s.assign).map(Number));
+    return {
+      topicMode: s.topicMode, pool: s.assignPool,
+      remaining: s.assignPool.filter((id) => !taken.has(id)),
+      rows: st.map((x) => {
+        const tid = s.assign[String(x.id)] || null;
+        const w = tid ? workRow(x.id, tkind(tid)) : null;
+        const subs = tid ? !!db.get('SELECT 1 AS x FROM submissions WHERE student_id = ? AND topic_id = ?', [x.id, tid]) : false;
+        return { id: x.id, number: x.number, name: x.name, topicId: tid, surveyed: subs, work: w && w.topic_id === tid ? w.status : null };
+      }),
+    };
+  }
+  function saveAssign(c, assign) {
+    c.settings.assign = assign;
+    db.run('UPDATE classes SET settings = ? WHERE id = ?', [JSON.stringify(c.settings), c.id]);
+  }
+  function checkChange(c, studentId, force) {
+    const cur = c.settings.assign[String(studentId)];
+    if (!cur || force) return;
+    const w = workRow(studentId, tkind(cur));
+    const has = (w && w.topic_id === cur && w.status !== 'draft') || db.get('SELECT 1 AS x FROM submissions WHERE student_id = ? AND topic_id = ?', [studentId, cur]);
+    if (has) fail(409, '이 학생은 지금 주제로 이미 기록이나 작품을 냈어요. 바꾸면 그 학생은 새 주제로 다시 해야 해요.', { needForce: true });
+  }
+
+  route('GET', '/api/teacher/classes/:id/assign', 'teacher', async ({ ctx, params }) => {
+    const c = teacherClass(ctx.teacher, params.id);
+    return { body: assignView(c) };
+  });
+
+  route('POST', '/api/teacher/classes/:id/assign/draw', 'teacher', async ({ ctx, params, body }) => {
+    const c = teacherClass(ctx.teacher, params.id);
+    const assign = { ...c.settings.assign };
+    let targets;
+    if (body.all) targets = db.all('SELECT id FROM students WHERE class_id = ? ORDER BY number', [c.id]).map((r) => r.id).filter((id) => !assign[String(id)]);
+    else {
+      const st = db.get('SELECT id FROM students WHERE id = ? AND class_id = ?', [int(body.studentId), c.id]);
+      if (!st) fail(404, '학생을 찾을 수 없어요.');
+      checkChange(c, st.id, body.force);
+      targets = [st.id];
+    }
+    const drawn = [];
+    for (const sid of targets) {
+      const prev = assign[String(sid)];
+      delete assign[String(sid)];
+      const taken = new Set(Object.values(assign).map(Number));
+      let pool = c.settings.assignPool.filter((id) => !taken.has(id) && id !== prev);
+      if (!pool.length) pool = c.settings.assignPool.filter((id) => !taken.has(id));
+      if (!pool.length) { if (prev) assign[String(sid)] = prev; fail(409, '남은 주제가 없어요. 주제 묶음을 늘리거나 다른 학생의 주제를 비워 주세요.', { drawn }); }
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      assign[String(sid)] = pick; drawn.push({ studentId: sid, topicId: pick });
+    }
+    saveAssign(c, assign);
+    return { body: { drawn, ...assignView(c) } };
+  });
+
+  route('POST', '/api/teacher/classes/:id/assign/set', 'teacher', async ({ ctx, params, body }) => {
+    const c = teacherClass(ctx.teacher, params.id);
+    const st = db.get('SELECT id FROM students WHERE id = ? AND class_id = ?', [int(body.studentId), c.id]);
+    if (!st) fail(404, '학생을 찾을 수 없어요.');
+    const assign = { ...c.settings.assign };
+    if (body.topicId === null || body.topicId === '' || body.topicId === undefined) {
+      checkChange(c, st.id, body.force); delete assign[String(st.id)];
+    } else {
+      const tid = int(body.topicId);
+      if (!topicById(tid)) fail(400, '주제를 다시 골라 주세요.');
+      if (assign[String(st.id)] === tid) return { body: assignView(c) };
+      const other = Object.entries(assign).find(([k, t]) => Number(t) === tid && k !== String(st.id));
+      if (other) fail(409, '이미 다른 학생이 받은 주제예요. 주제는 학생마다 하나씩 겹치지 않게 정해요.');
+      checkChange(c, st.id, body.force);
+      assign[String(st.id)] = tid;
+    }
+    saveAssign(c, assign);
+    return { body: assignView(c) };
+  });
+
+  route('POST', '/api/teacher/classes/:id/assign/reset', 'teacher', async ({ ctx, params }) => {
+    const c = teacherClass(ctx.teacher, params.id);
+    saveAssign(c, {});
+    return { body: assignView(c) };
   });
 
   route('GET', '/api/teacher/classes/:id/students', 'teacher', async ({ ctx, params }) => {
@@ -819,6 +1079,8 @@ export function createApi({ db, sec, options = {} }) {
     db.tx(() => {
       db.run("DELETE FROM sessions WHERE role = 'student' AND user_id = ?", [st.id]);
       db.run('DELETE FROM students WHERE id = ?', [st.id]);
+      const c = db.get('SELECT * FROM classes WHERE id = ?', [st.class_id]);
+      if (c) { const cs = mergeSettings(parse(c.settings)); delete cs.assign[String(st.id)]; db.run('UPDATE classes SET settings = ? WHERE id = ?', [JSON.stringify(cs), c.id]); }
     });
     return { body: { ok: true } };
   });
@@ -838,8 +1100,10 @@ export function createApi({ db, sec, options = {} }) {
       const state = getState(st.id);
       const vote = db.get('SELECT topic_id FROM votes WHERE student_id = ?', [st.id]);
       const subs = db.all('SELECT topic_id FROM submissions WHERE student_id = ?', [st.id]).map((r) => r.topic_id);
-      const wW = workRow(st.id, 'weather'); const wT = workRow(st.id, 'topic');
-      const rt = state.research?.topicId ? Number(state.research.topicId) : null;
+      const rt = researchOf(st, c.settings, state);
+      const wW = workRow(st.id, 'weather'); const wT = rt ? workRow(st.id, tkind(rt)) : null;
+      const done = doneWorks(st.id);
+      const topicsTouched = [...new Set([...subs, ...db.all("SELECT topic_id FROM works WHERE student_id = ? AND kind LIKE 'topic:%'", [st.id]).map((r) => r.topic_id)])];
       const w = state.weather || {};
       return {
         id: st.id, number: st.number, name: st.name,
@@ -851,6 +1115,11 @@ export function createApi({ db, sec, options = {} }) {
         table: rt ? (state.tables?.[rt]?.verified ? '완성' : state.tables?.[rt] ? '작성 중' : '시작 전') : '—',
         graph: wT ? { draft: '그리는 중', submitted: '승인 대기', approved: '승인됨', rejected: '다시 그리기' }[wT.status] + (parse(wT.data).checked && wT.status === 'draft' ? '(확인 통과)' : '') : '시작 전',
         weatherWork: wW?.status || null,
+        life: (() => { const L = state.life || {}; const wL = workRow(st.id, 'life'); return wL ? { draft: '그리는 중', submitted: '승인 대기', approved: '승인됨', rejected: '다시 그리기' }[wL.status] : L.tableChecked ? '표 완성' : L.subject ? '자료 찾는 중' : '시작 전'; })(),
+        lifeSubject: state.life?.subject || '',
+        surveyed: !!surveyRow(c.id, 'student', st.id),
+        worksDone: done.length, worksApproved: done.filter((x) => x.status === 'approved').length, minWorks: c.settings.minWorks,
+        doneTopics: done.map((x) => x.topic_id), topics: topicsTouched,
       };
     });
   }
@@ -879,7 +1148,7 @@ export function createApi({ db, sec, options = {} }) {
       body: {
         works: rows.map((r) => {
           const pw = publicWork(r);
-          return { ...pw, number: r.number, name: r.name, topicName: r.kind === 'weather' ? '연도별 폭염일수' : topicById(r.topic_id)?.name, stats: computeStats(pw.data.labels || [], pw.data.values || []) };
+          return { ...pw, number: r.number, name: r.name, topicName: workName(r, pw.data), stats: computeStats(pw.data.labels || [], pw.data.values || []) };
         }),
       },
     };
@@ -942,6 +1211,25 @@ export function createApi({ db, sec, options = {} }) {
         const s = getState(st.id); const w = s.weather || {};
         const yv = []; for (let i = 0; i < 5; i++) yv.push(w.years?.[i] ?? '', w.values?.[i] ?? '');
         rows.push([st.number, st.name, w.region || '', w.source || '', ...yv, weatherDone(st, s) ? 'O' : '']);
+      }
+    } else if (type === 'survey') {
+      name = 'survey';
+      rows = [['구분', ...STUDENT_SURVEY.map((it, i) => `${i + 1}. ${it.q}`), '응답 시각']];
+      for (const r of db.all("SELECT answers, updated_at FROM surveys WHERE class_id = ? AND role = 'student' ORDER BY updated_at", [c.id])) {
+        const a = parse(r.answers); rows.push(['학생', ...STUDENT_SURVEY.map((it) => a[it.id] ?? ''), r.updated_at]);
+      }
+      rows.push([]);
+      rows.push(['구분', ...TEACHER_SURVEY.map((it, i) => `${i + 1}. ${it.q}`), '응답 시각']);
+      for (const r of db.all("SELECT answers, updated_at FROM surveys WHERE class_id = ? AND role = 'teacher'", [c.id])) {
+        const a = parse(r.answers); rows.push(['교사', ...TEACHER_SURVEY.map((it) => a[it.id] ?? ''), r.updated_at]);
+      }
+    } else if (type === 'life') {
+      name = 'life';
+      rows = [['번호', '이름', '조사한 자료', '단위', '출처', '연도1', '값1', '연도2', '값2', '연도3', '값3', '연도4', '값4', '연도5', '값5', '연도6', '값6', '연도7', '값7', '연도8', '값8', '다음 해 예상', '그래프']];
+      for (const st of db.all('SELECT * FROM students WHERE class_id = ? ORDER BY number', [c.id])) {
+        const L = getState(st.id).life || {}; const wL = workRow(st.id, 'life');
+        const yv = []; for (let i = 0; i < 8; i++) yv.push(L.years?.[i] ?? '', L.values?.[i] ?? '');
+        rows.push([st.number, st.name, L.subject || '', L.unit || '', L.source || '', ...yv, L.predict || '', wL?.status || '']);
       }
     } else fail(400, '내려받을 자료 종류를 골라 주세요.');
     return { csv: csv(rows), filename: `${c.code}_${name}.csv` };

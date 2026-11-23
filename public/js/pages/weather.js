@@ -18,7 +18,7 @@ export function spreads(app) {
       intro: `${w.region || ''} 지역의 연도별 폭염일수를 꺾은선그래프로 나타내요.`,
       onSubmitted: async () => {
         await app.reload(false);
-        await celebrate('기상자료 탐험실 완료!', '폭염일수 그래프를 완성했어요. 이제 「주제 선택·투표」 장의 봉인이 풀렸어요. 우리 반이 함께 조사할 주제를 골라 볼까요?');
+        await celebrate('기상자료 탐험실 완료!', '폭염일수 그래프를 완성했어요. 이제 2차 「나의 주제 꺾은선그래프」와 3차 「우리 고장 꺾은선그래프」의 봉인이 풀렸어요.');
         app.go('topics', 0, 'next');
       },
     }));
@@ -39,7 +39,7 @@ function guideSpread(app, w, done) {
   return {
     folio: ['118쪽 탐험', '포털 조사'],
     left: (el) => el.append(
-      h('div', { class: 'page-head' }, icon('weather', 'ico'), h('div', null, h('div', { class: 'kicker' }, '제1장 · 꼭 먼저 하는 탐험'), h('h2', null, '기상자료 탐험실'))),
+      h('div', { class: 'page-head' }, icon('weather', 'ico'), h('div', null, h('div', { class: 'kicker' }, '1차 활동 · 꼭 먼저 하는 탐험'), h('h2', null, '기상자료 탐험실'))),
       h('div', { class: 'divider' }),
       h('p', null, '우리 고장의 여름은 해마다 얼마나 더웠을까요? 기상청 자료를 직접 찾아 연도별 ', h('b', null, '폭염일수'), '를 조사해 봐요.'),
       h('div', { class: 'def-box' }, h('b', null, '폭염일수 '), '하루 중 가장 높은 기온이 33 ℃ 이상인 날의 수예요.'),

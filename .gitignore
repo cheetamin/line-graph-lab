@@ -1,6 +1,7 @@
 node_modules/
 data/
 dist-demo/
+dist-pages/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm

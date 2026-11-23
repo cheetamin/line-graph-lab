@@ -8,7 +8,7 @@ export const A = (name) => `assets/${name}.webp`;
 export const ART = (name) => `assets/art/${name}.png`;
 export const ICONS = {
   book: 'icon_book', graph: 'icon_graph', table: 'icon_table', vote: 'icon_vote', weather: 'icon_weather',
-  search: 'icon_search', gallery: 'icon_gallery', scroll: 'icon_scroll', brush: 'icon_brush', home: 'icon_home',
+  search: 'icon_search', gallery: 'icon_gallery', scroll: 'icon_scroll', brush: 'icon_brush', home: 'icon_home', town: 'icon_town',
 };
 export const iconSrc = (k) => ART(ICONS[k] || k);
 const SEALS = { '封': 'seal_lock', '完': 'seal_done', '展': 'seal_show', '待': 'seal_wait', '表': 'seal_table' };

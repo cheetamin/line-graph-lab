@@ -3,7 +3,7 @@
 import { createApi } from '../core/api.js';
 import { seedDemo } from '../core/seed.js';
 
-const KEY = 'kgl-demo-db-v1';
+const KEY = 'kgl-demo-db-v7'; // 제비뽑기 방식 체험 자료(v2)
 const TKEY = 'kgl-demo-token';
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return memory[k] ?? null; } },
