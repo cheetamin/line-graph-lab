@@ -17,7 +17,6 @@ export async function boot(opts = {}) {
   const jm = location.hash.match(/^#join-([A-Za-z0-9]{4,8})$/);
   const joinCode = jm ? jm[1].toUpperCase() : (opts.joinCode || null);
   if (jm) { try { history.replaceState(null, '', location.pathname + location.search); } catch { /* */ } }
-  if (joinCode) { try { localStorage.setItem('kgl-code', joinCode); } catch { /* */ } }
   app.replaceChildren();
   if (me.role === 'student') {
     if (joinCode) setTimeout(() => toast('이미 연구소에 들어와 있어요. 다른 학급이면 [나가기] 뒤에 다시 QR을 비춰 주세요.'), 600);

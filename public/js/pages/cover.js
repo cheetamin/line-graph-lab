@@ -7,7 +7,6 @@ import { iconSrc } from '../ui.js';
 import { boot } from '../main.js';
 
 const ss = { get: (k) => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch { /* */ } }, del: (k) => { try { sessionStorage.removeItem(k); } catch { /* */ } } };
-const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 
 const CHAPTERS = [
   ['weather', '1차 기상자료 탐험실'],
@@ -121,9 +120,13 @@ export function mountLogin(root, tab = 'student', joinCode = null) {
 }
 
 function studentForm(joinCode = null, preset = null) {
-  const code = h('input', { type: 'text', name: 'classCode', autocomplete: 'off', autocapitalize: 'characters', maxlength: 8, required: true, placeholder: '예: AB12CD', value: joinCode || lsGet('kgl-code') || '' });
+  const code = h('input', { type: 'text', name: 'classCode', autocomplete: 'off', autocapitalize: 'characters', maxlength: 8, required: true, placeholder: '예: AB12CD', value: joinCode || '' }); // 처음엔 비워 둠(QR로 들어온 경우만 채움)
   const num = h('input', { type: 'number', name: 'number', inputmode: 'numeric', min: 1, max: 99, required: true, placeholder: '번호', class: 'num-input' });
-  const pin = h('input', { type: 'password', name: 'pin', class: 'pin-input', inputmode: 'numeric', maxlength: 4, autocomplete: 'off', required: true, placeholder: '••••' });
+  const pin = h('input', { type: 'password', name: 'pin', class: 'pin-input', inputmode: 'numeric', maxlength: 4, autocomplete: 'new-password', required: true, placeholder: '••••', readonly: true });
+  // 브라우저가 예전에 쓴 PIN을 저절로 채우지 않도록: 누를 때만 입력 가능하게 하고, 처음엔 비워 둠
+  const unlockPin = () => pin.removeAttribute('readonly');
+  pin.addEventListener('focus', unlockPin); pin.addEventListener('pointerdown', unlockPin);
+  setTimeout(() => { if (pin.hasAttribute('readonly')) pin.value = ''; }, 300);
   const err = h('p', { class: 'err-text', role: 'alert' });
   const classBox = h('div', { class: 'class-find', 'aria-live': 'polite' });
   let found = null; let lastCode = '';
@@ -148,8 +151,6 @@ function studentForm(joinCode = null, preset = null) {
         found.students.length ? h('div', null, h('div', { class: 'small', style: { margin: '4px 0' } }, '내 이름을 눌러요'),
           h('div', { class: 'name-grid' }, found.students.map((x) => h('button', { type: 'button', class: 'name-chip', 'data-n': x.number, 'aria-pressed': 'false', onClick: () => pick(x.number) }, h('small', null, x.number), x.name))))
           : h('p', { class: 'small' }, '아직 선생님이 학생 명단을 등록하지 않았어요.'));
-      const saved = Number(lsGet(`kgl-num-${c}`));
-      if (saved && found.students.some((x) => x.number === saved)) pick(saved);
     } catch (ex) { found = null; classBox.replaceChildren(h('p', { class: 'err-text' }, ex.message)); }
   };
   let t = null;
@@ -160,7 +161,7 @@ function studentForm(joinCode = null, preset = null) {
     try {
       await api('POST', '/api/student/login', { classCode: code.value, number: num.value, pin: pin.value });
       const c = code.value.toUpperCase();
-      try { localStorage.setItem('kgl-code', c); localStorage.setItem(`kgl-num-${c}`, String(num.value)); } catch { /* */ }
+      try { localStorage.removeItem('kgl-code'); localStorage.removeItem(`kgl-num-${c}`); } catch { /* 예전에 저장한 값 지우기 */ }
       const st = found?.students.find((x) => x.number === Number(num.value));
       toast(st ? `${st.name} 연구원의 기록을 불러왔어요!` : '연구소에 들어왔어요!', 'ok');
       boot();
