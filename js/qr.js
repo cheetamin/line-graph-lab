@@ -1,5 +1,5 @@
 // 학생 접속용 QR: 학급 코드가 들어간 주소(…#join-학급코드)를 QR로 만듭니다.
-import { h, s as svgEl } from './ui.js?v=mwt5mx58';
+import { h, s as svgEl } from './ui.js?v=mwt6eiz7';
 
 const BASE_KEY = 'kgl-join-base';
 

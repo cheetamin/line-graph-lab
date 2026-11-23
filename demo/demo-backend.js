@@ -1,8 +1,8 @@
 // 체험판 전용: 서버와 같은 핵심 로직(core/api.js)을 브라우저 안의 SQLite(sql.js)로 실행합니다.
 // 자료는 이 브라우저에만 저장됩니다. 실제 수업에서는 server/server.js로 운영하세요.
-import { createApi } from '../core/api.js?v=mwt5mx58';
-import { seedDemo } from '../core/seed.js?v=mwt5mx58';
-import { neisSearch } from '../shared/neis.js?v=mwt5mx58';
+import { createApi } from '../core/api.js?v=mwt6eiz7';
+import { seedDemo } from '../core/seed.js?v=mwt6eiz7';
+import { neisSearch } from '../shared/neis.js?v=mwt6eiz7';
 
 const KEY = 'kgl-demo-db-v7'; // 제비뽑기 방식 체험 자료(v2)
 const TKEY = 'kgl-demo-token';
@@ -45,6 +45,18 @@ window.__KGL_READY__ = (async () => {
   const api = createApi({ db, sec, options: { searchSchools: (q, f) => neisSearch(q, f) } });
   api.init();
   await seedDemo({ db, sec });
+  // 한 번만: 체험 학급 1번 학생의 3차(우리 고장)를 비워 처음부터 직접 해 보게 해요. 다른 학급 자료는 건드리지 않아요.
+  if (!store.get('kgl-demo-mig-life1')) {
+    try {
+      const st = db.get("SELECT s.id FROM students s JOIN classes c ON c.id = s.class_id WHERE c.code = 'DEMO26' AND c.is_demo = 1 AND s.number = 1");
+      if (st) {
+        const row = db.get('SELECT state FROM student_state WHERE student_id = ?', [st.id]);
+        if (row) { const state = JSON.parse(row.state || '{}'); delete state.life; db.run('UPDATE student_state SET state = ? WHERE student_id = ?', [JSON.stringify(state), st.id]); }
+        db.run("DELETE FROM works WHERE student_id = ? AND kind = 'life'", [st.id]);
+      }
+    } catch { /* 무시 */ }
+    store.set('kgl-demo-mig-life1', '1');
+  }
   const persist = () => { try { store.set(KEY, b64(sdb.export())); } catch { /* 저장 공간 부족 */ } };
   persist();
   window.__KGL_DEMO__ = async (method, path, body) => {

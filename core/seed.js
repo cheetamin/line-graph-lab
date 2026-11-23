@@ -1,10 +1,10 @@
 // 체험용(가상) 학급 데이터. 실제 운영 데이터와 구분되도록 학급 이름에 '체험용'을 붙이고 is_demo=1로 저장합니다.
 // 모든 단계를 둘러볼 수 있도록 기상자료·우리 고장 자료도 '예시(가상) 값'으로 채웁니다. 실제 통계가 아니에요.
-import { topicById } from '../shared/topics.js?v=mwt5mx58';
-import { DEFAULT_SETTINGS } from './api.js?v=mwt5mx58';
-import { computeStats } from '../shared/stats.js?v=mwt5mx58';
-import { SCALE_OPTIONS } from '../shared/topics.js?v=mwt5mx58';
-import { DEFAULT_LIFE_SOURCES } from '../shared/life.js?v=mwt5mx58';
+import { topicById } from '../shared/topics.js?v=mwt6eiz7';
+import { DEFAULT_SETTINGS } from './api.js?v=mwt6eiz7';
+import { computeStats } from '../shared/stats.js?v=mwt6eiz7';
+import { SCALE_OPTIONS } from '../shared/topics.js?v=mwt6eiz7';
+import { DEFAULT_LIFE_SOURCES } from '../shared/life.js?v=mwt6eiz7';
 
 const NAMES = ['체험학생', '김하늘', '이도윤', '박서연', '최지호', '정하은', '강민준', '조수아', '윤시우', '장예린',
   '임주원', '한지안', '오서준', '서다인', '신우진', '권나연', '황준서', '안채원', '송유찬', '전소율'];
@@ -109,8 +109,9 @@ export async function seedDemo({ db, sec, code = 'DEMO26', teacherUser = 'demo',
       addWork(sid, `topic:${topic.id}`, topic.id, data, me ? (ti === 2 ? 'submitted' : 'approved') : (R() < 0.8 ? 'approved' : 'submitted'));
     });
     // 3차 우리 고장
-    if (me || k % 2 === 0 || k % 5 === 1) {
-      const ex = LIFE[me ? 0 : k % LIFE.length];
+    // 1번 체험학생은 3차를 처음부터 직접 해 보도록 비워 둬요(자료 고르기 → 연도만 채워진 표에 수 옮겨 적기)
+    if (!me && (k % 2 === 0 || k % 5 === 1)) {
+      const ex = LIFE[k % LIFE.length];
       const vals = ex.real ? ex.base.slice() : ex.base.map((v) => v + Math.round((R() - 0.5) * 4));
       state.life = { sourceId: ex.sourceId, subject: ex.subject, unit: ex.unit, source: ex.real ? '공공데이터포털 경상남도 주요관광지점 입장객 현황' : EX, visited: true, years: ex.years, values: vals, tableChecked: true,
         predict: me ? '' : '다음 해에도 비슷하게 변할 것 같아요. 지금까지 같은 방향으로 꾸준히 변했기 때문이에요.' };
