@@ -5,7 +5,7 @@ for (const fn of ['append', 'replaceChildren', 'prepend']) {
   Element.prototype[fn] = function (...nodes) { return orig.apply(this, nodes.filter((n) => n !== null && n !== undefined && n !== false)); };
 }
 export const A = (name) => `assets/${name}.webp`;
-export const ART = (name) => `assets/art/${name}.png`;
+export const ART = (name) => `assets/art/${name}.webp`;
 export const ICONS = {
   book: 'icon_book', graph: 'icon_graph', table: 'icon_table', vote: 'icon_vote', weather: 'icon_weather',
   search: 'icon_search', gallery: 'icon_gallery', scroll: 'icon_scroll', brush: 'icon_brush', home: 'icon_home', town: 'icon_town',

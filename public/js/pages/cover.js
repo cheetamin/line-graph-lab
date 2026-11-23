@@ -16,7 +16,7 @@ const CHAPTERS = [
   ['gallery', '작품 전시관'],
 ];
 
-const D = (n) => `assets/art/${n}.png`;
+const D = (n) => `assets/art/${n}.webp`;
 const deco = (n, style, cls = '') => h('img', { class: `deco ${cls}`, src: D(n), alt: '', style, draggable: 'false' });
 
 export function mountCover(root, opts = {}) {

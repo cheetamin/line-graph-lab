@@ -327,7 +327,7 @@ async function pickerView() {
   const label = (x) => `${x.number}번 ${x.name}`;
   const nameEl = h('div', { class: 'pick-name', 'aria-live': 'assertive' }, '?');
   const subEl = h('div', { class: 'pick-sub' }, '버튼을 눌러 한 명을 뽑아요');
-  const stage = h('div', { class: 'pick-stage' }, h('img', { class: 'pick-seal', src: 'assets/art/seal_wait.png', alt: '' }), nameEl, subEl);
+  const stage = h('div', { class: 'pick-stage' }, h('img', { class: 'pick-seal', src: 'assets/art/seal_wait.webp', alt: '' }), nameEl, subEl);
   const left = h('span', { class: 'badge pick-left' });
   const hist = h('div', { class: 'pick-history' });
   const pickBtn = btn('한 명 뽑기', () => roll(), { variant: 'gold big' });
@@ -417,7 +417,7 @@ async function lotteryView() {
   const next = v.rows.find((x) => !x.topicId);
   const nameEl = h('div', { class: 'lot-who' }, next ? `${next.number}번 ${next.name}` : '모두 뽑았어요');
   const topicEl = h('div', { class: 'lot-topic', 'aria-live': 'assertive' }, next ? '?' : '');
-  const box = h('div', { class: 'lot-box' }, h('img', { class: 'pick-seal', src: 'assets/art/seal_wait.png', alt: '' }), nameEl, topicEl);
+  const box = h('div', { class: 'lot-box' }, h('img', { class: 'pick-seal', src: 'assets/art/seal_wait.webp', alt: '' }), nameEl, topicEl);
   let rolling = false;
   const call = async (path, body) => {
     try { return await api('POST', `/api/teacher/classes/${cur.id}/assign/${path}`, body); } catch (e) {

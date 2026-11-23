@@ -32,6 +32,27 @@ export async function boot(opts = {}) {
     const { mountCover } = await import('./pages/cover.js');
     mountCover(app, joinCode ? { ...opts, joinCode, skipCover: true, tab: 'student' } : opts);
   }
+  warmUp(me.role);
+}
+
+// 화면이 뜬 뒤 쉬는 틈에 그림·화면 모듈을 미리 받아 풀어 둬요 → 처음 넘길 때 멈칫하지 않아요
+const WARM_ART = ['btn_gold', 'btn_hanji', 'btn_hyeonpan', 'btn_jade', 'btn_off', 'btn_red', 'divider', 'dot_off', 'dot_on', 'frame_corner',
+  'icon_book', 'icon_brush', 'icon_gallery', 'icon_graph', 'icon_home', 'icon_scroll', 'icon_search', 'icon_table', 'icon_town', 'icon_vote', 'icon_weather',
+  'prop_mountains_faint', 'prop_mountains_small', 'seal_done', 'seal_lock', 'seal_show', 'seal_table', 'seal_wait', 'tab_off', 'tab_on', 'tile_off', 'tile_on', 'arrow_next', 'arrow_prev'];
+const WARM_BG = ['04_left_page_blank', '05_right_page_blank', '17_topic_card_default', '18_topic_card_selected', '19_graph_frame_blank', '20_data_table_frame_blank', '21_description_panel_blank'];
+function warmUp(role) {
+  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 400));
+  idle(() => {
+    const keep = (window.__kglWarm = window.__kglWarm || []);
+    [...WARM_ART.map((n) => `assets/art/${n}.webp`), ...WARM_BG.map((n) => `assets/${n}.webp`)].forEach((src, i) => {
+      setTimeout(() => { const im = new Image(); im.decoding = 'async'; im.src = src; keep.push(im); im.decode?.().catch(() => {}); }, i * 25);
+    });
+    // 다음에 쓸 화면 모듈도 미리 받아 둠
+    const mods = role === 'student'
+      ? [import('./pages/topics.js'), import('./pages/table.js'), import('./pages/graphwork.js'), import('./pages/life.js'), import('./pages/gallery.js'), import('./pages/survey.js')]
+      : role === 'teacher' ? [] : [import('./pages/student.js'), import('./pages/teacher.js')];
+    Promise.allSettled(mods);
+  });
 }
 
 export async function logout() {

@@ -29,8 +29,13 @@ async def main(names):
             s = fn()
             await pg.set_content(f'<html><body style="margin:0;background:transparent">{s}</body></html>')
             el = await pg.query_selector('svg')
-            await el.screenshot(path=os.path.join(OUT, name + '.png'), omit_background=True)
+            png = os.path.join(OUT, name + '.png')
+            await el.screenshot(path=png, omit_background=True)
+            # 화면에는 가벼운 WebP를 써요(PNG보다 약 4배 작음)
+            from PIL import Image
+            Image.open(png).save(os.path.join(OUT, name + '.webp'), 'WEBP', quality=88, method=6)
+            os.remove(png)
         await b.close()
-    print(f'{len(items)}개 PNG 완성 →', os.path.abspath(OUT))
+    print(f'{len(items)}개 WebP 완성 →', os.path.abspath(OUT))
 
 asyncio.run(main(sys.argv[1:]))
