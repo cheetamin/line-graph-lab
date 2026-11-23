@@ -27,5 +27,17 @@ if (!PAGES) {
 } else fs.writeFileSync(path.join(out, '.nojekyll'), '');
 for (const f of ['03_open_book_blank_1600x960.webp', '38_mountain_overlay.webp']) fs.rmSync(path.join(out, 'assets', f), { force: true });
 if (!PAGES) html = html.replace('<title>꺾은선그래프 연구소</title>', '<title>꺾은선그래프 연구소 (체험판)</title>');
+// GitHub Pages: 새로 올릴 때마다 코드 파일 주소에 판 번호(?v=)를 붙여, 브라우저가 옛 파일을 다시 쓰지 않게 함
+if (PAGES) {
+  const V = Date.now().toString(36);
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+  const re = /((?:from|import)\s*\(?\s*)(['"])(\.{1,2}\/[^'"?]+?\.js)\2/g;
+  for (const f of walk(out).filter((x) => x.endsWith('.js') && !/[\\/](vendor|demo[\\/]sql-wasm)/.test(x))) {
+    const src = fs.readFileSync(f, 'utf8');
+    const next = src.replace(re, (m, pre, q, spec) => `${pre}${q}${spec}?v=${V}${q}`);
+    if (next !== src) fs.writeFileSync(f, next);
+  }
+  html = html.replace(/(src|href)="((?:js|demo|css)\/[^"?]+\.(?:js|css))"/g, (m, a, u) => `${a}="${u}?v=${V}"`);
+}
 fs.writeFileSync(idx, html);
 console.log(`${PAGES ? 'dist-pages' : 'dist-demo'}/ 완성`);
