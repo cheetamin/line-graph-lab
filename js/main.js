@@ -7,9 +7,11 @@ const app = document.getElementById('app');
 
 export async function boot(opts = {}) {
   if (window.__KGL_READY__) await window.__KGL_READY__;
-  if (isDemo() && !document.querySelector('.demo-ribbon')) document.body.append(h('div', { class: 'demo-ribbon' }, '체험판 · 자료는 이 브라우저에만 저장돼요'));
   let me = { role: null };
   try { me = await api('GET', '/api/me'); } catch (e) { toast(e.message, 'bad'); }
+  // 체험판 띠는 교사·관리자 화면에만(학생 화면에는 체험판 설명을 보이지 않음)
+  document.querySelector('.demo-ribbon')?.remove();
+  if (isDemo() && (me.role === 'teacher' || me.role === 'admin')) document.body.append(h('div', { class: 'demo-ribbon' }, '체험판 · 자료는 이 브라우저에만 저장돼요'));
   S.me = me;
   // QR로 들어온 경우: 주소 끝의 #join-학급코드
   const jm = location.hash.match(/^#join-([A-Za-z0-9]{4,8})$/);
@@ -21,6 +23,9 @@ export async function boot(opts = {}) {
     if (joinCode) setTimeout(() => toast('이미 연구소에 들어와 있어요. 다른 학급이면 [나가기] 뒤에 다시 QR을 비춰 주세요.'), 600);
     const { mountStudent } = await import('./pages/student.js');
     await mountStudent(app);
+  } else if (me.role === 'admin') {
+    const { mountAdmin } = await import('./pages/admin.js');
+    await mountAdmin(app);
   } else if (me.role === 'teacher') {
     const { mountTeacher } = await import('./pages/teacher.js');
     await mountTeacher(app);

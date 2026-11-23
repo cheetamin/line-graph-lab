@@ -65,11 +65,21 @@ export function mountCover(root, opts = {}) {
   }
 }
 
-function demoHint(kind, fill) {
+// 체험판 안내: 교사 탭에서만 보여요(학생용 체험·교사용 체험 둘 다)
+function demoGuide(goStudent, fillTeacher) {
   if (!isDemo()) return null;
-  return h('div', { class: 'note gold small' },
-    kind === 'student' ? '체험판: 학급 코드 DEMO26 · 번호 1 · PIN 1234' : '체험판: 아이디 demo · 비밀번호 demo1234',
-    ' ', h('button', { class: 'link-btn', type: 'button', onClick: fill }, '자동으로 채우기'));
+  return h('div', { class: 'demo-guide' },
+    h('div', { class: 'demo-guide-head' }, '체험판 안내 ', h('span', { class: 'small muted' }, '· 자료는 이 브라우저에만 저장돼요')),
+    h('div', { class: 'demo-guide-row' },
+      h('div', null, h('b', null, '학생으로 체험'), h('br'),
+        h('span', { class: 'small' }, '학급 코드 DEMO26 → 이름 누르기 → PIN 1234'), h('br'),
+        h('span', { class: 'small muted' }, '1번 체험학생: 그래프 직접 그려 보기 · 3번 이도윤: 만족도 조사 해 보기')),
+      h('div', { class: 'demo-guide-btns' },
+        btn('1번으로', () => goStudent(1), { variant: 'small green' }), btn('3번으로', () => goStudent(3), { variant: 'small' }))),
+    h('div', { class: 'demo-guide-row' },
+      h('div', null, h('b', null, '교사로 체험'), h('br'), h('span', { class: 'small' }, '아이디 demo · 비밀번호 demo1234'), h('br'),
+        h('span', { class: 'small muted' }, '학급 만들기, 명단, 작품 승인, 3차 우리 고장 바꾸기, 만족도 결과')),
+      h('div', { class: 'demo-guide-btns' }, btn('채워 주기', fillTeacher, { variant: 'small green' }))));
 }
 
 export function mountLogin(root, tab = 'student', joinCode = null) {
@@ -98,11 +108,11 @@ export function mountLogin(root, tab = 'student', joinCode = null) {
   const right = (el) => {
     const body = h('div');
     const tabs = h('div', { class: 'row', role: 'tablist', style: { justifyContent: 'center', marginBottom: '10px' } });
-    const show = (t) => {
+    const show = (t, preset = null) => {
       tabs.replaceChildren(
         h('button', { class: `chip-btn ${t === 'student' ? 'on' : ''}`, role: 'tab', 'aria-selected': String(t === 'student'), type: 'button', onClick: () => show('student') }, '학생 입장'),
         h('button', { class: `chip-btn ${t === 'teacher' ? 'on' : ''}`, role: 'tab', 'aria-selected': String(t === 'teacher'), type: 'button', onClick: () => show('teacher') }, '교사 관리실'));
-      body.replaceChildren(t === 'student' ? studentForm(joinCode) : teacherForm());
+      body.replaceChildren(t === 'student' ? studentForm(joinCode, preset) : teacherForm((n) => show('student', { code: 'DEMO26', number: n, pin: '1234' })));
     };
     el.append(h('div', { class: 'center' }, h('h2', { class: 'plaque' }, '연구소 입장')), tabs, body);
     show(tab);
@@ -110,7 +120,7 @@ export function mountLogin(root, tab = 'student', joinCode = null) {
   book.fill({ left, right, folio: ['一', '二'], canPrev: true, prevText: '표지로' });
 }
 
-function studentForm(joinCode = null) {
+function studentForm(joinCode = null, preset = null) {
   const code = h('input', { type: 'text', name: 'classCode', autocomplete: 'off', autocapitalize: 'characters', maxlength: 8, required: true, placeholder: '예: AB12CD', value: joinCode || lsGet('kgl-code') || '' });
   const num = h('input', { type: 'number', name: 'number', inputmode: 'numeric', min: 1, max: 99, required: true, placeholder: '번호', class: 'num-input' });
   const pin = h('input', { type: 'password', name: 'pin', class: 'pin-input', inputmode: 'numeric', maxlength: 4, autocomplete: 'off', required: true, placeholder: '••••' });
@@ -164,15 +174,17 @@ function studentForm(joinCode = null) {
   err,
   btn('연구소 들어가기', null, { variant: 'gold', type: 'submit' }),
   h('p', { class: 'small muted center', style: { margin: '4px 0 0' } }, '내가 한 활동은 저절로 저장돼요. 다음 시간에 같은 이름으로 들어오면 이어서 할 수 있어요.'),
-  joinCode ? null : demoHint('student', async () => { code.value = 'DEMO26'; await lookup(true); pick(1); pin.value = '1234'; }));
-  if (code.value) setTimeout(() => lookup(), 200);
+  null);
+  if (preset) { code.value = preset.code; setTimeout(async () => { await lookup(true); pick(preset.number); pin.value = preset.pin; }, 50); }
+  else if (code.value) setTimeout(() => lookup(), 200);
   return form;
 }
 
-function teacherForm() {
-  let signup = false;
+function teacherForm(goStudent) {
+  let signup = false; let admin = false;
   const wrap = h('div');
   const render = () => {
+    if (admin) { wrap.replaceChildren(adminForm(() => { admin = false; render(); })); return; }
     const user = h('input', { type: 'text', name: 'username', autocomplete: 'username', required: true, placeholder: '영문 소문자·숫자' });
     const pw = h('input', { type: 'password', name: 'password', autocomplete: signup ? 'new-password' : 'current-password', required: true, placeholder: signup ? '8자 이상' : '' });
     const name = h('input', { type: 'text', name: 'name', placeholder: '예: 김OO 선생님' });
@@ -186,6 +198,7 @@ function teacherForm() {
         boot();
       } catch (ex) { err.textContent = ex.message; }
     } },
+    !signup ? demoGuide(goStudent, () => { user.value = 'demo'; pw.value = 'demo1234'; pw.focus(); }) : null,
     h('h3', { class: 'center' }, signup ? '교사 계정 만들기' : '교사 관리실 로그인'),
     h('label', { class: 'field' }, h('span', null, '아이디'), user),
     h('label', { class: 'field' }, h('span', null, '비밀번호'), pw),
@@ -194,10 +207,28 @@ function teacherForm() {
     err,
     btn(signup ? '계정 만들고 들어가기' : '관리실 들어가기', null, { variant: 'green', type: 'submit' }),
     h('button', { class: 'link-btn', type: 'button', onClick: () => { signup = !signup; render(); } }, signup ? '이미 계정이 있어요 → 로그인' : '처음이에요 → 교사 계정 만들기'),
-    !signup ? h('p', { class: 'small muted center' }, '비밀번호를 잊었다면 서버 관리자가 npm run reset-teacher 명령으로 바꿀 수 있어요.') : null,
-    !signup ? demoHint('teacher', () => { user.value = 'demo'; pw.value = 'demo1234'; }) : null);
+    !signup ? h('button', { class: 'link-btn admin-link', type: 'button', onClick: () => { admin = true; render(); } }, '전체 관리자 들어가기') : null);
     wrap.replaceChildren(form);
   };
   render();
   return wrap;
+}
+
+// 전체 관리자 로그인(비밀번호만)
+function adminForm(back) {
+  const pw = h('input', { type: 'password', name: 'adminPassword', autocomplete: 'current-password', required: true });
+  const status = h('div');
+  api('GET', '/api/admin/status').then((r) => { if (!r.enabled) status.replaceChildren(h('div', { class: 'note gold small' }, '전체 관리자는 학교·교육청 서버에 올린 판에서 쓸 수 있어요. 서버를 올릴 때 관리자 비밀번호(ADMIN_PASSWORD)를 정하면 열려요. 이 판(GitHub Pages·체험판)은 자료가 각 브라우저에만 있어 모아 볼 수 없어요.')); }).catch(() => {});
+  const err = h('p', { class: 'err-text', role: 'alert' });
+  return h('form', { class: 'login-card', onSubmit: async (e) => {
+    e.preventDefault(); err.textContent = '';
+    try { await api('POST', '/api/admin/login', { password: pw.value }); boot(); } catch (ex) { err.textContent = ex.message; pw.value = ''; pw.focus(); }
+  } },
+  h('h3', { class: 'center' }, '전체 관리자'),
+  h('p', { class: 'small muted center' }, '모든 학급의 운영 수·학생 수와 만족도 조사 결과를 봐요.'),
+  status,
+  h('label', { class: 'field' }, h('span', null, '관리자 비밀번호'), pw),
+  err,
+  btn('관리자 들어가기', null, { variant: 'green', type: 'submit' }),
+  h('button', { class: 'link-btn', type: 'button', onClick: back }, '← 교사 로그인으로'));
 }

@@ -115,6 +115,7 @@ export function createApi({ db, sec, options = {} }) {
     const h = await sec.sha256(token);
     const s = db.get('SELECT * FROM sessions WHERE token_hash = ?', [h]);
     if (!s || s.expires_at < Date.now()) return null;
+    if (s.role === 'admin') return { role: 'admin', tokenHash: h };
     if (s.role === 'teacher') {
       const t = db.get('SELECT id, username, name FROM teachers WHERE id = ?', [s.user_id]);
       return t ? { role: 'teacher', teacher: t, tokenHash: h } : null;
@@ -480,8 +481,59 @@ export function createApi({ db, sec, options = {} }) {
 
   route('GET', '/api/me', null, async ({ ctx }) => {
     if (!ctx) return { body: { role: null } };
+    if (ctx.role === 'admin') return { body: { role: 'admin' } };
     if (ctx.role === 'teacher') return { body: { role: 'teacher', teacher: ctx.teacher } };
     return { body: { role: 'student', student: { id: ctx.student.id, number: ctx.student.number, name: ctx.student.name }, className: ctx.cls.name } };
+  });
+
+  // ── 전체 관리자: 모든 학급의 운영 현황과 만족도 조사 결과 ──
+  // 관리자 비밀번호는 서버 환경 변수(ADMIN_PASSWORD)로만 정해요. 코드나 공개 저장소에는 두지 않아요.
+  const adminEnabled = () => !!options.adminPassword;
+  async function checkAdmin(password) {
+    const pw = String(password || '');
+    if (!adminEnabled() || !pw || pw.length > 100) return false;
+    return (await sec.sha256(pw)) === (await sec.sha256(options.adminPassword));
+  }
+  route('GET', '/api/admin/status', null, async () => ({ body: { enabled: adminEnabled() } }));
+  route('POST', '/api/admin/login', null, async ({ body }) => {
+    if (!adminEnabled()) fail(403, '전체 관리자는 서버 판에서 쓸 수 있어요. 서버에 ADMIN_PASSWORD를 정해 주세요.');
+    limit('admin-login', 10);
+    if (!(await checkAdmin(body.password))) fail(401, '관리자 비밀번호가 맞지 않아요.');
+    clearLimit('admin-login');
+    const token = await newSession('admin', 0, null, 1);
+    return { body: { ok: true }, token };
+  });
+  route('GET', '/api/admin/overview', 'admin', async ({ query }) => {
+    const withDemo = query.demo === '1';
+    const classes = db.all(`SELECT c.id, c.name, c.code, c.is_demo, c.created_at, c.settings, t.name AS teacher, t.username
+      FROM classes c JOIN teachers t ON t.id = c.teacher_id ORDER BY c.created_at DESC`).filter((c) => withDemo || !c.is_demo);
+    const ids = classes.map((c) => c.id);
+    const count = (sql, id) => db.get(sql, [id]).n;
+    const rows = classes.map((c) => {
+      const st = mergeSettings(parse(c.settings));
+      return {
+        id: c.id, name: c.name, code: c.code, isDemo: !!c.is_demo, createdAt: c.created_at, teacher: c.teacher || c.username,
+        school: st.school?.name || '', region: st.lifeRegion || '',
+        students: count('SELECT COUNT(*) AS n FROM students WHERE class_id = ?', c.id),
+        works: count("SELECT COUNT(*) AS n FROM works WHERE class_id = ? AND status IN ('submitted','approved')", c.id),
+        approved: count("SELECT COUNT(*) AS n FROM works WHERE class_id = ? AND status = 'approved'", c.id),
+        studentSurveys: count("SELECT COUNT(*) AS n FROM surveys WHERE class_id = ? AND role = 'student'", c.id),
+        teacherSurvey: count("SELECT COUNT(*) AS n FROM surveys WHERE class_id = ? AND role = 'teacher'", c.id) > 0,
+      };
+    });
+    const answers = (role) => db.all(`SELECT class_id, answers FROM surveys WHERE role = ?`, [role]).filter((r) => ids.includes(r.class_id)).map((r) => parse(r.answers));
+    const sAns = answers('student'); const tAns = answers('teacher');
+    const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
+    return { body: {
+      withDemo,
+      totals: {
+        teachers: new Set(rows.map((r) => r.teacher)).size, classes: rows.length, students: sum('students'),
+        works: sum('works'), approved: sum('approved'), studentSurveys: sAns.length, teacherSurveys: tAns.length,
+        demoClasses: db.get('SELECT COUNT(*) AS n FROM classes WHERE is_demo = 1').n,
+      },
+      classes: rows,
+      surveys: { students: summarize(STUDENT_SURVEY, sAns), teachers: summarize(TEACHER_SURVEY, tAns) },
+    } };
   });
 
   route('POST', '/api/teacher/password', 'teacher', async ({ ctx, body }) => {
@@ -1250,6 +1302,7 @@ export function createApi({ db, sec, options = {} }) {
         if (r.role === 'any' && !ctx) fail(401, '다시 로그인해 주세요.');
         if (r.role === 'teacher' && ctx?.role !== 'teacher') fail(401, '교사 로그인이 필요해요.');
         if (r.role === 'student' && ctx?.role !== 'student') fail(401, '학생 로그인이 필요해요.');
+        if (r.role === 'admin' && ctx?.role !== 'admin') fail(401, '전체 관리자 로그인이 필요해요.');
         const out = await r.fn({ ctx, params, query, body: body || {} });
         return { status: out.status || 200, body: out.body, token: out.token, clearToken: out.clearToken, csv: out.csv, filename: out.filename };
       }
