@@ -114,9 +114,9 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
         h('table', { class: 'data compact' },
           h('caption', { class: 'small muted' }, u ? '그래프로 옮길 자료 (어림값)' : '내가 완성한 표 (그래프로 옮길 자료)'),
           h('tr', null, h('th', null, xUnit === '년' ? '연도' : '월'), labels.map((l) => h('th', null, l))),
-          u ? h('tr', { class: 'approx-row' }, h('th', null, `어림값 (${unit})`), values.map((v) => {
+          u ? h('tr', { class: 'approx-row' }, h('th', null, `어림값(${unit})`), values.map((v) => {
             const a = approxValue(v, maxValue);
-            return h('td', null, a === null ? '—' : h('span', null, h('b', null, `약 ${koNum(a)}`), h('br'), h('span', { class: 'small muted' }, fmt(a))));
+            return h('td', null, a === null ? '—' : h('b', null, `약 ${koNum(a)}`));
           }))
             : h('tr', null, h('th', null, `(${unit})`), values.map((v) => h('td', null, v === null || v === '' ? '—' : fmt(v))))),
         u ? h('p', { class: 'small approx-note' }, '📍 수가 커서 ', h('b', null, `${PLACE_NAME[u]}의 자리까지 반올림한 어림값`), '으로 바꾸었어요. 이 어림값에 맞게 점을 찍어요.') : null);

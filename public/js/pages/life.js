@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { S, saveState } from '../store.js';
 import { graphSpread, celebrate } from './graphwork.js';
 import { renderStatic } from '../graph.js';
+import { approxValue, koNum } from '../../shared/topics.js';
 
 const N = 8; // 표 칸 수(3~8개 사용)
 const L = () => S.data.state.life || {};
@@ -167,7 +168,7 @@ function thinkSpread(app, l) {
       } else {
         el.append(h('div', { class: 'table-frame' }, h('table', { class: 'data htable' },
           h('tr', null, h('th', null, '연도(년)'), l.years.map((y) => h('td', null, y))),
-          h('tr', null, h('th', null, l.unit ? `값(${l.unit})` : '값'), vals.map((v) => h('td', null, fmt(v)))))));
+          h('tr', null, h('th', null, (approxValue(vals[0], Math.max(...vals)) !== null ? '약 ' : '') + (l.unit ? `값(${l.unit})` : '값')), vals.map((v) => { const a = approxValue(v, Math.max(...vals)); return h('td', { style: { whiteSpace: 'nowrap' } }, a === null ? fmt(v) : koNum(a)); })))));
       }
       const ups = vals.slice(1).filter((v, i) => v > vals[i]).length; const downs = vals.slice(1).filter((v, i) => v < vals[i]).length;
       el.append(h('div', { class: 'note small', style: { marginTop: '10px' } }, h('b', null, '살펴보기 '), `앞의 해보다 늘어난 때가 ${ups}번, 줄어든 때가 ${downs}번이에요. 이런 흐름이 다음 해에도 이어질까요?`));
