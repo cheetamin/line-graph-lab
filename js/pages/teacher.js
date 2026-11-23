@@ -1,18 +1,18 @@
 // 교사 관리실 — 학생 화면과 같은 고서 배경 장면(왼쪽 판 6개 = 메뉴, 펼친 책 두 쪽 = 내용)
-import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwt79o7p';
-import { api, isDemo } from '../api.js?v=mwt79o7p';
-import { S } from '../store.js?v=mwt79o7p';
-import { logout } from '../main.js?v=mwt79o7p';
-import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwt79o7p';
-import { renderStatic } from '../graph.js?v=mwt79o7p';
-import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwt79o7p';
-import { Book } from '../book.js?v=mwt79o7p';
-import { PageTurner } from '../pageturn.js?v=mwt79o7p';
-import { surveyForm } from './survey.js?v=mwt79o7p';
-import { SCALE_LABELS } from '../../shared/survey.js?v=mwt79o7p';
-import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwt79o7p';
-import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwt79o7p';
-import { OFFICES } from '../../shared/neis.js?v=mwt79o7p';
+import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwt7ieup';
+import { api, isDemo } from '../api.js?v=mwt7ieup';
+import { S } from '../store.js?v=mwt7ieup';
+import { logout } from '../main.js?v=mwt7ieup';
+import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwt7ieup';
+import { renderStatic } from '../graph.js?v=mwt7ieup';
+import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwt7ieup';
+import { Book } from '../book.js?v=mwt7ieup';
+import { PageTurner } from '../pageturn.js?v=mwt7ieup';
+import { surveyForm } from './survey.js?v=mwt7ieup';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwt7ieup';
+import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwt7ieup';
+import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwt7ieup';
+import { OFFICES } from '../../shared/neis.js?v=mwt7ieup';
 
 const SECTIONS = [
   { key: 'class', label: '학급·명단', icon: 'home', subs: [['roster', '학생 명단'], ['qr', '학급 정보·QR']] },
@@ -924,7 +924,7 @@ function qrCard(cls) {
           h('li', null, h('span', null, '학급 코드가 자동으로 들어간 입장 화면이 열려요.')),
           h('li', null, h('span', null, '명단에서 내 이름을 누르면 들어와요.'))),
         h('p', { class: 'small muted', style: { margin: 0 } }, 'QR을 못 쓰는 기기는 연구소 첫 화면에서 학급 코드를 직접 적어요.'),
-        isDemo() ? h('div', { class: 'note gold small' }, '체험판은 자료가 이 브라우저에만 저장돼서, 다른 기기에서 QR로 들어와도 이 학급이 보이지 않아요. 학교 서버나 호스팅에 올리면 QR이 그대로 작동해요.') : null,
+        isDemo() ? h('div', { class: 'note gold small' }, '체험판은 자료가 이 브라우저에만 저장돼서, 다른 기기에서 QR로 들어와도 이 학급이 보이지 않아요. 실제 수업은 ', h('a', { href: 'https://line-graph-lab.cheetamin.workers.dev/', target: '_blank', rel: 'noopener' }, '학급 서버판 ↗'), '에서 계정을 만들어 해 주세요.') : null,
         url ? h('div', { class: 'qr-url' }, url) : null,
         h('div', { class: 'row' },
           url ? btn('주소 복사', () => navigator.clipboard?.writeText(url).then(() => toast('주소를 복사했어요.', 'ok')).catch(() => toast('주소를 직접 선택해 복사해 주세요.')), { variant: 'small green' }) : null,

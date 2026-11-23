@@ -1,8 +1,8 @@
 // 제1장 기상자료 탐험실 (교과서 118~121쪽): 포털 조사 → 표 → 직접 그래프
-import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwt79o7p';
-import { api } from '../api.js?v=mwt79o7p';
-import { S, saveState } from '../store.js?v=mwt79o7p';
-import { graphSpread, celebrate } from './graphwork.js?v=mwt79o7p';
+import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwt7ieup';
+import { api } from '../api.js?v=mwt7ieup';
+import { S, saveState } from '../store.js?v=mwt7ieup';
+import { graphSpread, celebrate } from './graphwork.js?v=mwt7ieup';
 
 function W() { return S.data.state.weather || { years: ['', '', '', '', ''], values: ['', '', '', '', ''] }; }
 

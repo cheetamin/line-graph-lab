@@ -1,10 +1,10 @@
 // 전체 관리자: 모든 학급의 운영 현황(학급 수·학생 수·작품 수)과 학생·교사 만족도 조사 결과
-import { h, btn, toast, iconSrc } from '../ui.js?v=mwt79o7p';
-import { api } from '../api.js?v=mwt79o7p';
-import { logout } from '../main.js?v=mwt79o7p';
-import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwt79o7p';
-import { Book } from '../book.js?v=mwt79o7p';
-import { SCALE_LABELS } from '../../shared/survey.js?v=mwt79o7p';
+import { h, btn, toast, iconSrc } from '../ui.js?v=mwt7ieup';
+import { api } from '../api.js?v=mwt7ieup';
+import { logout } from '../main.js?v=mwt7ieup';
+import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwt7ieup';
+import { Book } from '../book.js?v=mwt7ieup';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwt7ieup';
 
 const SECTIONS = [
   { key: 'overview', label: '운영 현황', icon: 'home' },
