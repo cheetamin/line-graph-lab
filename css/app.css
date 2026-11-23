@@ -1197,6 +1197,7 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
 .reset-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 /* 점 찍기용 어림값 */
 .approx-row th, .approx-row td { background: #fff6dc; }
-.approx-row td b { color: #7a2d1f; }
+.approx-row td b { color: #7a2d1f; font-size: 1.05em; white-space: nowrap; }
+.approx-row th { white-space: nowrap; }
 .approx-note { margin: 6px 4px 0; }
 .g-label-ko { font-size: 13px; fill: #7a5a3a; }

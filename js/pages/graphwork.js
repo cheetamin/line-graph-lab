@@ -1,9 +1,9 @@
 // 그래프 그리기 공용 펼침(기상자료·조사 주제 모두 사용): 왼쪽 단계 안내, 오른쪽 모눈종이
-import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwt6eiz7';
-import { api } from '../api.js?v=mwt6eiz7';
-import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwt6eiz7';
-import { GraphEditor } from '../graph.js?v=mwt6eiz7';
-import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwt6eiz7';
+import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwt6l81r';
+import { api } from '../api.js?v=mwt6l81r';
+import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwt6l81r';
+import { GraphEditor } from '../graph.js?v=mwt6l81r';
+import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwt6l81r';
 
 const UNITS = ['월', '년', '일', '회', '권', '편', '개', '시간', '원', '명', '만 명', '곳'];
 const STATUS = { draft: ['그리는 중', 'warn'], submitted: ['제출함 · 선생님 확인 중', 'ok'], approved: ['승인됨 · 전시 중', 'green'], rejected: ['다시 그려 보세요', 'red'] };
@@ -114,9 +114,9 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
         h('table', { class: 'data compact' },
           h('caption', { class: 'small muted' }, u ? '그래프로 옮길 자료 (어림값)' : '내가 완성한 표 (그래프로 옮길 자료)'),
           h('tr', null, h('th', null, xUnit === '년' ? '연도' : '월'), labels.map((l) => h('th', null, l))),
-          u ? h('tr', { class: 'approx-row' }, h('th', null, `어림값 (${unit})`), values.map((v) => {
+          u ? h('tr', { class: 'approx-row' }, h('th', null, `어림값(${unit})`), values.map((v) => {
             const a = approxValue(v, maxValue);
-            return h('td', null, a === null ? '—' : h('span', null, h('b', null, `약 ${koNum(a)}`), h('br'), h('span', { class: 'small muted' }, fmt(a))));
+            return h('td', null, a === null ? '—' : h('b', null, `약 ${koNum(a)}`));
           }))
             : h('tr', null, h('th', null, `(${unit})`), values.map((v) => h('td', null, v === null || v === '' ? '—' : fmt(v))))),
         u ? h('p', { class: 'small approx-note' }, '📍 수가 커서 ', h('b', null, `${PLACE_NAME[u]}의 자리까지 반올림한 어림값`), '으로 바꾸었어요. 이 어림값에 맞게 점을 찍어요.') : null);
