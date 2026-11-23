@@ -1,18 +1,18 @@
 // 교사 관리실 — 학생 화면과 같은 고서 배경 장면(왼쪽 판 6개 = 메뉴, 펼친 책 두 쪽 = 내용)
-import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwswvbuq';
-import { api, isDemo } from '../api.js?v=mwswvbuq';
-import { S } from '../store.js?v=mwswvbuq';
-import { logout } from '../main.js?v=mwswvbuq';
-import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwswvbuq';
-import { renderStatic } from '../graph.js?v=mwswvbuq';
-import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwswvbuq';
-import { Book } from '../book.js?v=mwswvbuq';
-import { PageTurner } from '../pageturn.js?v=mwswvbuq';
-import { surveyForm } from './survey.js?v=mwswvbuq';
-import { SCALE_LABELS } from '../../shared/survey.js?v=mwswvbuq';
-import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwswvbuq';
-import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwswvbuq';
-import { OFFICES } from '../../shared/neis.js?v=mwswvbuq';
+import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwsxb00z';
+import { api, isDemo } from '../api.js?v=mwsxb00z';
+import { S } from '../store.js?v=mwsxb00z';
+import { logout } from '../main.js?v=mwsxb00z';
+import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwsxb00z';
+import { renderStatic } from '../graph.js?v=mwsxb00z';
+import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwsxb00z';
+import { Book } from '../book.js?v=mwsxb00z';
+import { PageTurner } from '../pageturn.js?v=mwsxb00z';
+import { surveyForm } from './survey.js?v=mwsxb00z';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwsxb00z';
+import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwsxb00z';
+import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwsxb00z';
+import { OFFICES } from '../../shared/neis.js?v=mwsxb00z';
 
 const SECTIONS = [
   { key: 'class', label: '학급·명단', icon: 'home', subs: [['roster', '학생 명단'], ['qr', '학급 정보·QR']] },
@@ -195,6 +195,7 @@ async function rosterView() {
             return h('tr', null, h('td', null, st.number), h('td', null, nm), h('td', null, nick),
               h('td', null, h('div', { class: 'row', style: { justifyContent: 'center', gap: '3px', flexWrap: 'nowrap' } },
                 btn('저장', async () => { try { await api('PUT', `/api/teacher/students/${st.id}`, { name: nm.value, nickname: nick.value }); toast('저장했어요.', 'ok'); } catch (e) { toast(e.message, 'bad'); } }, { variant: 'small green' }),
+                btn('자료', () => studentDetail(st.id), { variant: 'small' }),
                 btn('삭제', async () => { if (!(await confirmBox('학생 삭제', `${st.number}번 ${st.name} 학생과 그 학생의 모든 자료를 지울까요? 되돌릴 수 없어요.`, '삭제'))) return; await api('DELETE', `/api/teacher/students/${st.id}`); toast('삭제했어요.'); loadClasses(); }, { variant: 'small' }))));
           })))) : h('p', { class: 'muted' }, '아직 등록된 학생이 없어요. 왼쪽 표에 적어 주세요.'));
     },
@@ -212,6 +213,8 @@ async function qrView() {
         h('label', { class: 'field' }, h('span', null, '학생 알림'), notice),
         h('div', { class: 'row', style: { marginTop: '8px' } },
           btn('저장', async () => { try { await api('PUT', `/api/teacher/classes/${cur.id}`, { name: cname.value, settings: { notice: notice.value } }); toast('저장했어요.', 'ok'); loadClasses(); } catch (e) { toast(e.message, 'bad'); } }, { variant: 'green small' }),
+          btn('학급 자료 모두 초기화', () => resetClass(), { variant: 'small' }),
+          isDemo() && window.__KGL_RESET_DEMO__ ? btn('체험 자료 처음 상태로', async () => { if (await confirmBox('체험 자료 처음 상태로', '이 브라우저의 체험판 자료를 모두 지우고 처음 예시 자료로 되돌릴까요? (선생님이 만든 학급도 지워져요)', '되돌리기')) window.__KGL_RESET_DEMO__(); }, { variant: 'small hanji' }) : null,
           btn('학급 삭제', async () => { if (!(await confirmBox('학급 삭제', `${cur.name}과 학생·응답·작품을 모두 지울까요? 되돌릴 수 없어요.`, '삭제'))) return; await api('DELETE', `/api/teacher/classes/${cur.id}`); cur = null; loadClasses(); }, { variant: 'small' })))),
     right: (R) => R.append(h('div', { class: 'center' }, h('h2', { class: 'plaque' }, '학생 접속 QR')), qrCard(cur)),
   };
@@ -263,8 +266,54 @@ async function studentDetail(id) {
       r.state.life?.subject ? h('div', null, h('b', null, '3차 우리 고장: '), `${r.state.life.subject} (${r.state.life.unit || ''}) / ${(r.state.life.years || []).map((y, i) => `${y}년 ${r.state.life.values?.[i] ?? ''}`).join(', ')} · 출처: ${r.state.life.source || '-'}`,
         r.state.life.predict ? h('div', { class: 'small' }, '다음 해 예상: ', r.state.life.predict) : null) : null,
       ...Object.entries(resp).map(([tid, list]) => h('div', null, h('b', null, topicById(tid).name), ': ', list.map((x) => `${x.month}월 ${x.status === 'unknown' ? '모름' : fmt(x.value)}${x.source === 'record' ? '(기록)' : ''}`).join(', '))),
-      ...works),
+      ...works,
+      resetPanel(r)),
   });
+}
+
+// 학생 자료 지우기·초기화: 이름·번호·PIN은 그대로 두고 고른 부분만 처음 상태로
+function resetPanel(r) {
+  const id = r.student.id; const who = `${r.student.number}번 ${r.student.name}`;
+  const topicIds = [...new Set([...r.responses.map((x) => Number(x.topic_id)), ...r.works.filter((x) => x.kind === 'topic').map((x) => Number(x.topicId))])].filter(Boolean).sort((a, b) => a - b);
+  const run = async (part, label, extra = {}) => {
+    if (!(await confirmBox('자료 지우기', `${who} 학생의 ‘${label}’을(를) 지울까요? 지운 자료는 되돌릴 수 없어요. (이름·번호·PIN은 그대로예요)`, '지우기'))) return;
+    try {
+      await api('POST', `/api/teacher/students/${id}/reset`, { part, ...extra });
+      toast(`${label}을(를) 지웠어요.`, 'ok');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); // 상세 창 닫기
+      await loadClasses(); studentDetail(id);
+    } catch (e) { toast(e.message, 'bad'); }
+  };
+  return h('div', { class: 'reset-panel' },
+    h('h3', null, '자료 지우기·초기화'),
+    h('p', { class: 'small muted' }, '잘못 입력했거나 처음부터 다시 하게 할 때 써요. 이름·번호·PIN은 남아요.'),
+    h('div', { class: 'reset-grid' },
+      btn('1차 기상자료 지우기', () => run('weather', '1차 기상자료(표·그래프)'), { variant: 'small hanji' }),
+      ...topicIds.map((tid) => btn(`2차 ‘${tName(tid)}’ 지우기`, () => run('topic', `2차 ‘${tName(tid)}’ 기록·표·그래프`, { topicId: tid }), { variant: 'small hanji' })),
+      topicIds.length > 1 ? btn('2차 전체 지우기', () => run('topics', '2차 모든 주제 기록·표·그래프'), { variant: 'small hanji' }) : null,
+      btn('3차 우리 고장 지우기', () => run('life', '3차 우리 고장 자료·그래프'), { variant: 'small hanji' }),
+      btn('만족도 응답 지우기', () => run('survey', '만족도 조사 응답'), { variant: 'small hanji' })),
+    h('div', { class: 'row', style: { marginTop: '8px' } }, btn('이 학생 처음부터(모두 초기화)', () => run('all', '모든 활동 자료'), { variant: 'small' })));
+}
+
+// 학급 전체 초기화: 명단·설정은 남기고 모든 학생 자료를 지움(학급 코드를 적어야 실행)
+async function resetClass() {
+  const inp = h('input', { type: 'text', placeholder: cur.code, maxlength: 10, autocomplete: 'off' });
+  const withT = h('input', { type: 'checkbox' });
+  const ok = await modal({
+    title: '학급 자료 모두 초기화',
+    body: h('div', { class: 'stack' },
+      h('p', null, h('b', null, cur.name), '의 모든 학생 자료(1·2·3차 기록, 표, 그래프, 작품, 만족도 응답)를 지워요. 학생 명단·PIN·학급 설정은 그대로 남아요.'),
+      h('div', { class: 'note small' }, '지운 자료는 되돌릴 수 없어요. 필요하면 먼저 [기록·내려받기]에서 CSV로 받아 두세요.'),
+      h('label', { class: 'toggle small' }, withT, '선생님 만족도 응답도 지우기'),
+      h('label', { class: 'field' }, h('span', null, `확인을 위해 학급 코드 ${cur.code}를 적어 주세요`), inp)),
+    actions: [{ label: '취소', value: false, variant: 'green' }, { label: '모두 초기화', value: true }],
+  });
+  if (!ok) return;
+  try {
+    const r = await api('POST', `/api/teacher/classes/${cur.id}/reset`, { confirm: inp.value, withTeacherSurvey: withT.checked });
+    toast(`학생 ${r.students}명의 자료를 모두 지웠어요.`, 'ok'); loadClasses();
+  } catch (e) { toast(e.message, 'bad'); }
 }
 
 // ───────── 학생 뽑기 ─────────

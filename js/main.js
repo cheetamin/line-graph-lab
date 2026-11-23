@@ -1,7 +1,7 @@
 // 「꺾은선그래프 연구소」 시작점
-import { api, onNetwork, isDemo } from './api.js?v=mwswvbuq';
-import { h, toast } from './ui.js?v=mwswvbuq';
-import { S } from './store.js?v=mwswvbuq';
+import { api, onNetwork, isDemo } from './api.js?v=mwsxb00z';
+import { h, toast } from './ui.js?v=mwsxb00z';
+import { S } from './store.js?v=mwsxb00z';
 
 const app = document.getElementById('app');
 
@@ -20,16 +20,16 @@ export async function boot(opts = {}) {
   app.replaceChildren();
   if (me.role === 'student') {
     if (joinCode) setTimeout(() => toast('이미 연구소에 들어와 있어요. 다른 학급이면 [나가기] 뒤에 다시 QR을 비춰 주세요.'), 600);
-    const { mountStudent } = await import('./pages/student.js?v=mwswvbuq');
+    const { mountStudent } = await import('./pages/student.js?v=mwsxb00z');
     await mountStudent(app);
   } else if (me.role === 'admin') {
-    const { mountAdmin } = await import('./pages/admin.js?v=mwswvbuq');
+    const { mountAdmin } = await import('./pages/admin.js?v=mwsxb00z');
     await mountAdmin(app);
   } else if (me.role === 'teacher') {
-    const { mountTeacher } = await import('./pages/teacher.js?v=mwswvbuq');
+    const { mountTeacher } = await import('./pages/teacher.js?v=mwsxb00z');
     await mountTeacher(app);
   } else {
-    const { mountCover } = await import('./pages/cover.js?v=mwswvbuq');
+    const { mountCover } = await import('./pages/cover.js?v=mwsxb00z');
     mountCover(app, joinCode ? { ...opts, joinCode, skipCover: true, tab: 'student' } : opts);
   }
 }
