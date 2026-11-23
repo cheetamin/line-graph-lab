@@ -1,5 +1,5 @@
 // 고서 책 틀과 책장 넘김 애니메이션
-import { h, ART, reducedMotion, isNarrow } from './ui.js?v=mwt6l81r';
+import { h, ART, reducedMotion, isNarrow } from './ui.js?v=mwt6yfks';
 
 function clonePage(el) {
   const c = el.cloneNode(true);
@@ -64,7 +64,7 @@ export class Book {
     const holders = [];
     const place = (side, part) => {
       const page = side === 'left' ? this.left : this.right;
-      if (defer === side) {
+      if (defer === side || defer === 'both') {
         const holder = h('div', { class: `page-holder ${side}`, 'aria-hidden': 'true' }, part.body);
         Object.assign(holder.style, this.rectPct(page));
         this.el.append(holder); holders.push({ holder, page, part });
@@ -79,6 +79,30 @@ export class Book {
 
   commit(holders) {
     for (const { holder, page, part } of holders) { page.replaceChildren(part.body); holder.remove(); }
+  }
+
+  // 넘기기 전에 다음 쪽을 보이지 않는 곳에 미리 그리고 그림까지 풀어 둬요 → 넘기는 도중에 멈칫하지 않아요
+  async stage(spread) {
+    const r = this.fill(spread, 'both');
+    const imgs = r.holders.flatMap((x) => [...x.holder.querySelectorAll('img')]);
+    await Promise.race([
+      Promise.all(imgs.map((im) => (im.decode ? im.decode().catch(() => {}) : null))),
+      new Promise((res) => setTimeout(res, 220)),
+    ]);
+    return r;
+  }
+
+  // 새 쪽의 글과 상자가 위에서부터 차례로 스며들듯 나타나요
+  reveal(pages, base = 0) {
+    if (reducedMotion()) return;
+    pages.forEach((p, pi) => {
+      const inner = p.querySelector('.page-inner');
+      if (!inner) return;
+      [...inner.children].slice(0, 9).forEach((n, i) => {
+        n.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }],
+          { duration: 300, delay: base + pi * 60 + i * 45, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'backwards' });
+      });
+    });
   }
 
   // 책(.book) 상자 기준 백분율 위치 — 창 크기가 바뀌어도 그림 속 책에 붙어 있도록
@@ -109,21 +133,25 @@ export class Book {
   // 메뉴로 여러 장을 건너뛸 때: 글만 짧게 바뀜(배경 그대로)
   async jump(spread) {
     const olds = [this.left.firstElementChild, this.right.firstElementChild].filter(Boolean);
-    await Promise.all(olds.map((n) => n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {})));
-    this.fill(spread);
-    const news = [this.left.firstElementChild, this.right.firstElementChild].filter(Boolean);
-    await Promise.all(news.map((n) => n.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' }).finished.catch(() => {})));
+    const [staged] = await Promise.all([
+      this.stage(spread),
+      Promise.all(olds.map((n) => n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {}))),
+    ]);
+    this.commit(staged.holders);
+    this.reveal([this.left, this.right]);
   }
 
   // 책장 넘김 영상: 종이가 넘어가는 쪽을 덮으면 그 쪽 글을 숨기고, 반대쪽에 완전히 내려앉는 순간 새 쪽으로 교체
   async videoTurn(spread, dir) {
     const side = dir === 'next' ? this.right : this.left; // 종이가 들려 올라가는 쪽(교체 뒤에는 열린 쪽)
     const old = side.firstElementChild;
+    const staged = await this.stage(spread); // 영상이 돌기 전에 다음 쪽을 미리 그려 둠
     await this.turner.play(dir, {
       cover: () => { old?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 40, fill: 'forwards' }); },
       swap: () => {
-        this.fill(spread); // 내려앉은 쪽은 종이 아래에서 바뀌고, 종이가 사라지며 드러남
+        this.commit(staged.holders); // 미리 그린 쪽을 옮기기만 하므로 가벼움
         side.firstElementChild?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 170, easing: 'ease-out' });
+        this.reveal([dir === 'next' ? this.left : this.right, side], 40);
       },
     });
   }
@@ -133,6 +161,7 @@ export class Book {
     const next = dir === 'next'; const sx = next ? 1 : -1;
     const pages = isNarrow() ? [this.left, this.right] : (next ? [this.left, this.right] : [this.right, this.left]);
     const olds = pages.map((p) => p.firstElementChild).filter(Boolean);
+    const staged = await this.stage(spread);
     // 먹 번짐 띠
     const layer = h('div', { class: 'ink-layer' });
     const band = h('div', { class: `ink-band ${next ? 'to-left' : 'to-right'}` });
@@ -149,8 +178,8 @@ export class Book {
       { opacity: 1, transform: 'none', filter: 'blur(0)' },
       { opacity: 0, transform: `translateX(${-sx * 26}px)`, filter: 'blur(3px)' },
     ], { duration: 190, delay: i * 50, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {})));
-    // ② 글이 완전히 사라진 뒤에만 새 쪽으로 교체
-    this.fill(spread);
+    // ② 글이 완전히 사라진 뒤에만 새 쪽으로 교체(미리 그려 둔 것을 옮김)
+    this.commit(staged.holders);
     const news = pages.map((p) => p.firstElementChild).filter(Boolean);
     news.forEach((n) => { n.style.opacity = '0'; });
     // ③ 붓질 뒤를 따라 새 글이 차례로 나타남

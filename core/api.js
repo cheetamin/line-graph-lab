@@ -2,11 +2,11 @@
 // - 모든 권한 검증과 학급 격리는 이 파일에서 수행합니다.
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
-import { SCHEMA } from './schema.js?v=mwt6l81r';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwt6l81r';
-import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwt6l81r';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwt6l81r';
-import { computeStats, round1 } from '../shared/stats.js?v=mwt6l81r';
+import { SCHEMA } from './schema.js?v=mwt6yfks';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwt6yfks';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwt6yfks';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwt6yfks';
+import { computeStats, round1 } from '../shared/stats.js?v=mwt6yfks';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY = 86400000;

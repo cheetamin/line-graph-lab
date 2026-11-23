@@ -1,6 +1,6 @@
 // 꺾은선그래프 모눈종이: 정적 그리기 + 학생이 직접 점 찍고 선 잇는 편집기
-import { s, h } from './ui.js?v=mwt6l81r';
-import { snapStep, MAJOR, MAX_CELLS, SCALE_OPTIONS, koNum } from '../shared/topics.js?v=mwt6l81r';
+import { s, h } from './ui.js?v=mwt6yfks';
+import { snapStep, MAJOR, MAX_CELLS, SCALE_OPTIONS, koNum } from '../shared/topics.js?v=mwt6yfks';
 
 // scale = 작은 눈금 한 칸(점선 한 칸)의 크기. 작은 칸 MAJOR(5)개가 모여 큰 눈금(실선) 한 칸이 되고, 큰 눈금마다 수를 적어요.
 export function layout({ labels, scale, yStart = 0, maxV = 0, title = '' }) {
@@ -95,12 +95,21 @@ export function renderStatic(d, { showValues = false, answer = null, mini = fals
   const L = layout({ labels, scale: d.scale || autoScale(maxOf(d.values, d.points)), yStart: d.yStart || 0, maxV: maxOf(d.values, d.points), title: d.title });
   drawFrame(svg, L, d, { labels });
   const pts = d.points || {};
-  for (const [a, b] of d.segments || []) {
+  // 전시용 그래프: 처음 보일 때 선이 왼쪽부터 차례로 그어지고 점이 찍혀요
+  let order = 0;
+  const segs = [...(d.segments || [])].sort((p, q) => Math.min(...p) - Math.min(...q));
+  for (const [a, b] of segs) {
     if (pts[a] === undefined || pts[b] === undefined) continue;
-    svg.append(s('line', { x1: L.x(a), y1: L.y(pts[a]), x2: L.x(b), y2: L.y(pts[b]), class: 'g-seg' }));
+    const x1 = L.x(a); const y1 = L.y(pts[a]); const x2 = L.x(b); const y2 = L.y(pts[b]);
+    const ln = s('line', { x1, y1, x2, y2, class: 'g-seg draw-in' });
+    ln.style.setProperty('--len', String(Math.hypot(x2 - x1, y2 - y1)));
+    ln.style.setProperty('--d', `${120 + order++ * 110}ms`);
+    svg.append(ln);
   }
   for (const [k, v] of Object.entries(pts)) {
-    svg.append(s('circle', { cx: L.x(+k), cy: L.y(v), r: 6, class: 'g-point' }));
+    const c = s('circle', { cx: L.x(+k), cy: L.y(v), r: 6, class: 'g-point pop-in', style: `transform-origin:${L.x(+k)}px ${L.y(v)}px` });
+    c.style.setProperty('--d', `${60 + (+k) * 110}ms`);
+    svg.append(c);
     if (showValues) svg.append(s('text', { x: L.x(+k), y: L.y(v) - 12, 'text-anchor': 'middle', class: 'g-value' }, Number(v).toLocaleString()));
   }
   if (answer) drawAnswer(svg, L, answer);
@@ -206,7 +215,7 @@ export class GraphEditor {
   undo() { if (!this.undoStack.length) return; this.redoStack.push(this.snapshot()); this.restore(this.undoStack.pop()); }
   redo() { if (!this.redoStack.length) return; this.undoStack.push(this.snapshot()); this.restore(this.redoStack.pop()); }
   async clearAll() {
-    const { confirmBox } = await import('./ui.js?v=mwt6l81r');
+    const { confirmBox } = await import('./ui.js?v=mwt6yfks');
     if (!(await confirmBox('모두 지우기', '찍은 점과 선분을 모두 지울까요? (되돌리기로 다시 살릴 수 있어요)', '모두 지우기'))) return;
     this.push(); this.onChange({ points: {}, segments: [] }); this.render();
   }
@@ -225,8 +234,11 @@ export class GraphEditor {
     if (this.lastKey && this.lastKey !== key) this.fitted = false;
     this.lastKey = key;
     this.Lc = L;
+    // 눈금·축(모눈)은 바뀔 때만 다시 그려요. 점을 끌 때마다 모눈 전체를 다시 그리면 버벅거려요.
+    const fk = JSON.stringify([L.W, L.H, L.cells, L.rowH, L.scale, L.yStart, L.waveH, d.title, d.xName, d.yName, d.xUnit, d.yUnit, this.labels]);
     this.svg.replaceChildren();
-    drawFrame(this.svg, L, d, { labels: this.labels });
+    if (this.frameKey === fk && this.frameG) this.svg.append(this.frameG);
+    else { this.frameG = drawFrame(this.svg, L, d, { labels: this.labels }); this.frameKey = fk; }
     if (!this.fitted && this.scroll.clientWidth > 0) {
       this.fitted = true;
       const mh = parseFloat(getComputedStyle(this.scroll).maxHeight) || Infinity;
@@ -240,17 +252,29 @@ export class GraphEditor {
     }
     const pts = d.points || {};
     const segLayer = s('g'); const ptLayer = s('g');
+    // 새로 생긴 점·선분만 살짝 움직여요(먹물이 번지듯 점이 톡, 선분은 붓으로 긋듯)
+    const prev = this.seen || { pts: null, segs: null };
+    const nowPts = {}; const nowSegs = {};
     for (const [a, b] of d.segments || []) {
       if (pts[a] === undefined || pts[b] === undefined) continue;
       const bad = Math.abs(a - b) !== 1;
-      segLayer.append(s('line', { x1: L.x(a), y1: L.y(pts[a]), x2: L.x(b), y2: L.y(pts[b]), class: `g-seg ${bad ? 'wrong' : ''}`, 'data-seg': `${a}-${b}` }));
+      const id = `${a}-${b}`; nowSegs[id] = 1;
+      const fresh = prev.segs && !prev.segs[id];
+      const x1 = L.x(a); const y1 = L.y(pts[a]); const x2 = L.x(b); const y2 = L.y(pts[b]);
+      const ln = s('line', { x1, y1, x2, y2, class: `g-seg ${bad ? 'wrong' : ''} ${fresh ? 'fresh' : ''}`, 'data-seg': id });
+      if (fresh) ln.style.setProperty('--len', String(Math.hypot(x2 - x1, y2 - y1)));
+      segLayer.append(ln);
     }
     for (const [k, v] of Object.entries(pts)) {
       const i = +k;
       const wrong = this.wrongLabels.includes(this.labels[i]);
+      const id = `${i}:${v}`; nowPts[id] = 1;
+      const fresh = prev.pts && !prev.pts[id];
       ptLayer.append(s('circle', { cx: L.x(i), cy: L.y(v), r: 15, fill: 'transparent', 'data-pt': i }));
-      ptLayer.append(s('circle', { cx: L.x(i), cy: L.y(v), r: this.sel === i ? 9 : 7, class: `g-point ${this.sel === i ? 'sel' : ''} ${wrong ? 'wrong' : ''}`, 'data-pt': i, 'pointer-events': 'none' }));
+      if (fresh) ptLayer.append(s('circle', { cx: L.x(i), cy: L.y(v), r: 7, class: 'g-ripple', 'pointer-events': 'none', style: `transform-origin:${L.x(i)}px ${L.y(v)}px` }));
+      ptLayer.append(s('circle', { cx: L.x(i), cy: L.y(v), r: this.sel === i ? 9 : 7, class: `g-point ${this.sel === i ? 'sel' : ''} ${wrong ? 'wrong' : ''} ${fresh ? 'fresh' : ''}`, 'data-pt': i, 'pointer-events': 'none', style: fresh ? `transform-origin:${L.x(i)}px ${L.y(v)}px` : null }));
     }
+    this.seen = { pts: nowPts, segs: nowSegs };
     this.svg.append(segLayer, ptLayer);
     if (this.answer) drawAnswer(this.svg, L, this.answer);
     if (this.ghost) this.drawGhost(L);

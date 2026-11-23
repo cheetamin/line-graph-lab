@@ -1,18 +1,18 @@
 // 교사 관리실 — 학생 화면과 같은 고서 배경 장면(왼쪽 판 6개 = 메뉴, 펼친 책 두 쪽 = 내용)
-import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwt6l81r';
-import { api, isDemo } from '../api.js?v=mwt6l81r';
-import { S } from '../store.js?v=mwt6l81r';
-import { logout } from '../main.js?v=mwt6l81r';
-import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwt6l81r';
-import { renderStatic } from '../graph.js?v=mwt6l81r';
-import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwt6l81r';
-import { Book } from '../book.js?v=mwt6l81r';
-import { PageTurner } from '../pageturn.js?v=mwt6l81r';
-import { surveyForm } from './survey.js?v=mwt6l81r';
-import { SCALE_LABELS } from '../../shared/survey.js?v=mwt6l81r';
-import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwt6l81r';
-import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwt6l81r';
-import { OFFICES } from '../../shared/neis.js?v=mwt6l81r';
+import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwt6yfks';
+import { api, isDemo } from '../api.js?v=mwt6yfks';
+import { S } from '../store.js?v=mwt6yfks';
+import { logout } from '../main.js?v=mwt6yfks';
+import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwt6yfks';
+import { renderStatic } from '../graph.js?v=mwt6yfks';
+import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwt6yfks';
+import { Book } from '../book.js?v=mwt6yfks';
+import { PageTurner } from '../pageturn.js?v=mwt6yfks';
+import { surveyForm } from './survey.js?v=mwt6yfks';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwt6yfks';
+import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwt6yfks';
+import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwt6yfks';
+import { OFFICES } from '../../shared/neis.js?v=mwt6yfks';
 
 const SECTIONS = [
   { key: 'class', label: '학급·명단', icon: 'home', subs: [['roster', '학생 명단'], ['qr', '학급 정보·QR']] },
@@ -327,7 +327,7 @@ async function pickerView() {
   const label = (x) => `${x.number}번 ${x.name}`;
   const nameEl = h('div', { class: 'pick-name', 'aria-live': 'assertive' }, '?');
   const subEl = h('div', { class: 'pick-sub' }, '버튼을 눌러 한 명을 뽑아요');
-  const stage = h('div', { class: 'pick-stage' }, h('img', { class: 'pick-seal', src: 'assets/art/seal_wait.png', alt: '' }), nameEl, subEl);
+  const stage = h('div', { class: 'pick-stage' }, h('img', { class: 'pick-seal', src: 'assets/art/seal_wait.webp', alt: '' }), nameEl, subEl);
   const left = h('span', { class: 'badge pick-left' });
   const hist = h('div', { class: 'pick-history' });
   const pickBtn = btn('한 명 뽑기', () => roll(), { variant: 'gold big' });
@@ -417,7 +417,7 @@ async function lotteryView() {
   const next = v.rows.find((x) => !x.topicId);
   const nameEl = h('div', { class: 'lot-who' }, next ? `${next.number}번 ${next.name}` : '모두 뽑았어요');
   const topicEl = h('div', { class: 'lot-topic', 'aria-live': 'assertive' }, next ? '?' : '');
-  const box = h('div', { class: 'lot-box' }, h('img', { class: 'pick-seal', src: 'assets/art/seal_wait.png', alt: '' }), nameEl, topicEl);
+  const box = h('div', { class: 'lot-box' }, h('img', { class: 'pick-seal', src: 'assets/art/seal_wait.webp', alt: '' }), nameEl, topicEl);
   let rolling = false;
   const call = async (path, body) => {
     try { return await api('POST', `/api/teacher/classes/${cur.id}/assign/${path}`, body); } catch (e) {

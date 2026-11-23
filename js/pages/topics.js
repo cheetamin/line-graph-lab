@@ -1,8 +1,8 @@
 // 제2장 주제 선택·투표 + 2026년 월별 경험 조사
-import { sealImg, h, icon, btn, toast, fmt, iconSrc } from '../ui.js?v=mwt6l81r';
-import { api } from '../api.js?v=mwt6l81r';
-import { S, saveState, backup, getBackup, clearBackup } from '../store.js?v=mwt6l81r';
-import { TOPICS, CATEGORIES, topicById, monthMax, validateEntry, YEAR } from '../../shared/topics.js?v=mwt6l81r';
+import { sealImg, h, icon, btn, toast, fmt, iconSrc } from '../ui.js?v=mwt6yfks';
+import { api } from '../api.js?v=mwt6yfks';
+import { S, saveState, backup, getBackup, clearBackup } from '../store.js?v=mwt6yfks';
+import { TOPICS, CATEGORIES, topicById, monthMax, validateEntry, YEAR } from '../../shared/topics.js?v=mwt6yfks';
 
 let selTopic = null; let cat = 'all'; let query = ''; let surveyTopic = null;
 
@@ -40,7 +40,7 @@ function myTopicSpread(app) {
         h('div', { class: 'lot-name' }, t.name),
         t.sub ? h('div', { class: 'small' }, `(${t.sub})`) : null,
         h('div', { class: 'lot-unit' }, '단위: ', h('b', null, t.unit)),
-        h('img', { class: 'lot-seal', src: 'assets/art/seal_done.png', alt: '' }));
+        h('img', { class: 'lot-seal', src: 'assets/art/seal_done.webp', alt: '' }));
       el.append(h('div', { class: 'center' }, h('h2', { class: 'plaque' }, '나의 제비')), slip,
         t.hint ? h('div', { class: 'note gold small', style: { marginTop: '12px' } }, t.hint) : null,
         h('p', { class: 'small', style: { marginTop: '10px' } }, t.kind === 'days' ? '한 달에 그 일을 한 날이 며칠인지 떠올려 적어요.' : t.kind === 'best' ? '그 달의 가장 좋은 기록을 적어요.' : `한 달 동안 몇 ${t.unit}인지 떠올려 적어요.`),
@@ -259,7 +259,7 @@ function chooseSpread(app) {
           h('div', { class: 'quota-seals' }, Array.from({ length: Math.max(need, done.length) }, (_, i) => {
             const w = done[i];
             return h('div', { class: `quota-slot ${w ? 'on' : ''} ${i >= need ? 'extra' : ''}`, title: w ? topicById(w.topicId)?.name : '' },
-              w ? h('img', { src: 'assets/art/seal_done.png', alt: '제출' }) : h('span', null, i + 1),
+              w ? h('img', { src: 'assets/art/seal_done.webp', alt: '제출' }) : h('span', null, i + 1),
               h('small', null, w ? topicById(w.topicId)?.name.replace(/^월별 /, '') : i >= need ? '더 하기' : '빈 칸'));
           })),
           h('p', { class: 'small', style: { margin: '6px 0 0' } }, done.length >= need ? '꼭 낼 그래프를 모두 냈어요! 시간이 남으면 다른 주제로 더 만들어 봐요.' : `${need - done.length}개 더 내야 해요.`)),

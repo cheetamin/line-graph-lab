@@ -1,10 +1,10 @@
 // 첫 화면(고서 표지)과 입장(로그인)
-import { h, A, icon, btn, toast, reducedMotion } from '../ui.js?v=mwt6l81r';
-import { api, isDemo } from '../api.js?v=mwt6l81r';
-import { Book } from '../book.js?v=mwt6l81r';
-import { makeHeader, deskProps, scene } from '../shell.js?v=mwt6l81r';
-import { iconSrc } from '../ui.js?v=mwt6l81r';
-import { boot } from '../main.js?v=mwt6l81r';
+import { h, A, icon, btn, toast, reducedMotion } from '../ui.js?v=mwt6yfks';
+import { api, isDemo } from '../api.js?v=mwt6yfks';
+import { Book } from '../book.js?v=mwt6yfks';
+import { makeHeader, deskProps, scene } from '../shell.js?v=mwt6yfks';
+import { iconSrc } from '../ui.js?v=mwt6yfks';
+import { boot } from '../main.js?v=mwt6yfks';
 
 const ss = { get: (k) => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch { /* */ } }, del: (k) => { try { sessionStorage.removeItem(k); } catch { /* */ } } };
 
@@ -16,7 +16,7 @@ const CHAPTERS = [
   ['gallery', '작품 전시관'],
 ];
 
-const D = (n) => `assets/art/${n}.png`;
+const D = (n) => `assets/art/${n}.webp`;
 const deco = (n, style, cls = '') => h('img', { class: `deco ${cls}`, src: D(n), alt: '', style, draggable: 'false' });
 
 export function mountCover(root, opts = {}) {

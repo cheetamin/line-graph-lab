@@ -1,8 +1,8 @@
 // 체험판 전용: 서버와 같은 핵심 로직(core/api.js)을 브라우저 안의 SQLite(sql.js)로 실행합니다.
 // 자료는 이 브라우저에만 저장됩니다. 실제 수업에서는 server/server.js로 운영하세요.
-import { createApi } from '../core/api.js?v=mwt6l81r';
-import { seedDemo } from '../core/seed.js?v=mwt6l81r';
-import { neisSearch } from '../shared/neis.js?v=mwt6l81r';
+import { createApi } from '../core/api.js?v=mwt6yfks';
+import { seedDemo } from '../core/seed.js?v=mwt6yfks';
+import { neisSearch } from '../shared/neis.js?v=mwt6yfks';
 
 const KEY = 'kgl-demo-db-v7'; // 제비뽑기 방식 체험 자료(v2)
 const TKEY = 'kgl-demo-token';
@@ -57,8 +57,13 @@ window.__KGL_READY__ = (async () => {
     } catch { /* 무시 */ }
     store.set('kgl-demo-mig-life1', '1');
   }
-  const persist = () => { try { store.set(KEY, b64(sdb.export())); } catch { /* 저장 공간 부족 */ } };
-  persist();
+  const saveNow = () => { clearTimeout(persistT); persistT = null; try { store.set(KEY, b64(sdb.export())); } catch { /* 저장 공간 부족 */ } };
+  // 쓸 때마다 전체 자료를 바로 저장하면 글자를 칠 때 화면이 멈칫해요 → 잠깐 모았다가 한 번에 저장(창을 닫거나 숨기면 바로 저장)
+  let persistT = null;
+  const persist = () => { clearTimeout(persistT); persistT = setTimeout(saveNow, 700); };
+  addEventListener('pagehide', () => { if (persistT) saveNow(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && persistT) saveNow(); });
+  saveNow();
   window.__KGL_DEMO__ = async (method, path, body) => {
     const u = new URL(path, 'http://demo.local');
     const out = await api.handle({ method, path: u.pathname, query: Object.fromEntries(u.searchParams), body: body ? JSON.parse(JSON.stringify(body)) : {}, token: store.get(TKEY) });
@@ -67,5 +72,5 @@ window.__KGL_READY__ = (async () => {
     if (method !== 'GET' || out.token) persist();
     return out;
   };
-  window.__KGL_RESET_DEMO__ = () => { store.del(KEY); store.del(TKEY); location.reload(); };
+  window.__KGL_RESET_DEMO__ = () => { clearTimeout(persistT); persistT = null; store.del(KEY); store.del(TKEY); location.reload(); };
 })();
