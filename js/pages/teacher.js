@@ -1,18 +1,18 @@
 // 교사 관리실 — 학생 화면과 같은 고서 배경 장면(왼쪽 판 6개 = 메뉴, 펼친 책 두 쪽 = 내용)
-import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwswi2vs';
-import { api, isDemo } from '../api.js?v=mwswi2vs';
-import { S } from '../store.js?v=mwswi2vs';
-import { logout } from '../main.js?v=mwswi2vs';
-import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwswi2vs';
-import { renderStatic } from '../graph.js?v=mwswi2vs';
-import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwswi2vs';
-import { Book } from '../book.js?v=mwswi2vs';
-import { PageTurner } from '../pageturn.js?v=mwswi2vs';
-import { surveyForm } from './survey.js?v=mwswi2vs';
-import { SCALE_LABELS } from '../../shared/survey.js?v=mwswi2vs';
-import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwswi2vs';
-import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwswi2vs';
-import { OFFICES } from '../../shared/neis.js?v=mwswi2vs';
+import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwswvbuq';
+import { api, isDemo } from '../api.js?v=mwswvbuq';
+import { S } from '../store.js?v=mwswvbuq';
+import { logout } from '../main.js?v=mwswvbuq';
+import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwswvbuq';
+import { renderStatic } from '../graph.js?v=mwswvbuq';
+import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwswvbuq';
+import { Book } from '../book.js?v=mwswvbuq';
+import { PageTurner } from '../pageturn.js?v=mwswvbuq';
+import { surveyForm } from './survey.js?v=mwswvbuq';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwswvbuq';
+import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwswvbuq';
+import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwswvbuq';
+import { OFFICES } from '../../shared/neis.js?v=mwswvbuq';
 
 const SECTIONS = [
   { key: 'class', label: '학급·명단', icon: 'home', subs: [['roster', '학생 명단'], ['qr', '학급 정보·QR']] },
@@ -114,7 +114,6 @@ const toggle = (label, checked, on) => h('label', { class: 'toggle' }, h('input'
 const tName = (id) => topicById(id)?.name.replace(/^월별 /, '') || '—';
 
 // ───────── 학생 명단: 표로 입력 ─────────
-let pendingPins = null;
 async function rosterView() {
   const list = (await api('GET', `/api/teacher/classes/${cur.id}/students`)).students;
   const existing = new Set(list.map((x) => x.number));
@@ -176,22 +175,17 @@ async function rosterView() {
     if (errs.some(Boolean)) return toast('빨간 줄을 먼저 고쳐 주세요.', 'bad');
     const students = rows.filter((r) => r.name.trim()).map((r) => ({ number: +r.number, name: r.name.trim(), nickname: r.nickname.trim() }));
     if (!students.length) return toast('이름을 한 명 이상 적어 주세요.', 'bad');
-    try { const res = await api('POST', `/api/teacher/classes/${cur.id}/students`, { students }); pendingPins = res.created; await loadClasses(); } catch (e) { toast(e.message, 'bad'); }
+    try { const res = await api('POST', `/api/teacher/classes/${cur.id}/students`, { students }); toast(`${res.created.length}명을 등록했어요.`, 'ok'); await loadClasses(); } catch (e) { toast(e.message, 'bad'); }
   };
-  const pinsBlock = (pins) => sheet(h('div', { class: 'row between' }, h('h3', { style: { margin: 0 } }, `새로 등록한 학생 PIN (${pins.length}명)`), btn('인쇄하기', () => { try { window.print(); } catch { /* */ } }, { variant: 'small green' })),
-    h('p', { class: 'small' }, '⚠ PIN은 지금 한 번만 보여요. 인쇄하거나 적어 두세요. 잊으면 [PIN 새로]를 누르면 돼요.'),
-    h('div', { class: 'pin-cards' }, pins.map((c) => h('div', { class: 'pin-card' }, h('div', { class: 'small' }, `학급 코드 ${cur.code}`), h('div', null, `${c.number}번 ${c.name}`), h('b', null, c.pin)))));
-  const pins = pendingPins; pendingPins = null;
   return {
     left: (L) => L.append(
       h('p', { class: 'small' }, '표에 번호와 이름을 적어요. 엑셀·한글 표나 명렬표를 복사해 ', h('b', null, '이름 칸에 붙여 넣으면'), ' 여러 명이 한꺼번에 들어가요.'),
       h('div', { class: 'roster-table-wrap' }, h('table', { class: 'data roster-table' },
         h('thead', null, h('tr', null, h('th', null, '번호'), h('th', null, '이름'), h('th', null, '별명(전시용)'), h('th', null, ''))), tbody)),
       h('div', { class: 'row', style: { marginTop: '8px' } }, btn('＋ 한 줄', () => addRows(1), { variant: 'small green' }), btn('＋ 다섯 줄', () => addRows(5), { variant: 'small green' }), msg),
-      h('div', { class: 'row', style: { marginTop: '10px' } }, btn('등록하고 PIN 만들기', submit, { variant: 'gold' })),
-      h('p', { class: 'small muted' }, '학생은 학급 코드 + 번호 + PIN 4자리로 들어와요. 학급 정보·QR 쪽에서 QR을 나눠 줄 수 있어요.')),
+      h('div', { class: 'row', style: { marginTop: '10px' } }, btn('명단 등록하기', submit, { variant: 'gold' })),
+      h('p', { class: 'small muted' }, '학생은 학급 코드를 적고 명단에서 자기 이름을 눌러 들어와요(PIN 없음). 학급 정보·QR 쪽에서 QR을 나눠 줄 수 있어요.')),
     right: (R) => {
-      if (pins) R.append(pinsBlock(pins));
       R.append(h('h3', null, `등록한 학생 (${list.length}명)`),
         list.length ? h('div', { class: 'table-scroll' }, h('table', { class: 'admin-table compact' },
           h('thead', null, h('tr', null, ['번호', '이름', '별명', '관리'].map((x) => h('th', null, x)))),
@@ -201,7 +195,6 @@ async function rosterView() {
             return h('tr', null, h('td', null, st.number), h('td', null, nm), h('td', null, nick),
               h('td', null, h('div', { class: 'row', style: { justifyContent: 'center', gap: '3px', flexWrap: 'nowrap' } },
                 btn('저장', async () => { try { await api('PUT', `/api/teacher/students/${st.id}`, { name: nm.value, nickname: nick.value }); toast('저장했어요.', 'ok'); } catch (e) { toast(e.message, 'bad'); } }, { variant: 'small green' }),
-                btn('PIN 새로', async () => { if (!(await confirmBox('PIN 새로 만들기', `${st.number}번 ${st.name} 학생의 PIN을 새로 만들까요? 예전 PIN으로는 들어올 수 없어요.`))) return; const p = await api('POST', `/api/teacher/students/${st.id}/pin`); pendingPins = [{ number: st.number, name: st.name, pin: p.pin }]; refresh(); }, { variant: 'small' }),
                 btn('삭제', async () => { if (!(await confirmBox('학생 삭제', `${st.number}번 ${st.name} 학생과 그 학생의 모든 자료를 지울까요? 되돌릴 수 없어요.`, '삭제'))) return; await api('DELETE', `/api/teacher/students/${st.id}`); toast('삭제했어요.'); loadClasses(); }, { variant: 'small' }))));
           })))) : h('p', { class: 'muted' }, '아직 등록된 학생이 없어요. 왼쪽 표에 적어 주세요.'));
     },
@@ -635,7 +628,7 @@ async function accountView() {
       h('form', { class: 'stack', style: { maxWidth: '360px' }, onSubmit: async (e) => { e.preventDefault(); try { await api('POST', '/api/teacher/password', { current: c.value, next: n.value }); toast('비밀번호를 바꾸었어요.', 'ok'); c.value = ''; n.value = ''; } catch (ex) { toast(ex.message, 'bad'); } } },
         h('label', { class: 'field' }, h('span', null, '현재 비밀번호'), c), h('label', { class: 'field' }, h('span', null, '새 비밀번호'), n), btn('바꾸기', null, { variant: 'green', type: 'submit' }))),
     right: (R) => R.append(h('h3', null, '수업 흐름'), h('ol', { class: 'steps-list small' },
-      h('li', null, h('span', null, '학급·명단: 표로 학생 등록 → PIN 카드 인쇄 → QR 나눠 주기')),
+      h('li', null, h('span', null, '학급·명단: 표로 학생 등록 → QR 나눠 주기')),
       h('li', null, h('span', null, '학생: 기상자료 탐험실(폭염일수) 완료')),
       h('li', null, h('span', null, '학생: 25가지 주제 중 직접 골라 내 기록 → 자료표 → 꺾은선그래프 제출')),
       h('li', null, h('span', null, '꼭 낼 그래프(기본 3개)를 내면, 시간이 남는 학생은 다른 주제로 더 만들기')),
@@ -880,7 +873,7 @@ function qrCard(cls) {
         h('ol', { class: 'steps-list small' },
           h('li', null, h('span', null, '태블릿·휴대전화 카메라로 QR을 비춰요.')),
           h('li', null, h('span', null, '학급 코드가 자동으로 들어간 입장 화면이 열려요.')),
-          h('li', null, h('span', null, '내 번호와 PIN 4자리만 적으면 들어와요.'))),
+          h('li', null, h('span', null, '명단에서 내 이름을 누르면 들어와요.'))),
         h('p', { class: 'small muted', style: { margin: 0 } }, 'QR을 못 쓰는 기기는 연구소 첫 화면에서 학급 코드를 직접 적어요.'),
         isDemo() ? h('div', { class: 'note gold small' }, '체험판은 자료가 이 브라우저에만 저장돼서, 다른 기기에서 QR로 들어와도 이 학급이 보이지 않아요. 학교 서버나 호스팅에 올리면 QR이 그대로 작동해요.') : null,
         url ? h('div', { class: 'qr-url' }, url) : null,
@@ -924,7 +917,7 @@ function printQr(cls, url) {
     h('div', { class: 'qr-print-name' }, cls.name),
     h('div', { class: 'qr-frame' }, qrSvg(url)),
     h('div', { class: 'qr-print-code' }, '학급 코드 ', h('b', null, cls.code)),
-    h('div', { class: 'qr-print-help' }, '카메라로 QR을 비추고, 내 번호와 PIN을 적어요.'));
+    h('div', { class: 'qr-print-help' }, '카메라로 QR을 비추고, 명단에서 내 이름을 눌러요.'));
   document.body.append(card); document.body.classList.add('printing-qr');
   const done = () => { card.remove(); document.body.classList.remove('printing-qr'); window.removeEventListener('afterprint', done); };
   window.addEventListener('afterprint', done);

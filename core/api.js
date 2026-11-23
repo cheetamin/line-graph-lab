@@ -2,11 +2,11 @@
 // - 모든 권한 검증과 학급 격리는 이 파일에서 수행합니다.
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
-import { SCHEMA } from './schema.js?v=mwswi2vs';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwswi2vs';
-import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwswi2vs';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwswi2vs';
-import { computeStats, round1 } from '../shared/stats.js?v=mwswi2vs';
+import { SCHEMA } from './schema.js?v=mwswvbuq';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwswvbuq';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwswvbuq';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwswvbuq';
+import { computeStats, round1 } from '../shared/stats.js?v=mwswvbuq';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY = 86400000;
@@ -466,9 +466,10 @@ export function createApi({ db, sec, options = {} }) {
     const key = `s:${code}:${number}`;
     limit(key, 6);
     const cls = db.get('SELECT * FROM classes WHERE code = ?', [code]);
-    if (!cls) fail(401, '학급 코드, 번호, 비밀번호(PIN)를 다시 확인해 주세요.');
+    if (!cls) fail(401, '학급 코드를 다시 확인해 주세요.');
+    // 2026-11-23: PIN 없이 학급 코드 + 내 이름(번호)만으로 들어와요.
     const st = db.get('SELECT * FROM students WHERE class_id = ? AND number = ?', [cls.id, number]);
-    if (!st || !(await sec.verify(String(body.pin || ''), st.pin_hash))) fail(401, '학급 코드, 번호, 비밀번호(PIN)를 다시 확인해 주세요.');
+    if (!st) fail(401, '명단에서 내 이름을 다시 골라 주세요.');
     clearLimit(key);
     const token = await newSession('student', st.id, cls.id, 30);
     return { token, body: { ok: true } };
