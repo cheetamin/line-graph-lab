@@ -1183,3 +1183,11 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
 .sv-dist { grid-column: 1 / -1; display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eadfc6; }
 .sv-dist i { display: block; height: 100%; }
 .sv-texts { margin: 4px 0 10px; padding-left: 18px; font-size: .86rem; }
+
+/* 교사 탭: 체험판 안내 / 전체 관리자 */
+.demo-guide { margin-top: 10px; padding: 8px 10px; border: 1.5px dashed #b8862f; border-radius: 6px; background: rgba(255,244,216,.85); }
+.demo-guide-head { font-family: var(--f-title); color: #7b2620; margin-bottom: 4px; }
+.demo-guide-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 5px 0; border-top: 1px dotted #d2b98a; }
+.demo-guide-row:first-of-type { border-top: 0; }
+.demo-guide-btns { display: flex; gap: 4px; flex: 0 0 auto; }
+.admin-link { display: block; margin: 8px auto 0; font-size: .85rem; opacity: .85; }

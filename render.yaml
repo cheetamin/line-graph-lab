@@ -16,6 +16,8 @@ services:
         value: /var/data/graph-lab.sqlite
       - key: TEACHER_SIGNUP_CODE
         generateValue: true
+      - key: ADMIN_PASSWORD   # 전체 관리자 비밀번호: Render 화면에서 직접 입력(저장소에 적지 않음)
+        sync: false
     disk:
       name: graph-lab-data
       mountPath: /var/data

@@ -13,7 +13,7 @@ const BASE = `http://localhost:${PORT}`;
 const DB = path.join(os.tmpdir(), `kgl-own-${Date.now()}.sqlite`);
 let proc;
 before(async () => {
-  proc = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server/server.js'], { env: { ...process.env, PORT: String(PORT), DATABASE_PATH: DB }, stdio: 'pipe' });
+  proc = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server/server.js'], { env: { ...process.env, PORT: String(PORT), DATABASE_PATH: DB, ADMIN_PASSWORD: 'test-admin-only' }, stdio: 'pipe' });
   for (let i = 0; i < 50; i++) { try { await fetch(BASE + '/healthz'); return; } catch { await new Promise((r) => setTimeout(r, 100)); } }
 });
 after(() => { proc.kill(); for (const f of [DB, DB + '-wal', DB + '-shm']) fs.rmSync(f, { force: true }); });
@@ -187,4 +187,24 @@ test('우리 고장: 학교 주소로 지역 자료, 지역 바꾸기', async ()
   assert.equal(r.body.settings.lifeRegion, '수원');
   assert.equal(r.body.settings.lifeSources[0].title, '수원시 관광지 입장객 수');
   assert.equal(r.body.settings.lifeSources[0].data, null);
+});
+
+test('전체 관리자: 비밀번호, 운영 현황, 만족도 모아 보기', async () => {
+  const A = client();
+  let r = await A('GET', '/api/admin/overview');
+  assert.equal(r.status, 401);
+  r = await A('POST', '/api/admin/login', { password: 'wrong-password' });
+  assert.equal(r.status, 401);
+  r = await A('POST', '/api/admin/login', { password: 'test-admin-only' });
+  assert.equal(r.status, 200);
+  r = await A('GET', '/api/me');
+  assert.equal(r.body.role, 'admin');
+  r = await A('GET', '/api/admin/overview');
+  assert.equal(r.status, 200);
+  assert.ok(r.body.totals.classes >= 1 && r.body.totals.students >= 2);
+  assert.equal(r.body.totals.studentSurveys, 1);
+  assert.equal(r.body.surveys.students[0].avg, 5);
+  assert.equal(JSON.stringify(r.body).includes('"가"'), false, '학생 이름 없음');
+  r = await A('GET', '/api/teacher/classes');
+  assert.equal(r.status, 401);
 });

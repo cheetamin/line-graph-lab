@@ -40,14 +40,14 @@ function client() {
 const T = client(); const T2 = client();
 let classId;
 
-test('학교 검색: 초등학교가 먼저, 인증키 없으면 5개 요청', async () => {
+test('학교 검색: 초등학교가 먼저, 인증키 없이 100개까지 요청', async () => {
   await T('POST', '/api/teacher/signup', { username: 'park', password: 'password1', name: '박선생' });
   let r = await T('GET', '/api/teacher/schools?q=' + encodeURIComponent('행복'));
   assert.equal(r.body.available, true);
   assert.equal(r.body.schools[0].name, '행복초등학교');
   assert.equal(r.body.schools[0].code, '9000001');
   assert.equal(r.body.schools[0].address, '경상남도 어딘가 1');
-  assert.match(lastNeisUrl, /pSize=5/); assert.doesNotMatch(lastNeisUrl, /KEY=/);
+  assert.match(lastNeisUrl, /pSize=100/); assert.doesNotMatch(lastNeisUrl, /KEY=/);
   r = await T('GET', '/api/teacher/schools?q=a');
   assert.equal(r.status, 400);
   const anon = client();
