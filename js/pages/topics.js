@@ -1,8 +1,8 @@
 // 제2장 주제 선택·투표 + 2026년 월별 경험 조사
-import { sealImg, h, icon, btn, toast, fmt, iconSrc } from '../ui.js?v=mwt6yfks';
-import { api } from '../api.js?v=mwt6yfks';
-import { S, saveState, backup, getBackup, clearBackup } from '../store.js?v=mwt6yfks';
-import { TOPICS, CATEGORIES, topicById, monthMax, validateEntry, YEAR } from '../../shared/topics.js?v=mwt6yfks';
+import { sealImg, h, icon, btn, toast, fmt, iconSrc } from '../ui.js?v=mwt79o7p';
+import { api } from '../api.js?v=mwt79o7p';
+import { S, saveState, backup, getBackup, clearBackup } from '../store.js?v=mwt79o7p';
+import { TOPICS, CATEGORIES, topicById, monthMax, validateEntry, YEAR } from '../../shared/topics.js?v=mwt79o7p';
 
 let selTopic = null; let cat = 'all'; let query = ''; let surveyTopic = null;
 

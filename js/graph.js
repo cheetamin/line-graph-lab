@@ -1,6 +1,6 @@
 // 꺾은선그래프 모눈종이: 정적 그리기 + 학생이 직접 점 찍고 선 잇는 편집기
-import { s, h } from './ui.js?v=mwt6yfks';
-import { snapStep, MAJOR, MAX_CELLS, SCALE_OPTIONS, koNum } from '../shared/topics.js?v=mwt6yfks';
+import { s, h } from './ui.js?v=mwt79o7p';
+import { snapStep, MAJOR, MAX_CELLS, SCALE_OPTIONS, koNum } from '../shared/topics.js?v=mwt79o7p';
 
 // scale = 작은 눈금 한 칸(점선 한 칸)의 크기. 작은 칸 MAJOR(5)개가 모여 큰 눈금(실선) 한 칸이 되고, 큰 눈금마다 수를 적어요.
 export function layout({ labels, scale, yStart = 0, maxV = 0, title = '' }) {
@@ -215,7 +215,7 @@ export class GraphEditor {
   undo() { if (!this.undoStack.length) return; this.redoStack.push(this.snapshot()); this.restore(this.undoStack.pop()); }
   redo() { if (!this.redoStack.length) return; this.undoStack.push(this.snapshot()); this.restore(this.redoStack.pop()); }
   async clearAll() {
-    const { confirmBox } = await import('./ui.js?v=mwt6yfks');
+    const { confirmBox } = await import('./ui.js?v=mwt79o7p');
     if (!(await confirmBox('모두 지우기', '찍은 점과 선분을 모두 지울까요? (되돌리기로 다시 살릴 수 있어요)', '모두 지우기'))) return;
     this.push(); this.onChange({ points: {}, segments: [] }); this.render();
   }

@@ -1,7 +1,7 @@
 // 제5장 작품 전시관: 왼쪽 작품 목록, 오른쪽 선택한 작품 — 작품마다 한 펼침, 책장을 넘기며 감상
-import { sealImg, h, icon, btn, fmt } from '../ui.js?v=mwt6yfks';
-import { api } from '../api.js?v=mwt6yfks';
-import { renderStatic } from '../graph.js?v=mwt6yfks';
+import { sealImg, h, icon, btn, fmt } from '../ui.js?v=mwt79o7p';
+import { api } from '../api.js?v=mwt79o7p';
+import { renderStatic } from '../graph.js?v=mwt79o7p';
 
 let cache = null; let filter = 'all'; let who = null; // who: 한 연구원(학생)의 작품만 보기
 const PER = 6;

@@ -1,8 +1,8 @@
 // 체험판 전용: 서버와 같은 핵심 로직(core/api.js)을 브라우저 안의 SQLite(sql.js)로 실행합니다.
 // 자료는 이 브라우저에만 저장됩니다. 실제 수업에서는 server/server.js로 운영하세요.
-import { createApi } from '../core/api.js?v=mwt6yfks';
-import { seedDemo } from '../core/seed.js?v=mwt6yfks';
-import { neisSearch } from '../shared/neis.js?v=mwt6yfks';
+import { createApi } from '../core/api.js?v=mwt79o7p';
+import { seedDemo } from '../core/seed.js?v=mwt79o7p';
+import { neisSearch } from '../shared/neis.js?v=mwt79o7p';
 
 const KEY = 'kgl-demo-db-v7'; // 제비뽑기 방식 체험 자료(v2)
 const TKEY = 'kgl-demo-token';
