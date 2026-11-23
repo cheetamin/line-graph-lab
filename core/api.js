@@ -466,9 +466,10 @@ export function createApi({ db, sec, options = {} }) {
     const key = `s:${code}:${number}`;
     limit(key, 6);
     const cls = db.get('SELECT * FROM classes WHERE code = ?', [code]);
-    if (!cls) fail(401, '학급 코드, 번호, 비밀번호(PIN)를 다시 확인해 주세요.');
+    if (!cls) fail(401, '학급 코드를 다시 확인해 주세요.');
+    // 2026-11-23: PIN 없이 학급 코드 + 내 이름(번호)만으로 들어와요.
     const st = db.get('SELECT * FROM students WHERE class_id = ? AND number = ?', [cls.id, number]);
-    if (!st || !(await sec.verify(String(body.pin || ''), st.pin_hash))) fail(401, '학급 코드, 번호, 비밀번호(PIN)를 다시 확인해 주세요.');
+    if (!st) fail(401, '명단에서 내 이름을 다시 골라 주세요.');
     clearLimit(key);
     const token = await newSession('student', st.id, cls.id, 30);
     return { token, body: { ok: true } };

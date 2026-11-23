@@ -71,7 +71,7 @@ function demoGuide(goStudent, fillTeacher) {
     h('div', { class: 'demo-guide-head' }, '체험판 안내 ', h('span', { class: 'small muted' }, '· 자료는 이 브라우저에만 저장돼요')),
     h('div', { class: 'demo-guide-row' },
       h('div', null, h('b', null, '학생으로 체험'), h('br'),
-        h('span', { class: 'small' }, '학급 코드 DEMO26 → 이름 누르기 → PIN 1234'), h('br'),
+        h('span', { class: 'small' }, '학급 코드 DEMO26 → 내 이름 누르기 → 들어가기'), h('br'),
         h('span', { class: 'small muted' }, '1번 체험학생: 그래프 직접 그려 보기 · 3번 이도윤: 만족도 조사 해 보기')),
       h('div', { class: 'demo-guide-btns' },
         btn('1번으로', () => goStudent(1), { variant: 'small green' }), btn('3번으로', () => goStudent(3), { variant: 'small' }))),
@@ -101,7 +101,7 @@ export function mountLogin(root, tab = 'student', joinCode = null) {
         h('li', null, h('span', null, h('b', null, '2차 나의 주제 그래프'), ' — 25가지 주제 중 골라 2026년 내 기록으로 표와 그래프를 만들어요.')),
         h('li', null, h('span', null, h('b', null, '3차 우리 고장 그래프'), ' — 우리 고장 자료를 공공데이터·누리집에서 찾아 그래프로 나타내고 앞날을 예상해요.')),
         h('li', null, h('span', null, h('b', null, '작품 전시관'), ' — 선생님이 승인한 친구들의 작품을 책장을 넘기며 감상해요.'))),
-      h('div', { class: 'note green', style: { marginTop: '14px' } }, '학급 코드와 비밀번호(PIN)는 선생님께 받아요. 다른 사람에게 알려 주지 않아요. 한 일은 저절로 저장되어 다음 시간에 이어서 할 수 있어요.'),
+      h('div', { class: 'note green', style: { marginTop: '14px' } }, '학급 코드는 선생님께 받아요. 학급 코드를 적고 명단에서 내 이름을 누르면 들어가요. 꼭 내 이름을 눌러요! 한 일은 저절로 저장되어 다음 시간에 이어서 할 수 있어요.'),
     );
   };
   const right = (el) => {
@@ -111,7 +111,7 @@ export function mountLogin(root, tab = 'student', joinCode = null) {
       tabs.replaceChildren(
         h('button', { class: `chip-btn ${t === 'student' ? 'on' : ''}`, role: 'tab', 'aria-selected': String(t === 'student'), type: 'button', onClick: () => show('student') }, '학생 입장'),
         h('button', { class: `chip-btn ${t === 'teacher' ? 'on' : ''}`, role: 'tab', 'aria-selected': String(t === 'teacher'), type: 'button', onClick: () => show('teacher') }, '교사 관리실'));
-      body.replaceChildren(t === 'student' ? studentForm(joinCode, preset) : teacherForm((n) => show('student', { code: 'DEMO26', number: n, pin: '1234' })));
+      body.replaceChildren(t === 'student' ? studentForm(joinCode, preset) : teacherForm((n) => show('student', { code: 'DEMO26', number: n })));
     };
     el.append(h('div', { class: 'center' }, h('h2', { class: 'plaque' }, '연구소 입장')), tabs, body);
     show(tab);
@@ -121,12 +121,7 @@ export function mountLogin(root, tab = 'student', joinCode = null) {
 
 function studentForm(joinCode = null, preset = null) {
   const code = h('input', { type: 'text', name: 'classCode', autocomplete: 'off', autocapitalize: 'characters', maxlength: 8, required: true, placeholder: '예: AB12CD', value: joinCode || '' }); // 처음엔 비워 둠(QR로 들어온 경우만 채움)
-  const num = h('input', { type: 'number', name: 'number', inputmode: 'numeric', min: 1, max: 99, required: true, placeholder: '번호', class: 'num-input' });
-  const pin = h('input', { type: 'password', name: 'pin', class: 'pin-input', inputmode: 'numeric', maxlength: 4, autocomplete: 'new-password', required: true, placeholder: '••••', readonly: true });
-  // 브라우저가 예전에 쓴 PIN을 저절로 채우지 않도록: 누를 때만 입력 가능하게 하고, 처음엔 비워 둠
-  const unlockPin = () => pin.removeAttribute('readonly');
-  pin.addEventListener('focus', unlockPin); pin.addEventListener('pointerdown', unlockPin);
-  setTimeout(() => { if (pin.hasAttribute('readonly')) pin.value = ''; }, 300);
+  const num = h('input', { type: 'hidden', name: 'number' });
   const err = h('p', { class: 'err-text', role: 'alert' });
   const classBox = h('div', { class: 'class-find', 'aria-live': 'polite' });
   let found = null; let lastCode = '';
@@ -134,8 +129,7 @@ function studentForm(joinCode = null, preset = null) {
     num.value = n;
     classBox.querySelectorAll('.name-chip').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.n) === Number(n))));
     const st = found?.students.find((x) => x.number === Number(n));
-    whoEl.textContent = st ? `${st.number}번 ${st.name}` : '';
-    if (st) setTimeout(() => pin.focus(), 50);
+    whoEl.textContent = st ? `${st.number}번 ${st.name} 연구원, 맞으면 아래 버튼을 눌러요.` : '';
   };
   const whoEl = h('b', { class: 'who-picked' });
   const lookup = async (force = false) => {
@@ -155,28 +149,28 @@ function studentForm(joinCode = null, preset = null) {
   };
   let t = null;
   code.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => lookup(), 450); });
-  num.addEventListener('change', () => pick(num.value));
   const form = h('form', { class: 'login-card', onSubmit: async (e) => {
     e.preventDefault(); err.textContent = '';
+    if (!num.value) { err.textContent = found ? '명단에서 내 이름을 먼저 눌러요.' : '학급 코드를 먼저 적어요.'; return; }
     try {
-      await api('POST', '/api/student/login', { classCode: code.value, number: num.value, pin: pin.value });
+      await api('POST', '/api/student/login', { classCode: code.value, number: num.value });
       const c = code.value.toUpperCase();
       try { localStorage.removeItem('kgl-code'); localStorage.removeItem(`kgl-num-${c}`); } catch { /* 예전에 저장한 값 지우기 */ }
       const st = found?.students.find((x) => x.number === Number(num.value));
       toast(st ? `${st.name} 연구원의 기록을 불러왔어요!` : '연구소에 들어왔어요!', 'ok');
       boot();
-    } catch (ex) { err.textContent = ex.message; pin.value = ''; pin.focus(); }
+    } catch (ex) { err.textContent = ex.message; }
   } },
-  joinCode ? h('div', { class: 'note green small join-note' }, h('b', null, 'QR로 들어왔어요 '), `학급 코드 ${joinCode}가 입력되었어요. 내 이름을 누르고 PIN만 적으면 돼요.`) : null,
+  joinCode ? h('div', { class: 'note green small join-note' }, h('b', null, 'QR로 들어왔어요 '), `학급 코드 ${joinCode}가 입력되었어요. 내 이름을 누르고 들어가기를 누르면 돼요.`) : null,
   h('label', { class: 'field' }, h('span', null, '① 학급 코드'), code),
   classBox,
-  h('div', { class: 'row login-who' }, h('label', { class: 'field', style: { flex: '0 0 90px' } }, h('span', null, '② 번호'), num), whoEl),
-  h('label', { class: 'field' }, h('span', null, '③ 비밀번호(PIN 4자리)'), pin),
+  num,
+  h('div', { class: 'row login-who' }, whoEl),
   err,
   btn('연구소 들어가기', null, { variant: 'gold', type: 'submit' }),
   h('p', { class: 'small muted center', style: { margin: '4px 0 0' } }, '내가 한 활동은 저절로 저장돼요. 다음 시간에 같은 이름으로 들어오면 이어서 할 수 있어요.'),
   null);
-  if (preset) { code.value = preset.code; setTimeout(async () => { await lookup(true); pick(preset.number); pin.value = preset.pin; }, 50); }
+  if (preset) { code.value = preset.code; setTimeout(async () => { await lookup(true); pick(preset.number); }, 50); }
   else if (code.value) setTimeout(() => lookup(), 200);
   return form;
 }

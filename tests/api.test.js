@@ -55,11 +55,13 @@ test('교사 가입·학급·학생 등록', async () => {
   assert.equal(r.status, 404, '다른 교사의 학급은 볼 수 없음');
 });
 
-test('학생 로그인: 이름만으로는 불가, PIN 필요', async () => {
+test('학생 로그인: 학급 코드 + 명단의 내 번호(PIN 없음)', async () => {
   const S = client(); ctx.S = S;
-  let r = await S('POST', '/api/student/login', { classCode: ctx.code, number: 1, pin: '0000' === ctx.pins[1] ? '1111' : '0000' });
-  assert.equal(r.status, 401);
-  r = await S('POST', '/api/student/login', { classCode: ctx.code.toLowerCase(), number: 1, pin: ctx.pins[1] });
+  let r = await S('POST', '/api/student/login', { classCode: ctx.code, number: 77 });
+  assert.equal(r.status, 401, '명단에 없는 번호는 불가');
+  r = await S('POST', '/api/student/login', { classCode: 'NOPE99', number: 1 });
+  assert.equal(r.status, 401, '없는 학급 코드는 불가');
+  r = await S('POST', '/api/student/login', { classCode: ctx.code.toLowerCase(), number: 1 });
   assert.equal(r.status, 200);
   r = await S('GET', '/api/me');
   assert.equal(r.body.role, 'student');
