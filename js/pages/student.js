@@ -1,18 +1,18 @@
 // 학생용 책: 상단 막대 + 장(章) 책갈피 + 책장 넘김 탐색
-import { sealImg, h, A, icon, toast, iconSrc } from '../ui.js';
-import { Book } from '../book.js';
-import { S, loadStudent, saveUi } from '../store.js';
-import { logout } from '../main.js';
-import { makeHeader, deskProps, lanternImg, scene } from '../shell.js';
-import { PageTurner } from '../pageturn.js';
-import * as home from './home.js';
-import * as weather from './weather.js';
-import * as topics from './topics.js';
-import * as table from './table.js';
-import * as graphCh from './graphpage.js';
-import * as gallery from './gallery.js';
-import * as life from './life.js';
-import * as survey from './survey.js';
+import { sealImg, h, A, icon, toast, iconSrc } from '../ui.js?v=mwswbgmk';
+import { Book } from '../book.js?v=mwswbgmk';
+import { S, loadStudent, saveUi } from '../store.js?v=mwswbgmk';
+import { logout } from '../main.js?v=mwswbgmk';
+import { makeHeader, deskProps, lanternImg, scene } from '../shell.js?v=mwswbgmk';
+import { PageTurner } from '../pageturn.js?v=mwswbgmk';
+import * as home from './home.js?v=mwswbgmk';
+import * as weather from './weather.js?v=mwswbgmk';
+import * as topics from './topics.js?v=mwswbgmk';
+import * as table from './table.js?v=mwswbgmk';
+import * as graphCh from './graphpage.js?v=mwswbgmk';
+import * as gallery from './gallery.js?v=mwswbgmk';
+import * as life from './life.js?v=mwswbgmk';
+import * as survey from './survey.js?v=mwswbgmk';
 
 export const CHAPTERS = [
   { key: 'home', label: '목차', icon: 'home', mod: home },

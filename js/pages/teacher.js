@@ -1,18 +1,18 @@
 // 교사 관리실 — 학생 화면과 같은 고서 배경 장면(왼쪽 판 6개 = 메뉴, 펼친 책 두 쪽 = 내용)
-import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js';
-import { api, isDemo } from '../api.js';
-import { S } from '../store.js';
-import { logout } from '../main.js';
-import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js';
-import { renderStatic } from '../graph.js';
-import { makeHeader, scene, lanternImg, deskProps } from '../shell.js';
-import { Book } from '../book.js';
-import { PageTurner } from '../pageturn.js';
-import { surveyForm } from './survey.js';
-import { SCALE_LABELS } from '../../shared/survey.js';
-import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js';
-import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js';
-import { OFFICES } from '../../shared/neis.js';
+import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwswbgmk';
+import { api, isDemo } from '../api.js?v=mwswbgmk';
+import { S } from '../store.js?v=mwswbgmk';
+import { logout } from '../main.js?v=mwswbgmk';
+import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwswbgmk';
+import { renderStatic } from '../graph.js?v=mwswbgmk';
+import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwswbgmk';
+import { Book } from '../book.js?v=mwswbgmk';
+import { PageTurner } from '../pageturn.js?v=mwswbgmk';
+import { surveyForm } from './survey.js?v=mwswbgmk';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwswbgmk';
+import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwswbgmk';
+import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwswbgmk';
+import { OFFICES } from '../../shared/neis.js?v=mwswbgmk';
 
 const SECTIONS = [
   { key: 'class', label: '학급·명단', icon: 'home', subs: [['roster', '학생 명단'], ['qr', '학급 정보·QR']] },
