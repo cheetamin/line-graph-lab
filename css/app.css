@@ -1195,3 +1195,8 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
 .reset-panel { margin-top: 14px; padding: 10px 12px; border: 1.5px dashed #a3302a; border-radius: 6px; background: rgba(255,240,232,.6); }
 .reset-panel h3 { margin: 0 0 2px; color: #7b2620; }
 .reset-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+/* 점 찍기용 어림값 */
+.approx-row th, .approx-row td { background: #fff6dc; }
+.approx-row td b { color: #7a2d1f; }
+.approx-note { margin: 6px 4px 0; }
+.g-label-ko { font-size: 13px; fill: #7a5a3a; }

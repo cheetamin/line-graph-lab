@@ -1,6 +1,6 @@
 // 꺾은선그래프 모눈종이: 정적 그리기 + 학생이 직접 점 찍고 선 잇는 편집기
-import { s, h } from './ui.js?v=mwsxb00z';
-import { snapStep, MAJOR, MAX_CELLS, SCALE_OPTIONS } from '../shared/topics.js?v=mwsxb00z';
+import { s, h } from './ui.js?v=mwt4rdkx';
+import { snapStep, MAJOR, MAX_CELLS, SCALE_OPTIONS, koNum } from '../shared/topics.js?v=mwt4rdkx';
 
 // scale = 작은 눈금 한 칸(점선 한 칸)의 크기. 작은 칸 MAJOR(5)개가 모여 큰 눈금(실선) 한 칸이 되고, 큰 눈금마다 수를 적어요.
 export function layout({ labels, scale, yStart = 0, maxV = 0, title = '' }) {
@@ -40,6 +40,7 @@ export function drawFrame(svg, L, d, { labels }) {
     if (L.hasScale && major) {
       const val = L.yStart + k * L.scale;
       g.append(s('text', { x: left - 8, y: yy + 5, 'text-anchor': 'end', class: 'g-label' }, Number(val.toFixed(2)).toLocaleString()));
+      if (val >= 10000) g.append(s('text', { x: left - 8, y: yy + 19, 'text-anchor': 'end', class: 'g-label g-label-ko' }, `(${koNum(Math.round(val))})`));
     }
   }
   for (let i = 0; i < L.n; i++) {
@@ -205,7 +206,7 @@ export class GraphEditor {
   undo() { if (!this.undoStack.length) return; this.redoStack.push(this.snapshot()); this.restore(this.undoStack.pop()); }
   redo() { if (!this.redoStack.length) return; this.undoStack.push(this.snapshot()); this.restore(this.redoStack.pop()); }
   async clearAll() {
-    const { confirmBox } = await import('./ui.js?v=mwsxb00z');
+    const { confirmBox } = await import('./ui.js?v=mwt4rdkx');
     if (!(await confirmBox('모두 지우기', '찍은 점과 선분을 모두 지울까요? (되돌리기로 다시 살릴 수 있어요)', '모두 지우기'))) return;
     this.push(); this.onChange({ points: {}, segments: [] }); this.render();
   }
@@ -267,7 +268,7 @@ export class GraphEditor {
     this.svg.append(s('line', { x1: L.ml, y1: gy, x2: gx, y2: gy, class: 'g-guide' }));
     this.svg.append(s('line', { x1: gx, y1: gy, x2: gx, y2: L.baseY, class: 'g-guide' }));
     this.svg.append(s('circle', { cx: gx, cy: gy, r: 9, class: 'g-ghost' }));
-    const label = `${this.labels[i]} · ${Number(v.toFixed(2)).toLocaleString()}${this.d.yUnit || ''}`;
+    const label = `${this.labels[i]} · ${Number(v.toFixed(2)).toLocaleString()}${this.d.yUnit || ''}${v >= 10000 ? ` (${koNum(Math.round(v))})` : ''}`;
     const w = label.length * 9 + 20;
     const bx = Math.min(Math.max(gx - w / 2, 4), L.W - w - 4);
     const by = Math.max(gy - 62, 4);
@@ -372,7 +373,7 @@ export class GraphEditor {
       const pts = { ...(this.d.points || {}) };
       if (pts[i] !== v) {
         this.push(); pts[i] = v; this.onChange({ points: pts });
-        this.setHint(`${this.labels[i]}에 ${v.toLocaleString()}${this.d.yUnit || ''} 위치로 점을 찍었어요.`);
+        this.setHint(`${this.labels[i]}에 ${v.toLocaleString()}${this.d.yUnit || ''}${v >= 10000 ? `(약 ${koNum(Math.round(v))})` : ''} 위치로 점을 찍었어요.`);
       }
       this.render();
     } else if (this.rubber) {
