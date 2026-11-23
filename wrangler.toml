@@ -1,0 +1,28 @@
+# 「꺾은선그래프 연구소」 학급 서버 (Cloudflare Workers 무료 플랜)
+# GitHub 저장소를 Cloudflare에 연결하면, main에 올릴 때마다 아래 설정으로 자동 배포돼요.
+name = "line-graph-lab"
+main = "server/worker.js"
+compatibility_date = "2025-09-01"
+keep_vars = true
+
+# 배포 전에 화면 파일(dist-server)을 만들어요
+[build]
+command = "node scripts/build-demo.js --server"
+
+# 화면 파일: /api/ 가 아닌 주소는 Cloudflare가 바로 보내 줘요
+[assets]
+directory = "./dist-server"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/healthz"]
+
+# 학급 자료 저장소(Durable Object + SQLite, 무료 플랜 사용 가능)
+[[durable_objects.bindings]]
+name = "LAB"
+class_name = "LabStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LabStore"]
+
+# 비밀 값(ADMIN_PASSWORD, NEIS_API_KEY, TEACHER_SIGNUP_CODE)은 Cloudflare 화면의
+# Settings → Variables and Secrets 에 'Secret'으로 넣어요. 여기에 적지 마세요(공개 저장소).

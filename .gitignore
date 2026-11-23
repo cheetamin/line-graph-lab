@@ -6,3 +6,6 @@ dist-pages/
 *.sqlite-wal
 *.sqlite-shm
 .env
+dist-server/
+.wrangler/
+.dev.vars

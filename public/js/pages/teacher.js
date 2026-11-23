@@ -924,7 +924,7 @@ function qrCard(cls) {
           h('li', null, h('span', null, '학급 코드가 자동으로 들어간 입장 화면이 열려요.')),
           h('li', null, h('span', null, '명단에서 내 이름을 누르면 들어와요.'))),
         h('p', { class: 'small muted', style: { margin: 0 } }, 'QR을 못 쓰는 기기는 연구소 첫 화면에서 학급 코드를 직접 적어요.'),
-        isDemo() ? h('div', { class: 'note gold small' }, '체험판은 자료가 이 브라우저에만 저장돼서, 다른 기기에서 QR로 들어와도 이 학급이 보이지 않아요. 학교 서버나 호스팅에 올리면 QR이 그대로 작동해요.') : null,
+        isDemo() ? h('div', { class: 'note gold small' }, '체험판은 자료가 이 브라우저에만 저장돼서, 다른 기기에서 QR로 들어와도 이 학급이 보이지 않아요. 실제 수업은 ', h('a', { href: 'https://line-graph-lab.cheetamin.workers.dev/', target: '_blank', rel: 'noopener' }, '학급 서버판 ↗'), '에서 계정을 만들어 해 주세요.') : null,
         url ? h('div', { class: 'qr-url' }, url) : null,
         h('div', { class: 'row' },
           url ? btn('주소 복사', () => navigator.clipboard?.writeText(url).then(() => toast('주소를 복사했어요.', 'ok')).catch(() => toast('주소를 직접 선택해 복사해 주세요.')), { variant: 'small green' }) : null,

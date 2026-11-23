@@ -9,7 +9,7 @@ import path from 'node:path';
 
 const PORT = 4100 + Math.floor(Math.random() * 80);
 const NEIS_PORT = PORT + 100;
-const BASE = `http://localhost:${PORT}`;
+const BASE = process.env.TEST_BASE || `http://localhost:${PORT}`; // TEST_BASE: 이미 떠 있는 서버(예: wrangler dev)로 시험
 const DB = path.join(os.tmpdir(), `kgl-class-${Date.now()}.sqlite`);
 let proc; let neis; let neisMode = 'ok'; let lastNeisUrl = '';
 
@@ -27,7 +27,7 @@ before(async () => {
   proc = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server/server.js'], { env: { ...process.env, PORT: String(PORT), DATABASE_PATH: DB, NEIS_BASE: `http://localhost:${NEIS_PORT}/hub/schoolInfo`, NEIS_API_KEY: '' }, stdio: 'pipe' });
   for (let i = 0; i < 50; i++) { try { await fetch(BASE + '/healthz'); return; } catch { await new Promise((r) => setTimeout(r, 100)); } }
 });
-after(() => { proc.kill(); neis.close(); for (const f of [DB, DB + '-wal', DB + '-shm']) fs.rmSync(f, { force: true }); });
+after(() => { if (!proc) return; proc.kill(); neis.close(); for (const f of [DB, DB + '-wal', DB + '-shm']) fs.rmSync(f, { force: true }); });
 
 function client() {
   let cookie = '';

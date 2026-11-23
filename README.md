@@ -112,3 +112,16 @@ docs/        교사용 안내
 ```
 
 글꼴: Song Myung, Gowun Dodum (SIL Open Font License, @fontsource).
+
+## Cloudflare 학급 서버판 (실제 수업용)
+
+주소: https://line-graph-lab.cheetamin.workers.dev
+
+- `server/worker.js` + `wrangler.toml` — Cloudflare Workers 무료 플랜. 자료는 Durable Object 안의 SQLite 한 곳에 저장돼요.
+- 이 GitHub 저장소를 Cloudflare(Workers & Pages → Import a repository)에 연결해 두면, `main`에 올릴 때마다 자동으로 배포돼요.
+  배포할 때 `node scripts/build-demo.js --server`로 화면 파일(`dist-server/`)을 만들어 함께 올려요.
+- 비밀 값은 Cloudflare 화면 **Settings → Variables and Secrets** 에 **Secret** 으로 넣어요(저장소에 적지 않기).
+  - `ADMIN_PASSWORD` — 전체 관리자 비밀번호
+  - `NEIS_API_KEY` — (선택) 나이스 인증키. 없으면 학교 검색 결과가 5개까지만 나와요
+  - `TEACHER_SIGNUP_CODE` — (선택) 교사 가입 코드
+- 내 컴퓨터에서 시험: `npx wrangler dev` → `TEST_BASE=http://127.0.0.1:8787 node --test tests/own-topics.test.js`

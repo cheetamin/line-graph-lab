@@ -194,6 +194,7 @@ function teacherForm(goStudent) {
       } catch (ex) { err.textContent = ex.message; }
     } },
     !signup ? demoGuide(goStudent, () => { user.value = 'demo'; pw.value = 'demo1234'; pw.focus(); }) : null,
+    !isDemo() && !signup ? h('div', { class: 'note small' }, '처음 오셨나요? 수업 전에 ', h('a', { href: 'https://cheetamin.github.io/line-graph-lab/', target: '_blank', rel: 'noopener' }, '체험판 ↗'), '에서 예시 학급(학생 20명 자료)으로 학생 화면과 교사 화면을 먼저 둘러보실 수 있어요. 아래 [처음이에요]로 계정을 만들면 우리 반을 만들 수 있어요.') : null,
     h('h3', { class: 'center' }, signup ? '교사 계정 만들기' : '교사 관리실 로그인'),
     h('label', { class: 'field' }, h('span', null, '아이디'), user),
     h('label', { class: 'field' }, h('span', null, '비밀번호'), pw),

@@ -9,14 +9,15 @@ import { computeStats } from '../public/shared/stats.js';
 import { topicById } from '../public/shared/topics.js';
 
 const PORT = 4400 + Math.floor(Math.random() * 80);
-const BASE = `http://localhost:${PORT}`;
+const BASE = process.env.TEST_BASE || `http://localhost:${PORT}`; // TEST_BASE: 이미 떠 있는 서버(예: wrangler dev)로 시험
 const DB = path.join(os.tmpdir(), `kgl-own-${Date.now()}.sqlite`);
 let proc;
 before(async () => {
+  if (process.env.TEST_BASE) return;
   proc = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server/server.js'], { env: { ...process.env, PORT: String(PORT), DATABASE_PATH: DB, ADMIN_PASSWORD: 'test-admin-only' }, stdio: 'pipe' });
   for (let i = 0; i < 50; i++) { try { await fetch(BASE + '/healthz'); return; } catch { await new Promise((r) => setTimeout(r, 100)); } }
 });
-after(() => { proc.kill(); for (const f of [DB, DB + '-wal', DB + '-shm']) fs.rmSync(f, { force: true }); });
+after(() => { if (!proc) return; proc.kill(); for (const f of [DB, DB + '-wal', DB + '-shm']) fs.rmSync(f, { force: true }); });
 function client() {
   let cookie = '';
   return async (method, p, body) => {
