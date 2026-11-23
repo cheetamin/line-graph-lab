@@ -3,7 +3,7 @@ import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.
 import { api } from '../api.js';
 import { S, setSave, backup, clearBackup, getBackup } from '../store.js';
 import { GraphEditor } from '../graph.js';
-import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../../shared/topics.js';
+import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js';
 
 const UNITS = ['월', '년', '일', '회', '권', '편', '개', '시간', '원', '명', '만 명', '곳'];
 const STATUS = { draft: ['그리는 중', 'warn'], submitted: ['제출함 · 선생님 확인 중', 'ok'], approved: ['승인됨 · 전시 중', 'green'], rejected: ['다시 그려 보세요', 'red'] };
@@ -106,7 +106,27 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
     const xName = h('input', { type: 'text', maxlength: 20, value: W.xName, placeholder: kind === 'weather' ? '예: 연도' : '예: 월', onInput: (e) => change({ xName: e.target.value.trim() }) });
     const yName = h('input', { type: 'text', maxlength: 20, value: W.yName, placeholder: kind === 'weather' ? '예: 폭염일수' : '예: 날수, 횟수', onInput: (e) => change({ yName: e.target.value.trim() }) });
     const scaleInfo = h('p', { class: 'small' });
+    const dataTable = h('div', { class: 'table-frame', style: { padding: '8px' } });
+    const big = maxValue >= 10000;
+    const renderTable = () => {
+      const u = approxUnit(W.scale);
+      const needs = u && values.some((v) => v !== null && v !== '' && Number(v) % u !== 0);
+      dataTable.replaceChildren(
+        h('table', { class: 'data compact' },
+          h('caption', { class: 'small muted' }, '내가 완성한 표 (그래프로 옮길 자료)'),
+          h('tr', null, h('th', null, xUnit === '년' ? '연도' : '월'), labels.map((l) => h('th', null, l))),
+          h('tr', null, h('th', null, `(${unit})`), values.map((v) => h('td', null, v === null || v === '' ? '—' : fmt(v)))),
+          needs ? h('tr', { class: 'approx-row' }, h('th', null, '어림값'), values.map((v) => {
+            const a = approxValue(v, W.scale);
+            return h('td', null, a === null ? '—' : h('span', null, h('b', null, `약 ${koNum(a)}`), h('br'), h('span', { class: 'small muted' }, fmt(a))));
+          })) : null),
+        needs ? h('p', { class: 'small approx-note' }, '📍 수가 커서 점을 찍기 어려우면 ', h('b', null, `${PLACE_NAME[u] || fmt(u)}의 자리까지 반올림한 어림값`), '에 점을 찍어도 돼요. 예: ',
+          (() => { const v = values.find((x) => x !== null && x !== '' && Number(x) % u !== 0); return `${fmt(v)} → 약 ${koNum(approxValue(v, W.scale))}`; })())
+          : (!W.scale && big ? h('p', { class: 'small muted approx-note' }, '수가 커서 점 찍기가 어렵다면, 3단계에서 눈금 크기를 정하면 점 찍기 쉬운 어림값(예: 약 40만)이 표 아래에 나타나요.') : null));
+    };
+    renderTable();
     const showScaleInfo = () => {
+      renderTable();
       const u = unit ? ` ${unit}` : '';
       if (!W.scale) { scaleInfo.textContent = `가장 큰 값은 ${fmt(maxValue)}${u}예요. 작은 눈금 한 칸을 몇으로 하면 알맞을까요?`; return; }
       const cells = cellsNeeded(maxValue, W.yStart, W.scale);
@@ -136,10 +156,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       intro ? h('p', { class: 'small' }, intro) : null,
       statusEl,
       lockedForever ? h('div', { class: 'note green' }, '기상자료 탐험을 완료했어요! 이 그래프는 기록으로 남아 있어요.') : null,
-      h('div', { class: 'table-frame', style: { padding: '8px' } }, h('table', { class: 'data compact' },
-        h('caption', { class: 'small muted' }, '내가 완성한 표 (그래프로 옮길 자료)'),
-        h('tr', null, h('th', null, xUnit === '년' ? '연도' : '월'), labels.map((l) => h('th', null, l))),
-        h('tr', null, h('th', null, `(${unit})`), values.map((v) => h('td', null, v === null || v === '' ? '—' : fmt(v)))))),
+      dataTable,
       h('div', { class: 'stepper', style: { marginTop: '10px' } },
         step('title', 1, '그래프 제목 정하기', h('label', { class: 'field' }, h('span', null, '제목'), titleIn), h('p', { class: 'small muted' }, '무엇을, 언제 조사했는지 알 수 있게 지어요.')),
         step('axis', 2, '가로축·세로축 이름과 단위',
@@ -152,7 +169,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
           scaleInfo, scaleBtns,
           h('details', null, h('summary', { class: 'small' }, '물결선으로 필요 없는 부분 줄이기(선택)'),
             h('div', { class: 'row', style: { marginTop: '6px' } }, h('span', { class: 'small' }, '세로축 시작 값'), yStart, h('span', { class: 'small muted' }, '0이면 물결선 없이 그려요.')))),
-        step('points', 4, '자료값에 맞게 점 찍기', h('p', { class: 'small' }, '오른쪽 모눈종이에서 [점 찍기]를 고르고, 표의 수에 맞는 곳을 눌러요. 누른 채 움직이면 위치와 값이 말풍선으로 보여요. 손을 떼면 점이 찍혀요.')),
+        step('points', 4, '자료값에 맞게 점 찍기', h('p', { class: 'small' }, approxUnit(W.scale) && big ? '표 아래 어림값(예: 약 40만)을 보고 찍어도 돼요. ' : '', '오른쪽 모눈종이에서 [점 찍기]를 고르고, 표의 수에 맞는 곳을 눌러요. 누른 채 움직이면 위치와 값이 말풍선으로 보여요. 손을 떼면 점이 찍혀요.')),
         step('lines', 5, '점들을 선분으로 잇기', h('p', { class: 'small' }, '[선 잇기]를 고르고 첫 점, 다음 점을 차례대로 눌러요. 잘못 이었으면 [지우개]로 선분을 눌러 지우거나 [되돌리기]를 눌러요.')),
         step('interp', 6, '그래프에서 알 수 있는 내용',
           h('label', { class: 'field' }, h('span', null, '가장 큰 값이 나타난 때'), pick('maxLabel', labels, '고르기')),

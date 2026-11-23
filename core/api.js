@@ -5,7 +5,7 @@
 import { SCHEMA } from './schema.js';
 import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../public/shared/life.js';
 import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../public/shared/survey.js';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../public/shared/topics.js';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../public/shared/topics.js';
 import { computeStats, round1 } from '../public/shared/stats.js';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -350,7 +350,11 @@ export function createApi({ db, sec, options = {} }) {
     for (let i = 0; i < n; i++) {
       if (values[i] === null) continue;
       if (data.points[i] === undefined) missing.push(labels[i]);
-      else if (Math.abs(Number(data.points[i]) - Number(values[i])) > tol) wrong.push(labels[i]);
+      else {
+        const p = Number(data.points[i]); const ap = approxValue(values[i], data.scale);
+        // 정확한 값 또는 점 찍기용 어림값(반올림) 둘 다 맞게 봐요
+        if (Math.abs(p - Number(values[i])) > tol && !(ap !== null && Math.abs(p - ap) <= tol)) wrong.push(labels[i]);
+      }
     }
     if (missing.length) issues.push({ step: 'points', msg: `점을 찍지 않은 곳이 있어요: ${missing.join(', ')}` });
     if (wrong.length) issues.push({ step: 'points', msg: `자료값과 위치가 다른 점이 있어요: ${wrong.join(', ')}. 표의 수와 세로 눈금을 다시 읽어 보세요.`, labels: wrong });
