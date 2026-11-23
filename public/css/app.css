@@ -1192,3 +1192,6 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
 .demo-guide-btns { display: flex; gap: 4px; flex: 0 0 auto; }
 .admin-link { display: block; margin: 8px auto 0; font-size: .85rem; opacity: .85; }
 .office-select { flex: 0 0 auto; min-height: 40px; max-width: 120px; }
+.reset-panel { margin-top: 14px; padding: 10px 12px; border: 1.5px dashed #a3302a; border-radius: 6px; background: rgba(255,240,232,.6); }
+.reset-panel h3 { margin: 0 0 2px; color: #7b2620; }
+.reset-grid { display: flex; flex-wrap: wrap; gap: 6px; }

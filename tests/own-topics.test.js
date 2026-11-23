@@ -208,3 +208,36 @@ test('전체 관리자: 비밀번호, 운영 현황, 만족도 모아 보기', a
   r = await A('GET', '/api/teacher/classes');
   assert.equal(r.status, 401);
 });
+
+test('학생 자료 지우기·학급 전체 초기화', async () => {
+  let r = await T('GET', `/api/teacher/students/${ctx.sid}`);
+  assert.ok(r.body.responses.some((x) => x.topic_id === 7));
+  r = await T('POST', `/api/teacher/students/${ctx.sid}/reset`, { part: 'topic', topicId: 7 });
+  assert.equal(r.status, 200);
+  r = await T('GET', `/api/teacher/students/${ctx.sid}`);
+  assert.equal(r.body.responses.some((x) => x.topic_id === 7), false);
+  assert.ok(r.body.responses.some((x) => x.topic_id === 3), '다른 주제는 그대로');
+  assert.equal(r.body.works.some((w) => w.kind === 'topic' && w.topicId === 7), false);
+  r = await T('POST', `/api/teacher/students/${ctx.sid}/reset`, { part: 'life' });
+  let s = await ctx.S('GET', '/api/student/state');
+  assert.equal(s.body.state.life, undefined);
+  assert.equal(s.body.works.some((w) => w.kind === 'life'), false);
+  // 다른 선생님 학생은 못 지움
+  const T2 = client();
+  await T2('POST', '/api/teacher/signup', { username: 'other2', password: 'password1', name: '남' });
+  r = await T2('POST', `/api/teacher/students/${ctx.sid}/reset`, { part: 'all' });
+  assert.equal(r.status, 404);
+  // 학급 전체: 코드가 틀리면 안 됨
+  r = await T('POST', `/api/teacher/classes/${ctx.cid}/reset`, { confirm: 'WRONG' });
+  assert.equal(r.status, 400);
+  r = await T('POST', `/api/teacher/classes/${ctx.cid}/reset`, { confirm: ctx.code.toLowerCase() });
+  assert.equal(r.status, 200); assert.equal(r.body.students, 2);
+  r = await T('GET', `/api/teacher/students/${ctx.sid}`);
+  assert.equal(r.body.responses.length, 0); assert.equal(r.body.works.length, 0);
+  r = await T('GET', `/api/teacher/classes/${ctx.cid}/students`);
+  assert.equal(r.body.students.length, 2, '명단은 그대로');
+  r = await T('GET', `/api/teacher/classes/${ctx.cid}/survey`);
+  assert.equal(r.body.students.responded, 0);
+  s = await ctx.S('GET', '/api/student/state');
+  assert.equal(s.status, 200, '학생은 같은 PIN으로 계속 들어올 수 있음');
+});

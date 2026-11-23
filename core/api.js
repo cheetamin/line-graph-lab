@@ -487,6 +487,64 @@ export function createApi({ db, sec, options = {} }) {
     return { body: { role: 'student', student: { id: ctx.student.id, number: ctx.student.number, name: ctx.student.name }, className: ctx.cls.name } };
   });
 
+  // ── 학생 자료 지우기·초기화(이름·번호·PIN은 그대로) ──
+  // part: weather(1차) | topic(2차 한 주제, topicId) | topics(2차 전체) | life(3차) | survey | all
+  function resetStudent(st, part, topicId) {
+    const state = getState(st.id);
+    const sid = st.id;
+    const delTopic = (tid) => {
+      db.run('DELETE FROM responses WHERE student_id = ? AND topic_id = ?', [sid, tid]);
+      db.run('DELETE FROM submissions WHERE student_id = ? AND topic_id = ?', [sid, tid]);
+      db.run('DELETE FROM works WHERE student_id = ? AND kind = ?', [sid, `topic:${tid}`]);
+      if (state.tables) delete state.tables[tid];
+      if (Number(state.research?.topicId) === tid) state.research = null;
+    };
+    if (part === 'weather' || part === 'all') {
+      delete state.weather; state.weatherDone = false;
+      db.run("DELETE FROM works WHERE student_id = ? AND kind = 'weather'", [sid]);
+    }
+    if (part === 'topic') {
+      const tid = int(topicId);
+      if (!topicById(tid)) fail(400, '지울 주제를 골라 주세요.');
+      delTopic(tid);
+    }
+    if (part === 'topics' || part === 'all') {
+      db.run('DELETE FROM responses WHERE student_id = ?', [sid]);
+      db.run('DELETE FROM submissions WHERE student_id = ?', [sid]);
+      db.run("DELETE FROM works WHERE student_id = ? AND kind LIKE 'topic%'", [sid]);
+      db.run('DELETE FROM votes WHERE student_id = ?', [sid]);
+      state.tables = {}; state.research = null;
+    }
+    if (part === 'life' || part === 'all') {
+      delete state.life;
+      db.run("DELETE FROM works WHERE student_id = ? AND kind = 'life'", [sid]);
+    }
+    if (part === 'survey' || part === 'all') db.run("DELETE FROM surveys WHERE role = 'student' AND user_id = ? AND class_id = ?", [sid, st.class_id]);
+    if (part === 'all') { for (const k of Object.keys(state)) delete state[k]; }
+    putState(sid, st.class_id, state);
+  }
+  const RESET_PARTS = ['weather', 'topic', 'topics', 'life', 'survey', 'all'];
+  route('POST', '/api/teacher/students/:id/reset', 'teacher', async ({ ctx, params, body }) => {
+    const st = teacherStudent(ctx.teacher, params.id);
+    const part = str(body.part, 10);
+    if (!RESET_PARTS.includes(part)) fail(400, '지울 부분을 골라 주세요.');
+    db.tx(() => resetStudent(st, part, body.topicId));
+    return { body: { ok: true } };
+  });
+  // 학급 전체 초기화: 명단·학급 설정은 남기고 학생 자료(입력·작품·만족도)를 모두 지움. 학급 코드를 적어야 실행
+  route('POST', '/api/teacher/classes/:id/reset', 'teacher', async ({ ctx, params, body }) => {
+    const c = teacherClass(ctx.teacher, params.id);
+    if (str(body.confirm, 10).toUpperCase() !== c.code) fail(400, `확인을 위해 학급 코드(${c.code})를 정확히 적어 주세요.`);
+    const list = db.all('SELECT * FROM students WHERE class_id = ?', [c.id]);
+    db.tx(() => {
+      list.forEach((st) => resetStudent(st, 'all'));
+      if (body.withTeacherSurvey) db.run("DELETE FROM surveys WHERE class_id = ? AND role = 'teacher'", [c.id]);
+      const s = c.settings; s.picked = []; s.assign = {};
+      db.run('UPDATE classes SET settings = ? WHERE id = ?', [JSON.stringify(s), c.id]);
+    });
+    return { body: { ok: true, students: list.length } };
+  });
+
   // ── 전체 관리자: 모든 학급의 운영 현황과 만족도 조사 결과 ──
   // 관리자 비밀번호는 서버 환경 변수(ADMIN_PASSWORD)로만 정해요. 코드나 공개 저장소에는 두지 않아요.
   const adminEnabled = () => !!options.adminPassword;
