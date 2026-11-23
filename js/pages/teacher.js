@@ -12,6 +12,7 @@ import { surveyForm } from './survey.js';
 import { SCALE_LABELS } from '../../shared/survey.js';
 import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js';
 import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js';
+import { OFFICES } from '../../shared/neis.js';
 
 const SECTIONS = [
   { key: 'class', label: '학급·명단', icon: 'home', subs: [['roster', '학생 명단'], ['qr', '학급 정보·QR']] },
@@ -727,6 +728,10 @@ const VIEWS = { survey: surveyView, life: lifeView, roster: rosterView, qr: qrVi
 function schoolPicker(onPick, initial = null) {
   let chosen = initial;
   const q = h('input', { type: 'search', placeholder: '학교 이름 (예: 행복초)', 'aria-label': '학교 이름', maxlength: 30 });
+  let savedOffice = ''; try { savedOffice = localStorage.getItem('kgl-office') || ''; } catch { /* */ }
+  const office = h('select', { 'aria-label': '시·도', class: 'office-select', onChange: () => { try { localStorage.setItem('kgl-office', office.value); } catch { /* */ } if (q.value.trim().length >= 2) search(); } },
+    h('option', { value: '' }, '전체 시·도'), OFFICES.map(([c, n]) => h('option', { value: c, selected: c === savedOffice ? true : undefined }, n)));
+  const elemOnly = h('input', { type: 'checkbox', checked: true, onChange: () => { if (q.value.trim().length >= 2) search(); } });
   const list = h('div', { class: 'school-list', role: 'listbox', 'aria-label': '검색한 학교' });
   const note = h('div', { class: 'small', role: 'status' });
   const manualName = h('input', { type: 'text', placeholder: '예: 행복초등학교', maxlength: 40 });
@@ -749,13 +754,13 @@ function schoolPicker(onPick, initial = null) {
     if (v.length < 2) { note.textContent = '학교 이름을 두 글자 이상 적어 주세요.'; return; }
     note.textContent = '찾는 중…'; list.replaceChildren();
     try {
-      const r = await api('GET', `/api/teacher/schools?q=${encodeURIComponent(v)}`);
+      const r = await api('GET', `/api/teacher/schools?q=${encodeURIComponent(v)}&office=${office.value}&kind=${elemOnly.checked ? encodeURIComponent('초등학교') : ''}`);
       if (!r.available) {
         note.replaceChildren(h('span', { class: 'err-text' }, r.error || '이 환경에서는 학교 검색을 쓸 수 없어요(체험판이거나 인터넷이 막혀 있어요). 학교 이름을 직접 적어 주세요.'));
         manual.classList.remove('hidden'); manualName.value = manualName.value || v; return;
       }
-      if (!r.schools.length) { note.textContent = '찾는 학교가 없어요. 이름을 줄여서(예: 행복초) 다시 찾거나 직접 적어 주세요.'; manual.classList.remove('hidden'); return; }
-      note.textContent = `${r.schools.length}개 학교를 찾았어요.${r.schools.length >= 5 ? ' 원하는 학교가 없으면 지역 이름을 함께 적어 보세요.' : ''}`;
+      if (!r.schools.length) { note.textContent = `찾는 학교가 없어요. ${office.value ? '시·도가 맞는지 확인하거나, ' : ''}이름을 줄여서(예: 행복초) 다시 찾거나 직접 적어 주세요.`; manual.classList.remove('hidden'); return; }
+      note.textContent = `${r.schools.length}개 학교를 찾았어요.${r.schools.length >= 5 && !office.value ? ' 원하는 학교가 없으면 위에서 시·도를 골라 주세요(이름이 같은 학교가 많으면 일부만 보여요).' : ''}`;
       list.replaceChildren(...r.schools.map((sc) => h('button', { type: 'button', class: 'school-item', role: 'option', 'aria-selected': String(chosen?.code === sc.code), onClick: (e) => {
         list.querySelectorAll('.school-item').forEach((b) => b.setAttribute('aria-selected', String(b === e.currentTarget))); pick(sc);
       } }, h('b', null, sc.name), sc.kind ? h('span', { class: `badge ${sc.kind === '초등학교' ? 'green' : ''}` }, sc.kind) : null, h('span', { class: 'small muted' }, [sc.office, sc.address].filter(Boolean).join(' · ')))));
@@ -764,7 +769,8 @@ function schoolPicker(onPick, initial = null) {
   q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
   showChosen();
   return h('div', { class: 'stack', style: { gap: '8px' } },
-    h('div', { class: 'row', style: { flexWrap: 'nowrap' } }, q, btn('검색', () => search(), { variant: 'small' })),
+    h('div', { class: 'row', style: { flexWrap: 'nowrap', gap: '6px' } }, office, q, btn('검색', () => search(), { variant: 'small' })),
+    h('label', { class: 'toggle small' }, elemOnly, '초등학교만 찾기'),
     note, list,
     h('button', { type: 'button', class: 'link-btn', style: { justifySelf: 'start' }, onClick: () => manual.classList.toggle('hidden') }, '목록에 없나요? 학교 이름 직접 적기'),
     manual, chosenEl);

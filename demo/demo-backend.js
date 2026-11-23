@@ -42,7 +42,7 @@ window.__KGL_READY__ = (async () => {
     exec: (sql) => sdb.exec(sql),
     tx(fn) { sdb.exec('BEGIN'); try { const r = fn(); sdb.exec('COMMIT'); return r; } catch (e) { sdb.exec('ROLLBACK'); throw e; } },
   };
-  const api = createApi({ db, sec, options: { searchSchools: (q) => neisSearch(q) } });
+  const api = createApi({ db, sec, options: { searchSchools: (q, f) => neisSearch(q, f) } });
   api.init();
   await seedDemo({ db, sec });
   const persist = () => { try { store.set(KEY, b64(sdb.export())); } catch { /* 저장 공간 부족 */ } };

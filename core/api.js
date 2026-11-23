@@ -890,7 +890,7 @@ export function createApi({ db, sec, options = {} }) {
     if (q.length < 2) fail(400, '학교 이름을 두 글자 이상 적어 주세요.');
     if (!options.searchSchools) return { body: { available: false, schools: [] } };
     try {
-      const schools = await options.searchSchools(q);
+      const schools = await options.searchSchools(q, { office: str(query.office, 4), kind: str(query.kind, 10) });
       return { body: { available: true, schools } };
     } catch (e) {
       return { body: { available: false, error: '지금은 학교 검색을 할 수 없어요. 학교 이름을 직접 적어 주세요.', schools: [] } };
