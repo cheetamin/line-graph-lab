@@ -109,30 +109,27 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
     const dataTable = h('div', { class: 'table-frame', style: { padding: '8px' } });
     const big = maxValue >= 10000;
     const renderTable = () => {
-      const u = approxUnit(W.scale);
-      const needs = u && values.some((v) => v !== null && v !== '' && Number(v) % u !== 0);
+      const u = approxUnit(maxValue);
       dataTable.replaceChildren(
         h('table', { class: 'data compact' },
-          h('caption', { class: 'small muted' }, '내가 완성한 표 (그래프로 옮길 자료)'),
+          h('caption', { class: 'small muted' }, u ? '그래프로 옮길 자료 (어림값)' : '내가 완성한 표 (그래프로 옮길 자료)'),
           h('tr', null, h('th', null, xUnit === '년' ? '연도' : '월'), labels.map((l) => h('th', null, l))),
-          h('tr', null, h('th', null, `(${unit})`), values.map((v) => h('td', null, v === null || v === '' ? '—' : fmt(v)))),
-          needs ? h('tr', { class: 'approx-row' }, h('th', null, '어림값'), values.map((v) => {
-            const a = approxValue(v, W.scale);
+          u ? h('tr', { class: 'approx-row' }, h('th', null, `어림값 (${unit})`), values.map((v) => {
+            const a = approxValue(v, maxValue);
             return h('td', null, a === null ? '—' : h('span', null, h('b', null, `약 ${koNum(a)}`), h('br'), h('span', { class: 'small muted' }, fmt(a))));
-          })) : null),
-        needs ? h('p', { class: 'small approx-note' }, '📍 수가 커서 점을 찍기 어려우면 ', h('b', null, `${PLACE_NAME[u] || fmt(u)}의 자리까지 반올림한 어림값`), '에 점을 찍어도 돼요. 예: ',
-          (() => { const v = values.find((x) => x !== null && x !== '' && Number(x) % u !== 0); return `${fmt(v)} → 약 ${koNum(approxValue(v, W.scale))}`; })())
-          : (!W.scale && big ? h('p', { class: 'small muted approx-note' }, '수가 커서 점 찍기가 어렵다면, 3단계에서 눈금 크기를 정하면 점 찍기 쉬운 어림값(예: 약 40만)이 표 아래에 나타나요.') : null));
+          }))
+            : h('tr', null, h('th', null, `(${unit})`), values.map((v) => h('td', null, v === null || v === '' ? '—' : fmt(v))))),
+        u ? h('p', { class: 'small approx-note' }, '📍 수가 커서 ', h('b', null, `${PLACE_NAME[u]}의 자리까지 반올림한 어림값`), '으로 바꾸었어요. 이 어림값에 맞게 점을 찍어요.') : null);
     };
     renderTable();
     const showScaleInfo = () => {
       renderTable();
       const u = unit ? ` ${unit}` : '';
-      if (!W.scale) { scaleInfo.textContent = `가장 큰 값은 ${fmt(maxValue)}${u}예요. 작은 눈금 한 칸을 몇으로 하면 알맞을까요?`; return; }
+      if (!W.scale) { scaleInfo.textContent = `가장 큰 값은 ${approxUnit(maxValue) ? `약 ${koNum(approxValue(maxValue, maxValue))}(${fmt(approxValue(maxValue, maxValue))})` : fmt(maxValue)}${u}예요. 작은 눈금 한 칸을 몇으로 하면 알맞을까요?`; return; }
       const cells = cellsNeeded(maxValue, W.yStart, W.scale);
       scaleInfo.replaceChildren(
         h('b', null, `작은 눈금 한 칸 = ${fmt(W.scale)}${u}`), ` → 큰 눈금 한 칸(작은 칸 ${MAJOR}개) = ${fmt(W.scale * MAJOR)}${u}`, h('br'),
-        `가장 큰 값 ${fmt(maxValue)}${u}까지 작은 칸 약 ${cells}칸이 필요해요. `,
+        `가장 큰 값 ${approxUnit(maxValue) ? `약 ${koNum(approxValue(maxValue, maxValue))}` : fmt(maxValue)}${u}까지 작은 칸 약 ${cells}칸이 필요해요. `,
         cells > MAX_CELLS ? h('b', { class: 'warn-text' }, '칸이 너무 많아요. 더 큰 수를 골라 보세요.') : cells < MIN_CELLS ? h('b', { class: 'warn-text' }, '칸이 너무 적어 변화가 잘 보이지 않아요. 더 작은 수를 골라 보세요.') : '');
     };
     showScaleInfo();
@@ -169,7 +166,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
           scaleInfo, scaleBtns,
           h('details', null, h('summary', { class: 'small' }, '물결선으로 필요 없는 부분 줄이기(선택)'),
             h('div', { class: 'row', style: { marginTop: '6px' } }, h('span', { class: 'small' }, '세로축 시작 값'), yStart, h('span', { class: 'small muted' }, '0이면 물결선 없이 그려요.')))),
-        step('points', 4, '자료값에 맞게 점 찍기', h('p', { class: 'small' }, approxUnit(W.scale) && big ? '표 아래 어림값(예: 약 40만)을 보고 찍어도 돼요. ' : '', '오른쪽 모눈종이에서 [점 찍기]를 고르고, 표의 수에 맞는 곳을 눌러요. 누른 채 움직이면 위치와 값이 말풍선으로 보여요. 손을 떼면 점이 찍혀요.')),
+        step('points', 4, '자료값에 맞게 점 찍기', h('p', { class: 'small' }, approxUnit(maxValue) ? '위 표의 어림값(예: 약 40만)을 보고 찍어요. ' : '', '오른쪽 모눈종이에서 [점 찍기]를 고르고, 표의 수에 맞는 곳을 눌러요. 누른 채 움직이면 위치와 값이 말풍선으로 보여요. 손을 떼면 점이 찍혀요.')),
         step('lines', 5, '점들을 선분으로 잇기', h('p', { class: 'small' }, '[선 잇기]를 고르고 첫 점, 다음 점을 차례대로 눌러요. 잘못 이었으면 [지우개]로 선분을 눌러 지우거나 [되돌리기]를 눌러요.')),
         step('interp', 6, '그래프에서 알 수 있는 내용',
           h('label', { class: 'field' }, h('span', null, '가장 큰 값이 나타난 때'), pick('maxLabel', labels, '고르기')),
@@ -192,7 +189,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       onChange: (p) => change(p),
       readOnly: lockedForever,
     });
-    answerToggle = h('input', { type: 'checkbox', onChange: (e) => { editor.answer = e.target.checked ? values.map((v) => (v === '' ? null : v)) : null; editor.render(); } });
+    answerToggle = h('input', { type: 'checkbox', onChange: (e) => { editor.answer = e.target.checked ? values.map((v) => (v === '' || v === null ? null : (approxUnit(maxValue) ? approxValue(v, maxValue) : v))) : null; editor.render(); } });
     el.append(
       h('div', { class: 'row between' }, h('h2', { class: 'plaque' }, '모눈종이'), h('label', { class: `toggle small ${W.checked ? '' : 'hidden'}` }, answerToggle, '정답 비교 그래프 겹쳐 보기')),
       editor.el);

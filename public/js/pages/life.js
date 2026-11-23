@@ -1,6 +1,6 @@
 // 3차 활동: 꺾은선그래프를 생활에 활용해 볼까요? (교과서 122~123쪽, 수학익힘 78~79쪽)
 // 우리 고장(선생님이 정한 시·군) 자료를 누리집·뉴스에서 직접 찾아 → 표 → 꺾은선그래프 → 다음 해 예상하기
-import { sealImg, h, icon, btn, toast, debounce, fmt } from '../ui.js';
+import { sealImg, h, icon, btn, toast, debounce, fmt, confirmBox } from '../ui.js';
 import { api } from '../api.js';
 import { S, saveState } from '../store.js';
 import { graphSpread, celebrate } from './graphwork.js';
@@ -63,6 +63,16 @@ function introSpread(app, l) {
           const patch = { sourceId: src.id };
           if (!l.subject || sources().some((x) => x.title === l.subject)) patch.subject = src.id === 'free' ? '' : src.title;
           if (!l.unit || sources().some((x) => x.unit === l.unit)) patch.unit = src.unit;
+          if (l.sourceId !== src.id) {
+            // 다른 자료로 바꾸면: 연도만 미리 적어 주고, 수는 학생이 직접 찾아 적도록 비워요
+            const hasVals = (l.values || []).some((v) => v !== '' && v !== null && v !== undefined);
+            if (hasVals && l.sourceId && !(await confirmBox('자료 바꾸기', `'${src.place || src.title}'(으)로 바꾸면 표에 적은 수가 지워져요. 바꿀까요?`, '바꾸기'))) return;
+            const ys = src.data ? src.data.years.filter((_, i) => src.data.values[i] !== null && src.data.values[i] !== undefined) : [];
+            patch.years = ys.length ? ys : ['', '', ''];
+            patch.values = patch.years.map(() => '');
+            patch.subject = src.id === 'free' ? '' : src.title;
+            patch.unit = src.unit || '';
+          }
           try { await saveState({ life: patch }); app.go('life', 1, 'next'); } catch (e) { toast(e.message, 'bad'); }
         } },
         h('b', null, compact ? (src.place || src.title) : src.title), compact ? null : src.unit ? h('span', { class: 'badge' }, `단위: ${src.unit}`) : null,
