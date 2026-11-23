@@ -1,9 +1,9 @@
 // 그래프 그리기 공용 펼침(기상자료·조사 주제 모두 사용): 왼쪽 단계 안내, 오른쪽 모눈종이
-import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwswbgmk';
-import { api } from '../api.js?v=mwswbgmk';
-import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwswbgmk';
-import { GraphEditor } from '../graph.js?v=mwswbgmk';
-import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../../shared/topics.js?v=mwswbgmk';
+import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwswi2vs';
+import { api } from '../api.js?v=mwswi2vs';
+import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwswi2vs';
+import { GraphEditor } from '../graph.js?v=mwswi2vs';
+import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../../shared/topics.js?v=mwswi2vs';
 
 const UNITS = ['월', '년', '일', '회', '권', '편', '개', '시간', '원', '명', '만 명', '곳'];
 const STATUS = { draft: ['그리는 중', 'warn'], submitted: ['제출함 · 선생님 확인 중', 'ok'], approved: ['승인됨 · 전시 중', 'green'], rejected: ['다시 그려 보세요', 'red'] };

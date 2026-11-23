@@ -1,7 +1,7 @@
 // 목차 펼침: 장 목록과 나의 진행 상황
-import { h, icon, btn, iconSrc } from '../ui.js?v=mwswbgmk';
-import { topicById } from '../../shared/topics.js?v=mwswbgmk';
-import { CHAPTERS, chapterDone, lockReason, chLabel } from './student.js?v=mwswbgmk';
+import { h, icon, btn, iconSrc } from '../ui.js?v=mwswi2vs';
+import { topicById } from '../../shared/topics.js?v=mwswi2vs';
+import { CHAPTERS, chapterDone, lockReason, chLabel } from './student.js?v=mwswi2vs';
 
 // 큰 활동 세 개(1차·2차·3차) + 전시관
 const ACTS = [

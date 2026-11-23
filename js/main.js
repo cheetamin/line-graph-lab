@@ -1,7 +1,7 @@
 // 「꺾은선그래프 연구소」 시작점
-import { api, onNetwork, isDemo } from './api.js?v=mwswbgmk';
-import { h, toast } from './ui.js?v=mwswbgmk';
-import { S } from './store.js?v=mwswbgmk';
+import { api, onNetwork, isDemo } from './api.js?v=mwswi2vs';
+import { h, toast } from './ui.js?v=mwswi2vs';
+import { S } from './store.js?v=mwswi2vs';
 
 const app = document.getElementById('app');
 
@@ -17,20 +17,19 @@ export async function boot(opts = {}) {
   const jm = location.hash.match(/^#join-([A-Za-z0-9]{4,8})$/);
   const joinCode = jm ? jm[1].toUpperCase() : (opts.joinCode || null);
   if (jm) { try { history.replaceState(null, '', location.pathname + location.search); } catch { /* */ } }
-  if (joinCode) { try { localStorage.setItem('kgl-code', joinCode); } catch { /* */ } }
   app.replaceChildren();
   if (me.role === 'student') {
     if (joinCode) setTimeout(() => toast('이미 연구소에 들어와 있어요. 다른 학급이면 [나가기] 뒤에 다시 QR을 비춰 주세요.'), 600);
-    const { mountStudent } = await import('./pages/student.js?v=mwswbgmk');
+    const { mountStudent } = await import('./pages/student.js?v=mwswi2vs');
     await mountStudent(app);
   } else if (me.role === 'admin') {
-    const { mountAdmin } = await import('./pages/admin.js?v=mwswbgmk');
+    const { mountAdmin } = await import('./pages/admin.js?v=mwswi2vs');
     await mountAdmin(app);
   } else if (me.role === 'teacher') {
-    const { mountTeacher } = await import('./pages/teacher.js?v=mwswbgmk');
+    const { mountTeacher } = await import('./pages/teacher.js?v=mwswi2vs');
     await mountTeacher(app);
   } else {
-    const { mountCover } = await import('./pages/cover.js?v=mwswbgmk');
+    const { mountCover } = await import('./pages/cover.js?v=mwswi2vs');
     mountCover(app, joinCode ? { ...opts, joinCode, skipCover: true, tab: 'student' } : opts);
   }
 }

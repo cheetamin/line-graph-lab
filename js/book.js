@@ -1,5 +1,5 @@
 // 고서 책 틀과 책장 넘김 애니메이션
-import { h, ART, reducedMotion, isNarrow } from './ui.js?v=mwswbgmk';
+import { h, ART, reducedMotion, isNarrow } from './ui.js?v=mwswi2vs';
 
 function clonePage(el) {
   const c = el.cloneNode(true);
