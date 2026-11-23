@@ -90,7 +90,7 @@ export function mountLogin(root, tab = 'student', joinCode = null) {
       h('ol', { class: 'steps-list' },
         h('li', null, h('span', null, h('b', null, '1차 기상자료 탐험실'), ' — 우리 지역의 연도별 폭염일수를 찾아 표와 그래프로 나타내요.')),
         h('li', null, h('span', null, h('b', null, '2차 나의 주제 그래프'), ' — 25가지 주제 중 골라 2026년 내 기록으로 표와 그래프를 만들어요.')),
-        h('li', null, h('span', null, h('b', null, '3차 우리 고장 그래프'), ' — 진주의 자료를 누리집·뉴스에서 찾아 그래프로 나타내고 앞날을 예상해요.')),
+        h('li', null, h('span', null, h('b', null, '3차 우리 고장 그래프'), ' — 우리 고장 자료를 공공데이터·누리집에서 찾아 그래프로 나타내고 앞날을 예상해요.')),
         h('li', null, h('span', null, h('b', null, '작품 전시관'), ' — 선생님이 승인한 친구들의 작품을 책장을 넘기며 감상해요.'))),
       h('div', { class: 'note green', style: { marginTop: '14px' } }, '학급 코드와 비밀번호(PIN)는 선생님께 받아요. 다른 사람에게 알려 주지 않아요. 한 일은 저절로 저장되어 다음 시간에 이어서 할 수 있어요.'),
     );

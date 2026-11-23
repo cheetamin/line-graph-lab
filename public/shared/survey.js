@@ -5,7 +5,7 @@ export const STUDENT_SURVEY = [
   { id: 'fun', type: 'scale', q: '꺾은선그래프 연구소 활동이 재미있었나요?' },
   { id: 'understand', type: 'scale', q: '꺾은선그래프로 나타내면 시간에 따른 변화를 한눈에 알 수 있다는 것을 알게 되었나요?' },
   { id: 'draw', type: 'scale', q: '눈금을 정하고 점을 찍고 선분으로 이어, 꺾은선그래프를 스스로 그릴 수 있게 되었나요?' },
-  { id: 'life', type: 'scale', q: '내 생활과 우리 고장(진주) 자료로 그래프를 그려 보니, 꺾은선그래프가 생활에 쓰인다는 것을 느꼈나요?' },
+  { id: 'life', type: 'scale', q: '내 생활과 우리 고장 자료로 그래프를 그려 보니, 꺾은선그래프가 생활에 쓰인다는 것을 느꼈나요?' },
   { id: 'easy', type: 'scale', q: '연구소(프로그램)를 쓰는 방법이 쉬웠나요?' },
   { id: 'best', type: 'choice', q: '가장 좋았던 활동은 무엇인가요?', options: ['1차 기상자료 탐험실', '2차 나의 주제 그래프', '3차 우리 고장 그래프', '작품 전시관 감상'] },
   { id: 'comment', type: 'text', q: '더 하고 싶은 말이나 바라는 점을 적어 주세요. (선택)', optional: true },

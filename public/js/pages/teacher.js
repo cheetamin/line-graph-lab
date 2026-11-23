@@ -10,6 +10,7 @@ import { Book } from '../book.js';
 import { PageTurner } from '../pageturn.js';
 import { surveyForm } from './survey.js';
 import { SCALE_LABELS } from '../../shared/survey.js';
+import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js';
 import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js';
 
 const SECTIONS = [
@@ -637,7 +638,7 @@ async function accountView() {
       h('li', null, h('span', null, '학생: 기상자료 탐험실(폭염일수) 완료')),
       h('li', null, h('span', null, '학생: 25가지 주제 중 직접 골라 내 기록 → 자료표 → 꺾은선그래프 제출')),
       h('li', null, h('span', null, '꼭 낼 그래프(기본 3개)를 내면, 시간이 남는 학생은 다른 주제로 더 만들기')),
-      h('li', null, h('span', null, '3차: 진주 관광지 입장객 수(공공데이터)나 공원·인구 자료로 우리 고장 꺾은선그래프 그리기')),
+      h('li', null, h('span', null, '3차: 우리 고장 관광지 입장객 수(공공데이터)나 공원·인구 자료로 우리 고장 꺾은선그래프 그리기')),
       h('li', null, h('span', null, '작품 승인 → 학생들이 작품 전시관에서 감상')))),
   };
 }
@@ -654,7 +655,7 @@ async function lifeView() {
     linksTa.value = src.links.map((l) => { let u = l.u; try { u = decodeURI(u); } catch { /* */ } return `${l.t} | ${u}`; }).join('\n');
     return h('div', { class: 'sheet' },
       h('div', { class: 'row between' }, h('b', null, `자료 ${i + 1}`), h('button', { type: 'button', class: 'link-btn', onClick: () => { list.splice(i, 1); draw(); } }, '빼기')),
-      h('div', { class: 'row', style: { gap: '6px' } }, h('label', { class: 'field', style: { flex: '1 1 160px' } }, h('span', null, '자료 이름'), f('title', '예: 진주성 입장객 수', 40)), h('label', { class: 'field', style: { flex: '0 0 90px' } }, h('span', null, '단위'), f('unit', '명', 10))),
+      h('div', { class: 'row', style: { gap: '6px' } }, h('label', { class: 'field', style: { flex: '1 1 160px' } }, h('span', null, '자료 이름'), f('title', '예: ○○ 입장객 수', 40)), h('label', { class: 'field', style: { flex: '0 0 90px' } }, h('span', null, '단위'), f('unit', '명', 10))),
       h('label', { class: 'field' }, h('span', null, '학생에게 보이는 설명'), f('desc', '', 400, { area: true })),
       h('label', { class: 'field' }, h('span', null, '찾는 방법'), f('tip', '', 500, { area: true })),
       h('label', { class: 'field' }, h('span', null, '링크(누리집·기사)'), linksTa));
@@ -663,12 +664,26 @@ async function lifeView() {
   return {
     left: (L) => L.append(
       h('p', { class: 'small' }, '3차 활동(교과서 122~123쪽)에서 학생이 고를 우리 고장 자료와, 자료를 찾을 누리집·뉴스 링크예요. 누리집 주소나 기사가 바뀌면 여기에서 고쳐 주세요.'),
-      h('label', { class: 'field' }, h('span', null, '우리 고장 이름'), regionIn),
-      h('div', { class: 'note gold small' }, '기본으로 진주 관광지 6곳(진주성·산림박물관·월아산 숲속의 진주·진양호 동물원·진주시립이성자미술관·진주익룡발자국전시관)의 입장객 수(공공데이터포털, 2017~2022년)와 진주시 도시공원 수, 진주시 인구, 직접 찾은 자료가 들어 있어요. 관광지 자료표는 학생 화면에 함께 보여요. 2020~2021년에 크게 줄어든 까닭도 함께 이야기해 보세요.'),
+      h('div', { class: 'sheet' },
+        h('h3', { style: { marginTop: 0 } }, '우리 고장 바꾸기'),
+        h('p', { class: 'small' }, '시·군 이름을 적고 [이 지역 자료로 바꾸기]를 누르면, 관광지 입장객 수·도시공원 수·인구 자료가 그 지역 이름과 링크로 바뀌어요.'),
+        h('div', { class: 'row', style: { gap: '6px', alignItems: 'flex-end' } },
+          h('label', { class: 'field', style: { flex: '1 1 140px' } }, h('span', null, '우리 고장 이름(예: 창원시, 하동군, 수원시)'), regionIn),
+          btn('이 지역 자료로 바꾸기', async () => {
+            const reg = normalizeRegion(regionIn.value);
+            if (!reg) return toast('지역 이름을 적어 주세요.', 'bad');
+            if (!(await confirmBox('우리 고장 바꾸기', `3차 자료를 ‘${reg}’ 자료로 바꿀까요? 지금 목록에서 고친 내용은 새 목록으로 바뀌어요. (이미 학생이 적은 표와 그래프는 그대로 남아요.)`, '바꾸기'))) return;
+            if (await saveSettings({ lifeRegion: reg, lifeSources: buildLifeSources(reg) }, `‘${reg}’ 자료로 바꾸었어요.`)) refresh();
+          }, { variant: 'gold small' })),
+        s.school?.address && regionFromAddress(s.school.address) && regionFromAddress(s.school.address) !== s.lifeRegion
+          ? h('p', { class: 'small' }, '학교 주소로 보면 ', h('button', { type: 'button', class: 'link-btn', onClick: () => { regionIn.value = regionFromAddress(s.school.address); } }, regionFromAddress(s.school.address)), '인 것 같아요.') : null,
+        h('div', { class: 'note gold small', style: { marginTop: '6px' } }, hasTourData(s.lifeRegion)
+          ? `${s.lifeRegion}은(는) 공공데이터포털 「경상남도 주요관광지점 입장객 현황」(2017~2022년)에 관광지 자료가 있어서, 입장객이 많은 관광지의 자료표가 학생 화면에 함께 보여요. 2020~2021년에 크게 줄어든 까닭도 함께 이야기해 보세요.`
+          : `${s.lifeRegion}의 관광지 입장객 수는 학생이 관광지식정보시스템에서 직접 찾아요(지금 들어 있는 관광지 자료표는 경상남도 시·군 자료예요). 인구·도시공원 수도 링크에서 찾아요.`)),
       h('div', { class: 'row', style: { marginTop: '10px' } },
         btn('저장', async () => { if (await saveSettings({ lifeSources: list, lifeRegion: regionIn.value }, '3차 자료를 저장했어요.')) refresh(); }, { variant: 'gold small' }),
         btn('＋ 자료 더하기', () => { list.push({ id: `s${Date.now() % 100000}`, title: '', unit: '', desc: '', tip: '', links: [] }); draw(); }, { variant: 'small green' }),
-        btn('기본으로 되돌리기', async () => { if (!(await confirmBox('기본으로 되돌리기', '3차 자료 목록을 처음 상태로 되돌릴까요?'))) return; if (await saveSettings({ lifeSources: [] }, '기본 목록으로 되돌렸어요.')) refresh(); }, { variant: 'small' }))),
+        btn('처음 목록으로 되돌리기', async () => { if (!(await confirmBox('처음 목록으로', `‘${s.lifeRegion}’의 처음 자료 목록으로 되돌릴까요?`))) return; if (await saveSettings({ lifeSources: buildLifeSources(s.lifeRegion) }, '처음 목록으로 되돌렸어요.')) refresh(); }, { variant: 'small' }))),
     right: (R) => R.append(box),
   };
 }
@@ -715,10 +730,10 @@ function schoolPicker(onPick, initial = null) {
   const list = h('div', { class: 'school-list', role: 'listbox', 'aria-label': '검색한 학교' });
   const note = h('div', { class: 'small', role: 'status' });
   const manualName = h('input', { type: 'text', placeholder: '예: 행복초등학교', maxlength: 40 });
-  const manualRegion = h('input', { type: 'text', placeholder: '예: 경상남도 (선택)', maxlength: 20 });
+  const manualRegion = h('input', { type: 'text', placeholder: '예: 경상남도 창원시 (선택)', maxlength: 20 });
   const manual = h('div', { class: 'stack hidden', style: { gap: '6px', marginTop: '8px' } },
     h('label', { class: 'field' }, h('span', null, '학교 이름 직접 적기'), manualName),
-    h('label', { class: 'field' }, h('span', null, '지역'), manualRegion),
+    h('label', { class: 'field' }, h('span', null, '지역(시·도와 시·군) — 3차 우리 고장 자료에 쓰여요'), manualRegion),
     btn('이 이름으로 정하기', () => {
       const name = manualName.value.trim();
       if (name.length < 2) return toast('학교 이름을 적어 주세요.', 'bad');

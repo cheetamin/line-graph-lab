@@ -1,5 +1,5 @@
 // 3차 활동: 꺾은선그래프를 생활에 활용해 볼까요? (교과서 122~123쪽, 수학익힘 78~79쪽)
-// 우리 고장(진주) 자료를 누리집·뉴스에서 직접 찾아 → 표 → 꺾은선그래프 → 다음 해 예상하기
+// 우리 고장(선생님이 정한 시·군) 자료를 누리집·뉴스에서 직접 찾아 → 표 → 꺾은선그래프 → 다음 해 예상하기
 import { sealImg, h, icon, btn, toast, debounce, fmt } from '../ui.js';
 import { api } from '../api.js';
 import { S, saveState } from '../store.js';
@@ -71,9 +71,9 @@ function introSpread(app, l) {
       const tour = sources().filter((x) => x.group === 'tour');
       const other = sources().filter((x) => x.group !== 'tour');
       el.append(h('div', { class: 'center' }, h('h2', { class: 'plaque green' }, `${region()} 자료 고르기`)),
-        tour.length ? h('div', null, h('h3', { class: 'life-group' }, '진주 관광지 입장객 수 ', h('span', { class: 'small muted' }, '(공공데이터포털 자료가 들어 있어요)')),
+        tour.length ? h('div', null, h('h3', { class: 'life-group' }, `${region()} 관광지 입장객 수 `, h('span', { class: 'small muted' }, tour.some((x) => x.data) ? '(공공데이터포털 자료가 들어 있어요)' : '(관광지식정보시스템에서 찾아요)')),
           h('div', { class: 'life-cards three' }, tour.map((x) => card(x, true)))) : null,
-        other.length ? h('div', null, h('h3', { class: 'life-group' }, '다른 진주 자료 ', h('span', { class: 'small muted' }, '(누리집에서 직접 찾아요)')),
+        other.length ? h('div', null, h('h3', { class: 'life-group' }, `다른 ${region()} 자료 `, h('span', { class: 'small muted' }, '(누리집에서 직접 찾아요)')),
           h('div', { class: 'life-cards three' }, other.map((x) => card(x, true)))) : null);
     },
   };
@@ -165,7 +165,7 @@ function thinkSpread(app, l) {
     right: (el) => {
       const pred = h('textarea', { rows: 4, maxlength: 300, placeholder: `${lastYear ? lastYear + 1 : '다음 해'}년에는 어떻게 될까요? 그렇게 생각한 이유도 써요.`, onInput: (e) => saveLife({ predict: e.target.value }) });
       pred.value = l.predict || '';
-      const rel = h('textarea', { rows: 3, maxlength: 300, placeholder: '예: 진주성 입장객 수가 줄어든 2020년에 진양호 동물원 입장객 수도 줄었어요.', onInput: (e) => saveLife({ relation: e.target.value }) });
+      const rel = h('textarea', { rows: 3, maxlength: 300, placeholder: '예: 관광지 입장객 수가 줄어든 2020년에 다른 관광지 입장객 수도 함께 줄었어요.', onInput: (e) => saveLife({ relation: e.target.value }) });
       rel.value = l.relation || '';
       el.append(
         h('div', { class: 'center' }, h('h2', { class: 'plaque green' }, '생각 더하기')),

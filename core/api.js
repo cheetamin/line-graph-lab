@@ -3,7 +3,7 @@
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
 import { SCHEMA } from './schema.js';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources } from '../public/shared/life.js';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../public/shared/life.js';
 import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../public/shared/survey.js';
 import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../public/shared/topics.js';
 import { computeStats, round1 } from '../public/shared/stats.js';
@@ -866,6 +866,9 @@ export function createApi({ db, sec, options = {} }) {
       if (db.get('SELECT id FROM classes WHERE code = ?', [code])) fail(409, '이미 다른 학급이 쓰고 있는 코드예요. 다른 코드를 정해 주세요.');
     } else code = genCode();
     const settings = { ...DEFAULT_SETTINGS, school, grade: grade >= 1 && grade <= 6 ? grade : null, classNo: classNo >= 1 && classNo <= 30 ? classNo : null, nickname: str(body.nickname, 20) };
+    // 3차 우리 고장: 학교 주소(또는 직접 적은 지역)로 그 시·군 자료를 미리 채움
+    const region = normalizeRegion(str(body.lifeRegion, 20)) || regionFromAddress(school?.address) || regionFromAddress(school?.region) || (hasTourData(school?.region) ? normalizeRegion(school.region) : '');
+    if (region) { settings.lifeRegion = region; settings.lifeSources = buildLifeSources(region); }
     const r = db.run('INSERT INTO classes(teacher_id, name, code, settings, created_at) VALUES (?,?,?,?,?)', [ctx.teacher.id, name, code, JSON.stringify(settings), now()]);
     return { body: { id: Number(r.lastInsertRowid), code, name } };
   });
@@ -892,7 +895,7 @@ export function createApi({ db, sec, options = {} }) {
     if (['list', 'total'].includes(p.tableRefMode)) s.tableRefMode = p.tableRefMode;
     if (p.kmaUrl !== undefined) { const u = str(p.kmaUrl, 300); if (u && !/^https?:\/\//.test(u)) fail(400, '주소는 http:// 또는 https://로 시작해야 해요.'); s.kmaUrl = u || DEFAULT_SETTINGS.kmaUrl; }
     if (p.lifeSources !== undefined) s.lifeSources = cleanLifeSources(p.lifeSources);
-    if (p.lifeRegion !== undefined) s.lifeRegion = str(p.lifeRegion, 20) || DEFAULT_LIFE_REGION;
+    if (p.lifeRegion !== undefined) s.lifeRegion = normalizeRegion(str(p.lifeRegion, 20)) || DEFAULT_LIFE_REGION;
     if (p.kmaGuide !== undefined) s.kmaGuide = str(p.kmaGuide, 2000) || DEFAULT_KMA_GUIDE;
     if (p.notice !== undefined) s.notice = str(p.notice, 300);
     if (p.school !== undefined) s.school = cleanSchool(p.school);

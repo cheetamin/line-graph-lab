@@ -174,3 +174,17 @@ test('만족도 조사: 학생은 세 활동 뒤, 교사는 승인 뒤', async (
   const ex = await fetch(`${BASE}/api/teacher/classes/${ctx.cid}/export?type=survey`, { headers: { 'X-Requested-With': 'graph-lab' } });
   assert.ok([200, 401].includes(ex.status));
 });
+
+test('우리 고장: 학교 주소로 지역 자료, 지역 바꾸기', async () => {
+  let r = await T('POST', '/api/teacher/classes', { school: { name: '행복초등학교', address: '경상남도 하동군 하동읍 1', region: '경상남도' }, grade: 4, classNo: 2 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await T('GET', '/api/teacher/classes');
+  const c = r.body.classes.find((x) => x.id === r.body.classes.at(-1).id);
+  assert.equal(c.settings.lifeRegion, '하동군');
+  assert.ok(c.settings.lifeSources[0].data && c.settings.lifeSources.some((x) => x.title === '하동군 인구'));
+  const { buildLifeSources } = await import('../public/shared/life.js');
+  r = await T('PUT', `/api/teacher/classes/${c.id}`, { settings: { lifeRegion: '수원', lifeSources: buildLifeSources('수원시') } });
+  assert.equal(r.body.settings.lifeRegion, '수원');
+  assert.equal(r.body.settings.lifeSources[0].title, '수원시 관광지 입장객 수');
+  assert.equal(r.body.settings.lifeSources[0].data, null);
+});
