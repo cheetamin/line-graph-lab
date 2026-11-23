@@ -51,11 +51,12 @@ export const sec = {
 
 // 나이스 학교 검색(인증키 NEIS_API_KEY는 선택). 같은 검색어는 6시간 동안 기억
 const schoolCache = new Map();
-async function searchSchools(q) {
-  const hit = schoolCache.get(q);
+async function searchSchools(q, filter = {}) {
+  const ck = `${q}|${filter.office || ''}|${filter.kind || ''}`;
+  const hit = schoolCache.get(ck);
   if (hit && Date.now() - hit.at < 6 * 3600 * 1000) return hit.list;
-  const list = await neisSearch(q, { key: process.env.NEIS_API_KEY || '', base: process.env.NEIS_BASE || undefined });
-  schoolCache.set(q, { at: Date.now(), list });
+  const list = await neisSearch(q, { key: process.env.NEIS_API_KEY || '', base: process.env.NEIS_BASE || undefined, office: filter.office, kind: filter.kind });
+  schoolCache.set(ck, { at: Date.now(), list });
   return list;
 }
 

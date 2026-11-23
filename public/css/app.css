@@ -1191,3 +1191,4 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
 .demo-guide-row:first-of-type { border-top: 0; }
 .demo-guide-btns { display: flex; gap: 4px; flex: 0 0 auto; }
 .admin-link { display: block; margin: 8px auto 0; font-size: .85rem; opacity: .85; }
+.office-select { flex: 0 0 auto; min-height: 40px; max-width: 120px; }
