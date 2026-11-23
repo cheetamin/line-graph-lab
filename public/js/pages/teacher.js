@@ -271,12 +271,12 @@ async function studentDetail(id) {
   });
 }
 
-// 학생 자료 지우기·초기화: 이름·번호·PIN은 그대로 두고 고른 부분만 처음 상태로
+// 학생 자료 지우기·초기화: 이름·번호는 그대로 두고 고른 부분만 처음 상태로
 function resetPanel(r) {
   const id = r.student.id; const who = `${r.student.number}번 ${r.student.name}`;
   const topicIds = [...new Set([...r.responses.map((x) => Number(x.topic_id)), ...r.works.filter((x) => x.kind === 'topic').map((x) => Number(x.topicId))])].filter(Boolean).sort((a, b) => a - b);
   const run = async (part, label, extra = {}) => {
-    if (!(await confirmBox('자료 지우기', `${who} 학생의 ‘${label}’을(를) 지울까요? 지운 자료는 되돌릴 수 없어요. (이름·번호·PIN은 그대로예요)`, '지우기'))) return;
+    if (!(await confirmBox('자료 지우기', `${who} 학생의 ‘${label}’을(를) 지울까요? 지운 자료는 되돌릴 수 없어요. (이름·번호는 그대로예요)`, '지우기'))) return;
     try {
       await api('POST', `/api/teacher/students/${id}/reset`, { part, ...extra });
       toast(`${label}을(를) 지웠어요.`, 'ok');
@@ -286,7 +286,7 @@ function resetPanel(r) {
   };
   return h('div', { class: 'reset-panel' },
     h('h3', null, '자료 지우기·초기화'),
-    h('p', { class: 'small muted' }, '잘못 입력했거나 처음부터 다시 하게 할 때 써요. 이름·번호·PIN은 남아요.'),
+    h('p', { class: 'small muted' }, '잘못 입력했거나 처음부터 다시 하게 할 때 써요. 이름·번호는 남아요.'),
     h('div', { class: 'reset-grid' },
       btn('1차 기상자료 지우기', () => run('weather', '1차 기상자료(표·그래프)'), { variant: 'small hanji' }),
       ...topicIds.map((tid) => btn(`2차 ‘${tName(tid)}’ 지우기`, () => run('topic', `2차 ‘${tName(tid)}’ 기록·표·그래프`, { topicId: tid }), { variant: 'small hanji' })),
@@ -303,7 +303,7 @@ async function resetClass() {
   const ok = await modal({
     title: '학급 자료 모두 초기화',
     body: h('div', { class: 'stack' },
-      h('p', null, h('b', null, cur.name), '의 모든 학생 자료(1·2·3차 기록, 표, 그래프, 작품, 만족도 응답)를 지워요. 학생 명단·PIN·학급 설정은 그대로 남아요.'),
+      h('p', null, h('b', null, cur.name), '의 모든 학생 자료(1·2·3차 기록, 표, 그래프, 작품, 만족도 응답)를 지워요. 학생 명단과 학급 설정은 그대로 남아요.'),
       h('div', { class: 'note small' }, '지운 자료는 되돌릴 수 없어요. 필요하면 먼저 [기록·내려받기]에서 CSV로 받아 두세요.'),
       h('label', { class: 'toggle small' }, withT, '선생님 만족도 응답도 지우기'),
       h('label', { class: 'field' }, h('span', null, `확인을 위해 학급 코드 ${cur.code}를 적어 주세요`), inp)),
