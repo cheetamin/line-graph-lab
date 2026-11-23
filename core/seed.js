@@ -109,8 +109,9 @@ export async function seedDemo({ db, sec, code = 'DEMO26', teacherUser = 'demo',
       addWork(sid, `topic:${topic.id}`, topic.id, data, me ? (ti === 2 ? 'submitted' : 'approved') : (R() < 0.8 ? 'approved' : 'submitted'));
     });
     // 3차 우리 고장
-    if (me || k % 2 === 0 || k % 5 === 1) {
-      const ex = LIFE[me ? 0 : k % LIFE.length];
+    // 1번 체험학생은 3차를 처음부터 직접 해 보도록 비워 둬요(자료 고르기 → 연도만 채워진 표에 수 옮겨 적기)
+    if (!me && (k % 2 === 0 || k % 5 === 1)) {
+      const ex = LIFE[k % LIFE.length];
       const vals = ex.real ? ex.base.slice() : ex.base.map((v) => v + Math.round((R() - 0.5) * 4));
       state.life = { sourceId: ex.sourceId, subject: ex.subject, unit: ex.unit, source: ex.real ? '공공데이터포털 경상남도 주요관광지점 입장객 현황' : EX, visited: true, years: ex.years, values: vals, tableChecked: true,
         predict: me ? '' : '다음 해에도 비슷하게 변할 것 같아요. 지금까지 같은 방향으로 꾸준히 변했기 때문이에요.' };

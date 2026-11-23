@@ -72,7 +72,7 @@ function demoGuide(goStudent, fillTeacher) {
     h('div', { class: 'demo-guide-row' },
       h('div', null, h('b', null, '학생으로 체험'), h('br'),
         h('span', { class: 'small' }, '학급 코드 DEMO26 → 내 이름 누르기 → 들어가기'), h('br'),
-        h('span', { class: 'small muted' }, '1번 체험학생: 그래프 직접 그려 보기 · 3번 이도윤: 만족도 조사 해 보기')),
+        h('span', { class: 'small muted' }, '1번 체험학생: 2차 그래프·3차 우리 고장 직접 해 보기 · 3번 이도윤: 만족도 조사 해 보기')),
       h('div', { class: 'demo-guide-btns' },
         btn('1번으로', () => goStudent(1), { variant: 'small green' }), btn('3번으로', () => goStudent(3), { variant: 'small' }))),
     h('div', { class: 'demo-guide-row' },
