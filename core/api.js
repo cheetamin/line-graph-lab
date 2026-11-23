@@ -2,11 +2,11 @@
 // - 모든 권한 검증과 학급 격리는 이 파일에서 수행합니다.
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
-import { SCHEMA } from './schema.js?v=mwt4rdkx';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwt4rdkx';
-import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwt4rdkx';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwt4rdkx';
-import { computeStats, round1 } from '../shared/stats.js?v=mwt4rdkx';
+import { SCHEMA } from './schema.js?v=mwt5mx58';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwt5mx58';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwt5mx58';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwt5mx58';
+import { computeStats, round1 } from '../shared/stats.js?v=mwt5mx58';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY = 86400000;
@@ -351,7 +351,7 @@ export function createApi({ db, sec, options = {} }) {
       if (values[i] === null) continue;
       if (data.points[i] === undefined) missing.push(labels[i]);
       else {
-        const p = Number(data.points[i]); const ap = approxValue(values[i], data.scale);
+        const p = Number(data.points[i]); const ap = approxValue(values[i], maxV);
         // 정확한 값 또는 점 찍기용 어림값(반올림) 둘 다 맞게 봐요
         if (Math.abs(p - Number(values[i])) > tol && !(ap !== null && Math.abs(p - ap) <= tol)) wrong.push(labels[i]);
       }
@@ -721,6 +721,23 @@ export function createApi({ db, sec, options = {} }) {
       if (vs.some((v) => v === '' || v === undefined || !Number.isFinite(Number(v)))) issues.push('값을 모두 숫자로 적어 주세요.');
       else if (vs.some((v) => v < 0 || v > 100000000)) issues.push('값은 0보다 크거나 같고 1억보다 작아야 해요.');
       else if (vs.some((v) => Math.abs(Math.round(v * 10) - v * 10) > 1e-6)) issues.push('값은 소수 첫째 자리까지만 적어요. 큰 수는 ‘만 명’처럼 단위를 바꾸어 어림해도 돼요.');
+      else {
+        // 공공데이터가 들어 있는 자료면, 적은 수가 자료표의 수와 맞는지 확인(만 명으로 어림한 것도 인정)
+        const src = (ctx.cls.settings.lifeSources || []).find((x) => x.id === L.sourceId && x.data);
+        if (src && Number.isInteger(ys[0])) {
+          const mul = L.unit === '만 명' ? 10000 : L.unit === '명' ? 1 : 0;
+          if (mul) {
+            const wrong = [];
+            pairs.forEach(([y, v]) => {
+              const k = src.data.years.indexOf(y); const real = k >= 0 ? src.data.values[k] : null;
+              if (real === null || real === undefined) { wrong.push(`${y}년(자료표에 없는 해)`); return; }
+              const tolV = mul === 1 ? 0.5 : 10000; // 만 명은 반올림·버림 어림 모두 인정
+              if (Math.abs(Number(v) * mul - real) > tolV) wrong.push(`${y}년`);
+            });
+            if (wrong.length) issues.push(`왼쪽 공공데이터 자료표의 수와 다른 칸이 있어요: ${wrong.join(', ')}. 자료표를 다시 보고 옮겨 적어 보세요.`);
+          }
+        }
+      }
     }
     if (issues.length) return { body: { ok: false, issues } };
     L.years = pairs.map(([y]) => y); L.values = pairs.map(([, v]) => Number(v));

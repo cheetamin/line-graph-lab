@@ -96,15 +96,12 @@ export function snapStep(scale) {
 // 작은 눈금이 몇 칸 필요한지
 export function cellsNeeded(maxV, yStart, scale) { return Math.ceil((maxV - (yStart || 0)) / scale - 1e-9); }
 
-// ── 점 찍기용 어림값: 큰 수(작은 눈금 한 칸이 1,000 이상)는 반올림해서 눈금에 맞추기 쉽게 ──
-// 어림 단위 = 작은 눈금 한 칸 이하의 가장 큰 10의 거듭제곱 (예: 한 칸 50,000 → 만의 자리까지)
-export function approxUnit(scale) {
-  if (!scale || scale < 1000) return 0;
-  return 10 ** Math.floor(Math.log10(scale) + 1e-9);
-}
+// ── 점 찍기용 어림값: 가장 큰 값이 10만 이상이면 만의 자리까지 반올림(예: 404,639 → 40만) ──
+// 그래프 그리는 화면에서는 이 어림값만 보여 주고, 점도 어림값에 찍으면 정답이에요.
+export function approxUnit(maxV) { return Number(maxV) >= 100000 ? 10000 : 0; }
 export const PLACE_NAME = { 1000: '천', 10000: '만', 100000: '십만', 1000000: '백만' };
-export function approxValue(v, scale) {
-  const u = approxUnit(scale);
+export function approxValue(v, maxV) {
+  const u = approxUnit(maxV);
   if (!u || v === null || v === undefined || v === '') return null;
   return Math.round(Number(v) / u) * u;
 }
