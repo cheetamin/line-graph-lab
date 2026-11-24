@@ -1,7 +1,7 @@
 // 「꺾은선그래프 연구소」 시작점
-import { api, onNetwork, isDemo } from './api.js?v=mwt7ieup';
-import { h, toast } from './ui.js?v=mwt7ieup';
-import { S } from './store.js?v=mwt7ieup';
+import { api, onNetwork, isDemo } from './api.js?v=mwulaa5m';
+import { h, toast } from './ui.js?v=mwulaa5m';
+import { S } from './store.js?v=mwulaa5m';
 
 const app = document.getElementById('app');
 
@@ -20,16 +20,16 @@ export async function boot(opts = {}) {
   app.replaceChildren();
   if (me.role === 'student') {
     if (joinCode) setTimeout(() => toast('이미 연구소에 들어와 있어요. 다른 학급이면 [나가기] 뒤에 다시 QR을 비춰 주세요.'), 600);
-    const { mountStudent } = await import('./pages/student.js?v=mwt7ieup');
+    const { mountStudent } = await import('./pages/student.js?v=mwulaa5m');
     await mountStudent(app);
   } else if (me.role === 'admin') {
-    const { mountAdmin } = await import('./pages/admin.js?v=mwt7ieup');
+    const { mountAdmin } = await import('./pages/admin.js?v=mwulaa5m');
     await mountAdmin(app);
   } else if (me.role === 'teacher') {
-    const { mountTeacher } = await import('./pages/teacher.js?v=mwt7ieup');
+    const { mountTeacher } = await import('./pages/teacher.js?v=mwulaa5m');
     await mountTeacher(app);
   } else {
-    const { mountCover } = await import('./pages/cover.js?v=mwt7ieup');
+    const { mountCover } = await import('./pages/cover.js?v=mwulaa5m');
     mountCover(app, joinCode ? { ...opts, joinCode, skipCover: true, tab: 'student' } : opts);
   }
   warmUp(me.role);
@@ -49,8 +49,8 @@ function warmUp(role) {
     });
     // 다음에 쓸 화면 모듈도 미리 받아 둠
     const mods = role === 'student'
-      ? [import('./pages/topics.js?v=mwt7ieup'), import('./pages/table.js?v=mwt7ieup'), import('./pages/graphwork.js?v=mwt7ieup'), import('./pages/life.js?v=mwt7ieup'), import('./pages/gallery.js?v=mwt7ieup'), import('./pages/survey.js?v=mwt7ieup')]
-      : role === 'teacher' ? [] : [import('./pages/student.js?v=mwt7ieup'), import('./pages/teacher.js?v=mwt7ieup')];
+      ? [import('./pages/topics.js?v=mwulaa5m'), import('./pages/table.js?v=mwulaa5m'), import('./pages/graphwork.js?v=mwulaa5m'), import('./pages/life.js?v=mwulaa5m'), import('./pages/gallery.js?v=mwulaa5m'), import('./pages/survey.js?v=mwulaa5m')]
+      : role === 'teacher' ? [] : [import('./pages/student.js?v=mwulaa5m'), import('./pages/teacher.js?v=mwulaa5m')];
     Promise.allSettled(mods);
   });
 }
