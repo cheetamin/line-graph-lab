@@ -28,7 +28,7 @@ export class Book {
     this.wrap = h('div', { class: 'book-wrap' }, this.el, this.prevBtn, this.nextBtn, this.prevLabel, this.nextLabel);
     this.busy = false;
     document.addEventListener('keydown', (e) => {
-      if (e.target.closest?.('input, textarea, select, [role=application]') || document.querySelector('.modal-back')) return;
+      if (e.target.closest?.('input, textarea, select, [role=application]') || document.querySelector('.modal-back') || document.body.classList.contains('graph-big-open')) return;
       if (e.key === 'PageDown' || (e.altKey && e.key === 'ArrowRight')) { e.preventDefault(); this.onNext(); }
       if (e.key === 'PageUp' || (e.altKey && e.key === 'ArrowLeft')) { e.preventDefault(); this.onPrev(); }
     });

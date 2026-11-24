@@ -138,13 +138,15 @@ const ICON = {
   redo: '<svg viewBox="0 0 24 24" style="transform:scaleX(-1)"><path d="M9 7L4 12l5 5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 12h10a6 6 0 010 12" fill="none" stroke="currentColor" stroke-width="2" transform="translate(0 -6)"/></svg>',
   zin: '<svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15l6 6M7 10h6M10 7v6" stroke="currentColor" stroke-width="2"/></svg>',
   zout: '<svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15l6 6M7 10h6" stroke="currentColor" stroke-width="2"/></svg>',
+  big: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>',
   clear: '<svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
 };
 const toolBtn = (key, label, onClick, pressed) => h('button', { type: 'button', class: 'tool-btn', 'aria-pressed': pressed === undefined ? undefined : String(pressed), onClick, html: `${ICON[key]}<span>${label}</span>`, title: label });
 
 // 직접 그리기 편집기
 export class GraphEditor {
-  constructor({ labels, getData, onChange, readOnly = false }) {
+  constructor({ labels, getData, onChange, readOnly = false, bigHeader = null }) {
+    this.bigHeader = bigHeader; // 크게 그리기 화면 위쪽에 보여 줄 표(함수)
     this.labels = labels;
     this.getData = getData; // () => 현재 작품 데이터(제목, 축, 눈금, 점, 선)
     this.onChange = onChange;
@@ -176,10 +178,12 @@ export class GraphEditor {
       zout: toolBtn('zout', '축소', () => this.setZoom(this.zoom / 1.25)),
       fit: toolBtn('move', '화면 맞춤', () => { this.fitted = false; this.render(); }),
       clear: toolBtn('clear', '모두 지우기', () => this.clearAll()),
+      big: toolBtn('big', '크게 그리기', () => (this.big ? this.closeBig() : this.openBig())),
     };
+    this.btns.big.classList.add('big-btn');
     const bar = h('div', { class: 'toolbar', role: 'toolbar', 'aria-label': '그리기 도구' },
       this.btns.point, this.btns.line, this.btns.erase, this.btns.move, h('span', { class: 'sep' }),
-      this.btns.undo, this.btns.redo, h('span', { class: 'sep' }), this.btns.zout, this.btns.zin, this.btns.fit, this.btns.clear);
+      this.btns.undo, this.btns.redo, h('span', { class: 'sep' }), this.btns.zout, this.btns.zin, this.btns.fit, this.btns.clear, h('span', { class: 'sep' }), this.btns.big);
     if (this.readOnly) bar.classList.add('hidden');
     this.svg.addEventListener('pointerdown', (e) => this.down(e));
     this.svg.addEventListener('pointermove', (e) => this.move(e));
@@ -204,6 +208,40 @@ export class GraphEditor {
     this.render();
   }
   setHint(t) { this.hint.textContent = t; }
+
+  // ── 크게 그리기: 화면 전체에 표와 모눈종이만 크게 보여 줘요(점 찍기·선 긋기가 쉬워요) ──
+  openBig() {
+    if (this.big) return;
+    this.home = document.createComment('graph-home');
+    this.el.before(this.home);
+    const close = h('button', { type: 'button', class: 'big-close' }, '✓ 다 그렸어요 (작게 보기)');
+    close.addEventListener('click', () => this.closeBig());
+    const table = this.bigHeader ? this.bigHeader() : null;
+    const top = h('div', { class: 'big-top' }, table ? h('div', { class: 'big-table' }, table) : h('div', { class: 'big-title' }, this.d.title || '꺾은선그래프 그리기'), close);
+    this.bigEl = h('div', { class: 'graph-big', role: 'dialog', 'aria-modal': 'true', 'aria-label': '크게 그리기' }, top, this.el);
+    document.body.append(this.bigEl);
+    document.body.classList.add('graph-big-open');
+    this.big = true;
+    this.btns.big.querySelector('span:last-child') && (this.btns.big.lastChild.textContent = '작게 보기');
+    this.onKeyBig = (e) => { if (e.key === 'Escape') { e.preventDefault(); this.closeBig(); } };
+    document.addEventListener('keydown', this.onKeyBig);
+    const fs = document.documentElement.requestFullscreen;
+    if (fs && window.matchMedia('(pointer: coarse)').matches) document.documentElement.requestFullscreen().catch(() => {});
+    this.fitted = false;
+    requestAnimationFrame(() => { this.fitted = false; this.render(); this.svg.focus({ preventScroll: true }); });
+  }
+  closeBig() {
+    if (!this.big) return;
+    this.big = false;
+    this.home.replaceWith(this.el);
+    this.bigEl.remove(); this.bigEl = null;
+    document.body.classList.remove('graph-big-open');
+    document.removeEventListener('keydown', this.onKeyBig);
+    this.btns.big.lastChild && (this.btns.big.lastChild.textContent = '크게 그리기');
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    this.fitted = false;
+    requestAnimationFrame(() => this.render());
+  }
   setZoom(z) {
     this.zoom = Math.min(3, Math.max(0.45, z));
     this.render();
@@ -241,8 +279,8 @@ export class GraphEditor {
     else { this.frameG = drawFrame(this.svg, L, d, { labels: this.labels }); this.frameKey = fk; }
     if (!this.fitted && this.scroll.clientWidth > 0) {
       this.fitted = true;
-      const mh = parseFloat(getComputedStyle(this.scroll).maxHeight) || Infinity;
-      this.zoom = Math.min(1.4, Math.max(0.45, Math.min((this.scroll.clientWidth - 4) / L.W, (mh - 4) / L.H)));
+      const mh = this.big ? this.scroll.clientHeight : (parseFloat(getComputedStyle(this.scroll).maxHeight) || Infinity);
+      this.zoom = Math.min(this.big ? 3 : 1.4, Math.max(0.45, Math.min((this.scroll.clientWidth - 4) / L.W, (mh - 4) / L.H)));
     }
     this.svg.style.width = `${L.W * this.zoom}px`;
     this.svg.style.height = `${L.H * this.zoom}px`;

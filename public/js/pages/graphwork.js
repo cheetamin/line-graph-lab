@@ -99,6 +99,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
     return ['title', 'axis', 'scale', 'points', 'lines', 'interp', 'check'].find((k) => !st[k]) || 'check';
   }
 
+  let tableRef = null; // 크게 그리기 화면에 함께 보여 줄 표
   const left = (el) => {
     stepEls = {};
     const titleIn = h('input', { type: 'text', maxlength: 60, value: W.title, placeholder: kind === 'weather' ? '예: ○○ 지역의 연도별 폭염일수' : '예: 우리 반 월별 운동한 날수', onInput: (e) => change({ title: e.target.value.trim() }) });
@@ -107,6 +108,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
     const yName = h('input', { type: 'text', maxlength: 20, value: W.yName, placeholder: kind === 'weather' ? '예: 폭염일수' : '예: 날수, 횟수', onInput: (e) => change({ yName: e.target.value.trim() }) });
     const scaleInfo = h('p', { class: 'small' });
     const dataTable = h('div', { class: 'table-frame', style: { padding: '8px' } });
+    tableRef = dataTable;
     const big = maxValue >= 10000;
     const renderTable = () => {
       const u = approxUnit(maxValue);
@@ -188,6 +190,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       getData: () => ({ ...W, maxValue }),
       onChange: (p) => change(p),
       readOnly: lockedForever,
+      bigHeader: () => (tableRef ? tableRef.cloneNode(true) : null),
     });
     answerToggle = h('input', { type: 'checkbox', onChange: (e) => { editor.answer = e.target.checked ? values.map((v) => (v === '' || v === null ? null : (approxUnit(maxValue) ? approxValue(v, maxValue) : v))) : null; editor.render(); } });
     el.append(

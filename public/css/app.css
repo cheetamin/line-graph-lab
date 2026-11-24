@@ -1274,3 +1274,35 @@ table.admin-table td, table.admin-table th { white-space: nowrap; }
   .g-seg.fresh, .g-seg.draw-in { animation: none !important; stroke-dasharray: none; stroke-dashoffset: 0; }
   .life-card, .work-card, .chip-btn, .name-chip, .side-tab, .tool-btn, .btn, .flip-btn { transition: none; }
 }
+
+/* ═════════ 크게 그리기: 표 + 모눈종이만 화면 가득 ═════════ */
+body.graph-big-open { overflow: hidden; }
+.graph-big {
+  position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; gap: 8px;
+  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: #f4e7c8 url('../assets/paper_blank.webp') center / cover;
+  animation: inkIn .25s ease both;
+}
+.graph-big .big-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.graph-big .big-title { font-family: 'Song Myung', serif; font-size: clamp(20px, 2.6vw, 30px); color: #3b2414; }
+.graph-big .big-close { font: inherit; font-size: clamp(15px, 1.6vw, 19px); font-weight: 700; padding: 10px 18px; border-radius: 10px; border: 2px solid #23543e; background: #2f6b4f; color: #fff; cursor: pointer; box-shadow: 0 3px 0 #1d4231; }
+.graph-big .big-close:active { transform: translateY(2px); box-shadow: 0 1px 0 #1d4231; }
+.graph-big .big-table { flex: 1; min-width: 0; overflow-x: auto; }
+.graph-big .graph-scroll svg { margin: 0 auto; }
+.graph-big .big-close { flex: none; white-space: nowrap; }
+.graph-big .big-table .table-frame { padding: 2px 6px !important; margin: 0; border-width: 6px; }
+.graph-big .big-table table.data th, .graph-big .big-table table.data td { padding: 4px 8px; }
+.graph-big .big-table table.data { margin: 0 auto; font-size: clamp(14px, 1.5vw, 18px); }
+.graph-big .big-table table.data caption, .graph-big .big-table .approx-note { display: none; }
+.graph-big .graph-shell { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.graph-big .graph-frame { flex: 1; min-height: 0; display: flex; }
+.graph-big .graph-scroll { flex: 1; max-height: none !important; min-height: 0; height: 100%; }
+.graph-big .toolbar { justify-content: center; gap: 8px; }
+.graph-big .tool-btn { min-width: 64px; min-height: 56px; font-size: 14px; }
+.graph-big .tool-btn svg { width: 26px; height: 26px; }
+.graph-big .graph-hint { font-size: clamp(14px, 1.4vw, 17px); text-align: center; }
+.graph-big .g-point { r: 9; }
+.tool-btn.big-btn { color: #1f5a3f; font-weight: 700; }
+.tool-btn.big-btn svg { color: #2f6b4f; }
+.tool-btn.big-btn:not(:hover) { animation: bigPulse 2.4s ease-in-out 1s 3; }
+@keyframes bigPulse { 0%, 100% { filter: none; } 50% { filter: drop-shadow(0 0 6px rgba(47, 107, 79, .7)); } }
