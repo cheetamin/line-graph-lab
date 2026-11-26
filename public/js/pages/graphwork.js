@@ -27,7 +27,10 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
 
   let editor; let stepEls = {}; let statusEl; let submitBtn; let checkBox; let answerToggle;
 
+  let lastSaved = JSON.stringify(W); // 바뀐 것이 없으면 저장하지 않아요
   const save = debounce(async () => {
+    const snap = JSON.stringify(W);
+    if (snap === lastSaved) { setSave('저장됨 ✓'); return; }
     setSave('저장 중…');
     backup(BK, { data: W, savedAt: Date.now() });
     try {
@@ -36,13 +39,14 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       const i = S.data.works.findIndex(match);
       if (i >= 0) S.data.works[i] = r.work; else S.data.works.push(r.work);
       clearBackup(BK);
+      lastSaved = snap;
       setSave('저장됨 ✓');
       updateMarks();
     } catch (e) {
       setSave('저장 실패 · 기기에 보관', true);
       toast(e.message, 'bad');
     }
-  }, 900);
+  }, 2500); // 2.5초 동안 모았다가 한 번에 저장
 
   function change(patch, opts = {}) {
     if (lockedForever) return;

@@ -13,7 +13,7 @@ const sources = () => S.data.cls.settings.lifeSources || [];
 const region = () => S.data.cls.settings.lifeRegion || '우리 고장';
 
 let pending = {};
-const flush = debounce(() => { const p = pending; pending = {}; if (!Object.keys(p).length) return Promise.resolve(); return saveState({ life: p }).catch((e) => toast(e.message, 'bad')); }, 600);
+const flush = debounce(() => { const p = pending; pending = {}; if (!Object.keys(p).length) return Promise.resolve(); return saveState({ life: p }).catch((e) => toast(e.message, 'bad')); }, 2000);
 const saveLife = (patch) => { pending = { ...pending, ...patch }; Object.assign(S.data.state.life = S.data.state.life || {}, patch); flush(); };
 
 export function spreads(app) {
@@ -120,7 +120,7 @@ function tableSpread(app, l) {
       const years = Array.from({ length: N }, (_, i) => (l.years?.[i] ?? ''));
       const vals = Array.from({ length: N }, (_, i) => (l.values?.[i] ?? ''));
       const msg = h('div', { role: 'status' });
-      const push = debounce(() => saveState({ life: { years: years.map((y) => (y === '' ? '' : Number(y))), values: vals.map((v) => (v === '' ? '' : Number(v))) } }).then(() => { S.data.state.life = { ...L(), years: years.slice(), values: vals.slice(), tableChecked: false }; }).catch((e) => toast(e.message, 'bad')), 600);
+      const push = debounce(() => saveState({ life: { years: years.map((y) => (y === '' ? '' : Number(y))), values: vals.map((v) => (v === '' ? '' : Number(v))) } }).then(() => { S.data.state.life = { ...L(), years: years.slice(), values: vals.slice(), tableChecked: false }; }).catch((e) => toast(e.message, 'bad')), 2000);
       const subject = h('input', { type: 'text', maxlength: 40, value: l.subject || '', placeholder: '예: 진양호 동물원 입장객 수', onInput: (e) => saveLife({ subject: e.target.value, tableChecked: false }) });
       const unit = h('input', { type: 'text', maxlength: 10, value: l.unit || '', placeholder: '예: 만 명', style: { maxWidth: '110px' }, onInput: (e) => { saveLife({ unit: e.target.value, tableChecked: false }); vHead.textContent = `${e.target.value ? `값 (${e.target.value})` : '값'}`; } });
       const source = h('input', { type: 'text', maxlength: 120, value: l.source || '', placeholder: '예: 공공데이터포털 경상남도 주요관광지점 입장객 현황', onInput: (e) => saveLife({ source: e.target.value }) });

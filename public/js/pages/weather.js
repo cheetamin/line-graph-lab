@@ -32,7 +32,7 @@ export function spreads(app) {
 }
 
 let pending = {};
-const flushWeather = debounce(() => { const p = pending; pending = {}; saveState({ weather: p }).catch((e) => toast(e.message, 'bad')); }, 700);
+const flushWeather = debounce(() => { const p = pending; pending = {}; saveState({ weather: p }).catch((e) => toast(e.message, 'bad')); }, 2000);
 const saveWeather = (patch) => { pending = { ...pending, ...patch }; flushWeather(); };
 
 function guideSpread(app, w, done) {
@@ -98,7 +98,7 @@ function tableSpread(app, w, done) {
       const years = (w.years?.length === 5 ? w.years : ['', '', '', '', '']).slice();
       const vals = (w.values?.length === 5 ? w.values : ['', '', '', '', '']).slice();
       const msg = h('div', { role: 'status' });
-      const push = debounce(() => saveState({ weather: { years: years.map((y) => (y === '' ? '' : Number(y))), values: vals.map((v) => (v === '' ? '' : Number(v))) } }).catch((e) => toast(e.message, 'bad')), 600);
+      const push = debounce(() => saveState({ weather: { years: years.map((y) => (y === '' ? '' : Number(y))), values: vals.map((v) => (v === '' ? '' : Number(v))) } }).catch((e) => toast(e.message, 'bad')), 2000);
       const yIn = years.map((y, i) => h('input', { type: 'number', inputmode: 'numeric', 'aria-label': `${i + 1}번째 연도`, value: y, disabled: done, onInput: (e) => { years[i] = e.target.value; push(); } }));
       const vIn = vals.map((v, i) => h('input', { type: 'number', inputmode: 'numeric', min: 0, max: 366, 'aria-label': `${i + 1}번째 폭염일수`, value: v, disabled: done, onInput: (e) => { vals[i] = e.target.value; push(); } }));
       el.append(

@@ -159,6 +159,9 @@ export function createApi({ db, sec, options = {} }) {
     return parse(r?.state);
   }
   function putState(studentId, classId, state) {
+    // 내용이 그대로면 쓰지 않아요(무료 플랜 '자료 쓰기' 한도 아끼기)
+    const cur = db.get('SELECT state FROM student_state WHERE student_id = ?', [studentId]);
+    if (cur && cur.state === JSON.stringify(state)) return;
     db.run(`INSERT INTO student_state(student_id, class_id, state, updated_at) VALUES (?,?,?,?)
       ON CONFLICT(student_id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at`,
     [studentId, classId, JSON.stringify(state), now()]);
@@ -903,7 +906,9 @@ export function createApi({ db, sec, options = {} }) {
       if (kind === 'weather' && state.weatherDone) fail(409, '기상자료 탐험을 이미 완료했어요.');
       status = 'draft';
     }
-    if (existing) {
+    if (existing && existing.data === JSON.stringify(data) && existing.status === status && (existing.topic_id ?? null) === (target.topicId ?? null)) {
+      // 바뀐 것이 없으면 쓰지 않아요
+    } else if (existing) {
       db.run('UPDATE works SET data = ?, status = ?, topic_id = ?, updated_at = ? WHERE id = ?', [JSON.stringify(data), status, target.topicId, now(), existing.id]);
     } else {
       db.run('INSERT INTO works(class_id, student_id, kind, topic_id, data, status, updated_at) VALUES (?,?,?,?,?,?,?)',

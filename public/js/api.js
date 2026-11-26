@@ -17,6 +17,7 @@ export async function api(method, path, body) {
       method, credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'graph-lab' },
       body: body ? JSON.stringify(body) : undefined,
+      keepalive: !!body && method !== 'GET' && JSON.stringify(body).length < 60000, // 창을 닫는 순간의 저장도 끝까지 보내요
     });
   } catch {
     listeners.forEach((f) => f(false));

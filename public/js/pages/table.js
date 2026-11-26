@@ -39,7 +39,7 @@ export function spreads(app) {
       h('p', { class: 'small muted', style: { marginTop: '8px' } }, '‘기억나지 않음’은 0으로 세지 않고 빼고 계산해요.'));
   };
 
-  const persist = debounce(() => saveState({ tableDraft: { topicId: t.id, values: vals } }).catch(() => {}), 800);
+  const persist = debounce(() => saveState({ tableDraft: { topicId: t.id, values: vals } }).catch(() => {}), 2000);
 
   return [{
     folio: ['우리 반 자료', '자료표'],
