@@ -1,9 +1,9 @@
 // 제1장 기상자료 탐험실 (교과서 118~121쪽): 포털 조사 → 표 → 직접 그래프
-import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx3mel6';
-import { api } from '../api.js?v=mwx3mel6';
-import { S, saveState } from '../store.js?v=mwx3mel6';
-import { graphSpread, celebrate } from './graphwork.js?v=mwx3mel6';
-import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, DECADE_HEAT, isDecadeMode, yearLabel } from '../../shared/weather-sources.js?v=mwx3mel6';
+import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx3qfi5';
+import { api } from '../api.js?v=mwx3qfi5';
+import { S, saveState } from '../store.js?v=mwx3qfi5';
+import { graphSpread, celebrate } from './graphwork.js?v=mwx3qfi5';
+import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, DECADE_HEAT, isDecadeMode, yearLabel } from '../../shared/weather-sources.js?v=mwx3qfi5';
 
 function W() { return S.data.state.weather || { years: ['', '', '', '', ''], values: ['', '', '', '', ''] }; }
 
@@ -43,7 +43,6 @@ function guideSpread(app, w, done) {
       h('div', { class: 'page-head' }, icon('weather', 'ico'), h('div', null, h('div', { class: 'kicker' }, '1차 활동 · 꼭 먼저 하는 탐험'), h('h2', null, '기상자료 탐험실'))),
       h('div', { class: 'divider' }),
       h('p', null, '100년 전과 비교하면 우리나라 여름은 얼마나 더워졌을까요? 기상청 보고서에서 10년 단위(연대별) ', h('b', null, '폭염일수'), '를 직접 찾아 조사해 봐요.'),
-      decadeTable(isDecadeMode(w) ? w : {}),
       h('div', { class: 'def-box' }, h('b', null, '폭염일수 '), '하루 중 가장 높은 기온이 33 ℃ 이상인 날의 수예요.'),
       h('h3', { style: { marginTop: '16px' } }, '탐험 순서'),
       h('ol', { class: 'steps-list' },
@@ -76,8 +75,9 @@ function guideSpread(app, w, done) {
       else if (!w.source && !done) saveWeather({ source: ARTICLE_SOURCE_NAME });
       el.append(
         h('div', { class: 'center' }, h('h2', { class: 'plaque green' }, '기상청 보고서 탐험')),
-        h('div', { class: 'panel stack' },
-          h('div', { class: 'note gold small' }, h('b', null, '알림 '), '기상자료개방포털의 폭염일수 자료가 잠시 내려가 있어요. 대신 기상청이 펴낸 보고서의 ', h('b', null, '【표 2】 연대별 폭염일수'), '에서 찾아요.'),
+        decadeTable(dec ? w : {}),
+        h('div', { class: 'panel stack', style: { marginTop: '10px' } },
+          h('div', { class: 'note gold small' }, h('b', null, '알림 '), '기상자료개방포털 자료가 잠시 내려가서, 위 표(기상청 보고서 【표 2】)로 조사해요. 보고서 원문에서 직접 확인해 볼 수도 있어요.'),
           h('a', { class: 'btn gold', href: DECADE_SOURCE.url, target: '_blank', rel: 'noopener', onClick: () => saveWeather({ visited: true }) }, '기상청 보고서 열기 ↗'),
           h('div', { class: 'small' }, h('b', null, DECADE_SOURCE.title), ` (${DECADE_SOURCE.date})`),
           h('div', { class: 'path-chips', 'aria-label': '찾는 곳' }, h('span', null, '아래쪽 [붙임 1]'), h('i', null, '›'), h('span', null, '【표 2】'), h('i', null, '›'), h('span', null, '폭염일수(일) 줄')),
