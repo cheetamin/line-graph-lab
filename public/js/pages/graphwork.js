@@ -106,7 +106,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
   let tableRef = null; // 크게 그리기 화면에 함께 보여 줄 표
   const left = (el) => {
     stepEls = {};
-    const titleIn = h('input', { type: 'text', maxlength: 60, value: W.title, placeholder: kind === 'weather' ? '예: ○○ 지역의 연도별 폭염일수' : '예: 우리 반 월별 운동한 날수', onInput: (e) => change({ title: e.target.value.trim() }) });
+    const titleIn = h('input', { type: 'text', maxlength: 60, value: W.title, placeholder: kind === 'weather' ? '예: 우리나라의 연대별 ○○일수' : '예: 우리 반 월별 운동한 날수', onInput: (e) => change({ title: e.target.value.trim() }) });
     const sel = (val, key, ph) => h('select', { onChange: (e) => change({ [key]: e.target.value }) }, h('option', { value: '' }, ph), [...new Set([...UNITS, unit, xUnit].filter(Boolean))].map((u) => h('option', { value: u, selected: val === u ? true : undefined }, u)));
     const xName = h('input', { type: 'text', maxlength: 20, value: W.xName, placeholder: kind === 'weather' ? '예: 연도' : '예: 월', onInput: (e) => change({ xName: e.target.value.trim() }) });
     const yName = h('input', { type: 'text', maxlength: 20, value: W.yName, placeholder: kind === 'weather' ? '예: 폭염일수' : '예: 날수, 횟수', onInput: (e) => change({ yName: e.target.value.trim() }) });

@@ -97,7 +97,7 @@ export function mountLogin(root, tab = 'student', joinCode = null) {
       h('div', { class: 'divider' }),
       h('p', null, '이 책은 우리 반이 함께 쓰는 ', h('b', null, '데이터 탐구서'), '예요. 실제 자료를 조사하고, 표로 정리하고, 모눈종이에 꺾은선그래프를 직접 그려요.'),
       h('ol', { class: 'steps-list' },
-        h('li', null, h('span', null, h('b', null, '1차 기상자료 탐험실'), ' — 우리 지역의 연도별 폭염일수를 찾아 표와 그래프로 나타내요.')),
+        h('li', null, h('span', null, h('b', null, '1차 기상자료 탐험실'), ' — 기상청 보고서에서 연대별 폭염·열대야·한파일수를 찾아 표와 그래프로 나타내요.')),
         h('li', null, h('span', null, h('b', null, '2차 나의 주제 그래프'), ' — 25가지 주제 중 골라 2026년 내 기록으로 표와 그래프를 만들어요.')),
         h('li', null, h('span', null, h('b', null, '3차 우리 고장 그래프'), ' — 우리 고장 자료를 공공데이터·누리집에서 찾아 그래프로 나타내고 앞날을 예상해요.')),
         h('li', null, h('span', null, h('b', null, '작품 전시관'), ' — 선생님이 승인한 친구들의 작품을 책장을 넘기며 감상해요.'))),
