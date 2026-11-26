@@ -75,9 +75,8 @@ function guideSpread(app, w, done) {
       else if (!w.source && !done) saveWeather({ source: ARTICLE_SOURCE_NAME });
       el.append(
         h('div', { class: 'center' }, h('h2', { class: 'plaque green' }, '기상청 보고서 탐험')),
-        decadeTable(dec ? w : {}),
-        h('div', { class: 'panel stack', style: { marginTop: '10px' } },
-          h('div', { class: 'note gold small' }, h('b', null, '알림 '), '기상자료개방포털 자료가 잠시 내려가서, 위 표(기상청 보고서 【표 2】)로 조사해요. 보고서 원문에서 직접 확인해 볼 수도 있어요.'),
+        h('div', { class: 'panel stack' },
+          h('div', { class: 'note gold small' }, h('b', null, '알림 '), '기상자료개방포털 자료가 잠시 내려가서, 아래 표(기상청 보고서 【표 2】)로 조사해요. 보고서 원문에서 직접 확인해 볼 수도 있어요.'),
           h('a', { class: 'btn gold', href: DECADE_SOURCE.url, target: '_blank', rel: 'noopener', onClick: () => saveWeather({ visited: true }) }, '기상청 보고서 열기 ↗'),
           h('div', { class: 'small' }, h('b', null, DECADE_SOURCE.title), ` (${DECADE_SOURCE.date})`),
           h('div', { class: 'path-chips', 'aria-label': '찾는 곳' }, h('span', null, '아래쪽 [붙임 1]'), h('i', null, '›'), h('span', null, '【표 2】'), h('i', null, '›'), h('span', null, '폭염일수(일) 줄')),
@@ -85,7 +84,8 @@ function guideSpread(app, w, done) {
           h('details', { class: 'small' }, h('summary', null, '기상자료개방포털로 찾기 (자료가 다시 열리면)'),
             h('a', { href: s.kmaUrl, target: '_blank', rel: 'noopener' }, '기상자료개방포털 열기 ↗'),
             h('div', { style: { whiteSpace: 'pre-line', marginTop: '6px' } }, s.kmaGuide))),
-        h('div', { class: 'stack', style: { marginTop: '12px' } },
+        h('div', { style: { marginTop: '12px' } }, decadeTable(dec ? w : {})),
+        h('div', { class: 'stack', style: { marginTop: '10px' } },
           done ? null : btn('추천: 1980년대 ~ 2020년대로 바로 정하기', () => setDecades(1980, '1980년대~2020년대로 정했어요. 보고서 【표 2】에서 폭염일수를 찾아 표에 적어요.'), { variant: 'green small' }),
           h('label', { class: 'field' }, h('span', null, '조사할 연대(연속된 5개)'), startSel),
           h('label', { class: 'field' }, h('span', null, '자료 출처'), source),
