@@ -1,9 +1,9 @@
 // 만족도 조사(학생): 1차·2차·3차 꺾은선그래프를 모두 제출하면 열려요
-import { sealImg, h, icon, btn, toast } from '../ui.js?v=mwx36j6u';
-import { api } from '../api.js?v=mwx36j6u';
-import { S } from '../store.js?v=mwx36j6u';
-import { SCALE_LABELS } from '../../shared/survey.js?v=mwx36j6u';
-import { celebrate } from './graphwork.js?v=mwx36j6u';
+import { sealImg, h, icon, btn, toast } from '../ui.js?v=mwx3fqvm';
+import { api } from '../api.js?v=mwx3fqvm';
+import { S } from '../store.js?v=mwx3fqvm';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwx3fqvm';
+import { celebrate } from './graphwork.js?v=mwx3fqvm';
 
 let cache = null;
 

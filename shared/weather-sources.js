@@ -10,3 +10,5 @@ export const ARTICLE_SOURCE_NAME = '기상청 「우리나라 113년 기후변�
 export const DECADES = [1910, 1920, 1930, 1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020];
 export const isDecadeMode = (w) => w?.unit === 'decade';
 export const yearLabel = (w, y) => (isDecadeMode(w) ? `${y}년대` : `${y}년`);
+// 【표 2】 연대별 폭염일수(일) — 기상청 「우리나라 113년 기후변화 분석 보고서」(2025. 12. 30.) 그대로
+export const DECADE_HEAT = { 1910: 7.7, 1920: 10.3, 1930: 10.4, 1940: 12.2, 1950: 8.1, 1960: 8.2, 1970: 7.8, 1980: 7.9, 1990: 10.1, 2000: 8.0, 2010: 13.3, 2020: 16.9 };

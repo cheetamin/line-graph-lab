@@ -1309,3 +1309,8 @@ body.graph-big-open { overflow: hidden; }
 /* 1차: 기사·보도자료 출처 목록 */
 .src-list { margin: 4px 0; padding-left: 1.3em; display: grid; gap: 8px; }
 .src-list a { font-weight: 700; color: #7a2d1f; }
+/* 1차: 보고서 표 2(연대별 폭염일수) */
+.dec-table { width: 100%; table-layout: fixed; font-size: 13px; }
+.dec-table th, .dec-table td { padding: 4px 2px; text-align: center; white-space: nowrap; }
+.dec-table tr > th:first-child { width: 22%; }
+.dec-table .on { background: #ffe9a8; color: #7a2d1f; font-weight: 800; }
