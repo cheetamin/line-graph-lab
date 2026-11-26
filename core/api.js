@@ -2,11 +2,11 @@
 // - 모든 권한 검증과 학급 격리는 이 파일에서 수행합니다.
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
-import { SCHEMA } from './schema.js?v=mwx3sl2c';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwx3sl2c';
-import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwx3sl2c';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwx3sl2c';
-import { computeStats, round1 } from '../shared/stats.js?v=mwx3sl2c';
+import { SCHEMA } from './schema.js?v=mwx47cj1';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwx47cj1';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwx47cj1';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwx47cj1';
+import { computeStats, round1 } from '../shared/stats.js?v=mwx47cj1';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY = 86400000;
@@ -385,7 +385,7 @@ export function createApi({ db, sec, options = {} }) {
   }
 
   function workName(r, d) {
-    if (r.kind === 'weather') return '연도별 폭염일수';
+    if (r.kind === 'weather') return d?.subject || '연도별 폭염일수';
     if (r.kind === 'life') return d?.subject ? `우리 고장: ${d.subject}` : '우리 고장 자료';
     return topicById(r.topic_id)?.name;
   }
@@ -664,7 +664,7 @@ export function createApi({ db, sec, options = {} }) {
       const years = Array.isArray(p.weather.years) ? p.weather.years.slice(0, 5).map((y) => (y === '' || y === null ? '' : int(y))) : w.years;
       const values = Array.isArray(p.weather.values) ? p.weather.values.slice(0, 5).map((v) => (v === '' || v === null ? '' : Number(v))) : w.values;
       const changed = JSON.stringify(years) !== JSON.stringify(w.years) || JSON.stringify(values) !== JSON.stringify(w.values);
-      if (state.weatherDone && changed) fail(409, '기상자료 탐험을 이미 완료했어요. 고치려면 선생님께 요청하세요.');
+      if (state.weatherDone && (changed || (p.weather.metric !== undefined && p.weather.metric !== w.metric))) fail(409, '기상자료 탐험을 이미 완료했어요. 고치려면 선생님께 요청하세요.');
       state.weather = {
         ...w,
         region: p.weather.region !== undefined ? str(p.weather.region, 40) : w.region,
@@ -672,8 +672,9 @@ export function createApi({ db, sec, options = {} }) {
         source: p.weather.source !== undefined ? str(p.weather.source, 80) : w.source,
         visited: p.weather.visited !== undefined ? !!p.weather.visited : w.visited,
         unit: p.weather.unit !== undefined ? (p.weather.unit === 'decade' ? 'decade' : 'year') : w.unit,
+        metric: p.weather.metric !== undefined ? (['heat', 'tropical', 'cold'].includes(p.weather.metric) ? p.weather.metric : 'heat') : w.metric,
         years, values,
-        tableChecked: (changed || (p.weather.unit !== undefined && p.weather.unit !== w.unit)) ? false : !!w.tableChecked,
+        tableChecked: (changed || (p.weather.unit !== undefined && p.weather.unit !== w.unit) || (p.weather.metric !== undefined && p.weather.metric !== w.metric)) ? false : !!w.tableChecked,
       };
     }
     if (p.life && typeof p.life === 'object') {
@@ -789,9 +790,10 @@ export function createApi({ db, sec, options = {} }) {
       if (new Set(years).size !== 5) issues.push('같은 연도가 두 번 적혀 있어요.');
       for (let i = 1; i < 5; i++) if (years[i] <= years[i - 1]) { issues.push('연도는 왼쪽부터 차례대로(작은 연도부터) 적어 주세요.'); break; }
     }
-    if (values.length !== 5 || values.some((v) => v === '' || !Number.isFinite(Number(v)))) issues.push('폭염일수 5개를 모두 적어 주세요.');
-    else if (values.some((v) => Math.abs(Math.round(Number(v) * 10) - Number(v) * 10) > 1e-6)) issues.push('폭염일수는 소수 첫째 자리까지만 적어요. (예: 10.6) 반올림해 자연수로 적어도 돼요.');
-    else if (values.some((v) => v < 0 || v > 366)) issues.push('폭염일수는 0일부터 366일 사이여야 해요. 다시 확인해 보세요.');
+    const mName = ({ tropical: '열대야일수', cold: '한파일수' })[w.metric] || '폭염일수';
+    if (values.length !== 5 || values.some((v) => v === '' || !Number.isFinite(Number(v)))) issues.push(`${mName} 5개를 모두 적어 주세요.`);
+    else if (values.some((v) => Math.abs(Math.round(Number(v) * 10) - Number(v) * 10) > 1e-6)) issues.push(`${mName}는 소수 첫째 자리까지만 적어요. (예: 10.6)`);
+    else if (values.some((v) => v < 0 || v > 366)) issues.push(`${mName}는 0일부터 366일 사이여야 해요. 다시 확인해 보세요.`);
     if (issues.length) return { body: { ok: false, issues } };
     state.weather.tableChecked = true;
     putState(ctx.student.id, ctx.cls.id, state);
@@ -906,6 +908,7 @@ export function createApi({ db, sec, options = {} }) {
     data.labels = target.labels;
     data.values = target.values;
     if (kind === 'life') data.subject = state.life?.subject || '';
+    if (kind === 'weather') data.subject = `${state.weather?.unit === 'decade' ? '연대별' : '연도별'} ${({ tropical: '열대야일수', cold: '한파일수' })[state.weather?.metric] || '폭염일수'}`;
     const sig = (x) => JSON.stringify(['title', 'xName', 'xUnit', 'yName', 'yUnit', 'scale', 'yStart', 'points', 'segments', 'interp', 'labels', 'values'].map((k) => x?.[k] ?? null));
     const same = !!prev.checked && sig(prev) === sig(data);
     if (same) { data.checked = true; data.checkedAt = prev.checkedAt; }

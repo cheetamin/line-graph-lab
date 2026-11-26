@@ -1,9 +1,9 @@
 // 그래프 그리기 공용 펼침(기상자료·조사 주제 모두 사용): 왼쪽 단계 안내, 오른쪽 모눈종이
-import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwx3sl2c';
-import { api } from '../api.js?v=mwx3sl2c';
-import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwx3sl2c';
-import { GraphEditor } from '../graph.js?v=mwx3sl2c';
-import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwx3sl2c';
+import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwx47cj1';
+import { api } from '../api.js?v=mwx47cj1';
+import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwx47cj1';
+import { GraphEditor } from '../graph.js?v=mwx47cj1';
+import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwx47cj1';
 
 const UNITS = ['월', '년', '일', '회', '권', '편', '개', '시간', '원', '명', '만 명', '곳'];
 const STATUS = { draft: ['그리는 중', 'warn'], submitted: ['제출함 · 선생님 확인 중', 'ok'], approved: ['승인됨 · 전시 중', 'green'], rejected: ['다시 그려 보세요', 'red'] };
@@ -106,7 +106,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
   let tableRef = null; // 크게 그리기 화면에 함께 보여 줄 표
   const left = (el) => {
     stepEls = {};
-    const titleIn = h('input', { type: 'text', maxlength: 60, value: W.title, placeholder: kind === 'weather' ? '예: ○○ 지역의 연도별 폭염일수' : '예: 우리 반 월별 운동한 날수', onInput: (e) => change({ title: e.target.value.trim() }) });
+    const titleIn = h('input', { type: 'text', maxlength: 60, value: W.title, placeholder: kind === 'weather' ? '예: 우리나라의 연대별 ○○일수' : '예: 우리 반 월별 운동한 날수', onInput: (e) => change({ title: e.target.value.trim() }) });
     const sel = (val, key, ph) => h('select', { onChange: (e) => change({ [key]: e.target.value }) }, h('option', { value: '' }, ph), [...new Set([...UNITS, unit, xUnit].filter(Boolean))].map((u) => h('option', { value: u, selected: val === u ? true : undefined }, u)));
     const xName = h('input', { type: 'text', maxlength: 20, value: W.xName, placeholder: kind === 'weather' ? '예: 연도' : '예: 월', onInput: (e) => change({ xName: e.target.value.trim() }) });
     const yName = h('input', { type: 'text', maxlength: 20, value: W.yName, placeholder: kind === 'weather' ? '예: 폭염일수' : '예: 날수, 횟수', onInput: (e) => change({ yName: e.target.value.trim() }) });
