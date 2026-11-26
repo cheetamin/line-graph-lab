@@ -30,7 +30,7 @@ export async function boot(opts = {}) {
     await mountTeacher(app);
   } else {
     const { mountCover } = await import('./pages/cover.js');
-    mountCover(app, joinCode ? { ...opts, joinCode, skipCover: true, tab: 'student' } : opts);
+    mountCover(app, joinCode ? { ...opts, joinCode, skipCover: true, tab: 'student' } : location.hash === '#admin' ? { ...opts, skipCover: true, tab: 'teacher' } : opts);
   }
   warmUp(me.role);
 }

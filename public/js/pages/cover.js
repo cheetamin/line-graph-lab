@@ -176,7 +176,7 @@ function studentForm(joinCode = null, preset = null) {
 }
 
 function teacherForm(goStudent) {
-  let signup = false; let admin = false;
+  let signup = false; let admin = location.hash === '#admin';
   const wrap = h('div');
   const render = () => {
     if (admin) { wrap.replaceChildren(adminForm(() => { admin = false; render(); })); return; }
@@ -210,21 +210,45 @@ function teacherForm(goStudent) {
   return wrap;
 }
 
-// 전체 관리자 로그인(비밀번호만)
+// 전체 관리자 로그인(비밀번호만). 서버판에서 처음 한 번은 비밀번호를 직접 정해요.
+const SERVER_URL = 'https://line-graph-lab.cheetamin.workers.dev/';
 function adminForm(back) {
-  const pw = h('input', { type: 'password', name: 'adminPassword', autocomplete: 'current-password', required: true });
-  const status = h('div');
-  api('GET', '/api/admin/status').then((r) => { if (!r.enabled) status.replaceChildren(h('div', { class: 'note gold small' }, '전체 관리자는 학교·교육청 서버에 올린 판에서 쓸 수 있어요. 서버를 올릴 때 관리자 비밀번호(ADMIN_PASSWORD)를 정하면 열려요. 이 판(GitHub Pages·체험판)은 자료가 각 브라우저에만 있어 모아 볼 수 없어요.')); }).catch(() => {});
+  const wrap = h('div');
   const err = h('p', { class: 'err-text', role: 'alert' });
-  return h('form', { class: 'login-card', onSubmit: async (e) => {
-    e.preventDefault(); err.textContent = '';
-    try { await api('POST', '/api/admin/login', { password: pw.value }); boot(); } catch (ex) { err.textContent = ex.message; pw.value = ''; pw.focus(); }
-  } },
-  h('h3', { class: 'center' }, '전체 관리자'),
-  h('p', { class: 'small muted center' }, '모든 학급의 운영 수·학생 수와 만족도 조사 결과를 봐요.'),
-  status,
-  h('label', { class: 'field' }, h('span', null, '관리자 비밀번호'), pw),
-  err,
-  btn('관리자 들어가기', null, { variant: 'green', type: 'submit' }),
-  h('button', { class: 'link-btn', type: 'button', onClick: back }, '← 교사 로그인으로'));
+  const backBtn = () => h('button', { class: 'link-btn', type: 'button', onClick: back }, '← 교사 로그인으로');
+  const head = () => [h('h3', { class: 'center' }, '전체 관리자'), h('p', { class: 'small muted center' }, '모든 학급의 운영 수·학생 수와 만족도 조사 결과를 봐요.')];
+
+  const loginForm = () => {
+    const pw = h('input', { type: 'password', name: 'adminPassword', autocomplete: 'current-password', required: true });
+    return h('form', { class: 'login-card', onSubmit: async (e) => {
+      e.preventDefault(); err.textContent = '';
+      try { await api('POST', '/api/admin/login', { password: pw.value }); boot(); } catch (ex) { err.textContent = ex.message; pw.value = ''; pw.focus(); }
+    } }, ...head(), h('label', { class: 'field' }, h('span', null, '관리자 비밀번호'), pw), err,
+    btn('관리자 들어가기', null, { variant: 'green', type: 'submit' }), backBtn());
+  };
+  const setupForm = () => {
+    const pw = h('input', { type: 'password', name: 'newAdminPassword', autocomplete: 'new-password', required: true, minlength: 8, placeholder: '8자 이상' });
+    const pw2 = h('input', { type: 'password', name: 'newAdminPassword2', autocomplete: 'new-password', required: true, placeholder: '한 번 더' });
+    return h('form', { class: 'login-card', onSubmit: async (e) => {
+      e.preventDefault(); err.textContent = '';
+      if (pw.value.length < 8) { err.textContent = '8자 이상으로 정해 주세요.'; return; }
+      if (pw.value !== pw2.value) { err.textContent = '두 비밀번호가 달라요. 다시 적어 주세요.'; pw2.value = ''; pw2.focus(); return; }
+      try { await api('POST', '/api/admin/setup', { password: pw.value }); boot(); } catch (ex) { err.textContent = ex.message; }
+    } }, ...head(),
+    h('div', { class: 'note green small' }, h('b', null, '처음 한 번만 '), '전체 관리자 비밀번호를 정해요. 정한 뒤에는 이 비밀번호로만 들어올 수 있어요. 비밀번호는 암호화해서 저장돼요.'),
+    h('label', { class: 'field' }, h('span', null, '새 관리자 비밀번호'), pw),
+    h('label', { class: 'field' }, h('span', null, '비밀번호 확인'), pw2), err,
+    btn('비밀번호 정하고 들어가기', null, { variant: 'green', type: 'submit' }), backBtn());
+  };
+  const demoNote = () => h('div', { class: 'login-card' }, ...head(),
+    h('div', { class: 'note gold small' }, '이 주소는 체험판이라 자료가 각 브라우저에만 저장돼요. 모든 학급의 운영 현황과 만족도 결과는 ', h('b', null, '수업용 주소'), '에서 볼 수 있어요.'),
+    h('a', { class: 'btn green', href: `${SERVER_URL}#admin`, target: '_blank', rel: 'noopener', style: { display: 'block', textAlign: 'center', textDecoration: 'none' } }, '수업용 주소에서 전체 관리자 열기 ↗'),
+    backBtn());
+
+  wrap.append(loginForm());
+  api('GET', '/api/admin/status').then((r) => {
+    if (r.canSetup) wrap.replaceChildren(setupForm());
+    else if (!r.enabled) wrap.replaceChildren(demoNote());
+  }).catch(() => {});
+  return wrap;
 }

@@ -59,7 +59,7 @@ export class LabStore extends DurableObject {
       cache.set(ck, { at: Date.now(), list });
       return list;
     };
-    this.api = createApi({ db, sec, options: { signupCode: env.TEACHER_SIGNUP_CODE || '', searchSchools, adminPassword: env.ADMIN_PASSWORD || '' } });
+    this.api = createApi({ db, sec, options: { signupCode: env.TEACHER_SIGNUP_CODE || '', searchSchools, adminPassword: env.ADMIN_PASSWORD || '', allowAdminSetup: true } });
     ctx.blockConcurrencyWhile(async () => { this.api.init(); });
   }
 

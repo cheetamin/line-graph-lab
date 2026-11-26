@@ -81,6 +81,10 @@ CREATE TABLE IF NOT EXISTS works (
   UNIQUE(student_id, kind)
 );
 CREATE INDEX IF NOT EXISTS idx_works_class ON works(class_id, status);
+CREATE TABLE IF NOT EXISTS app_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS surveys (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,

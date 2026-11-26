@@ -60,7 +60,7 @@ async function searchSchools(q, filter = {}) {
   return list;
 }
 
-const api = createApi({ db, sec, options: { signupCode: process.env.TEACHER_SIGNUP_CODE || '', searchSchools, adminPassword: process.env.ADMIN_PASSWORD || '' } });
+const api = createApi({ db, sec, options: { signupCode: process.env.TEACHER_SIGNUP_CODE || '', searchSchools, allowAdminSetup: true, adminPassword: process.env.ADMIN_PASSWORD || '' } });
 api.init();
 if (process.env.DEMO_SEED === '1') {
   seedDemo({ db, sec }).then((made) => made && console.log('체험용 학급(DEMO26)을 만들었습니다.'));
