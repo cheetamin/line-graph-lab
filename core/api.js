@@ -2,11 +2,11 @@
 // - 모든 권한 검증과 학급 격리는 이 파일에서 수행합니다.
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
-import { SCHEMA } from './schema.js?v=mwulaa5m';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwulaa5m';
-import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwulaa5m';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwulaa5m';
-import { computeStats, round1 } from '../shared/stats.js?v=mwulaa5m';
+import { SCHEMA } from './schema.js?v=mwx01ng7';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwx01ng7';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwx01ng7';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwx01ng7';
+import { computeStats, round1 } from '../shared/stats.js?v=mwx01ng7';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY = 86400000;
@@ -550,16 +550,33 @@ export function createApi({ db, sec, options = {} }) {
   });
 
   // ── 전체 관리자: 모든 학급의 운영 현황과 만족도 조사 결과 ──
-  // 관리자 비밀번호는 서버 환경 변수(ADMIN_PASSWORD)로만 정해요. 코드나 공개 저장소에는 두지 않아요.
-  const adminEnabled = () => !!options.adminPassword;
+  // 비밀번호는 ① 서버 환경 변수(ADMIN_PASSWORD) 또는 ② 서버판에서 처음 한 번 직접 정한 값(암호화해 저장)으로 정해요.
+  // 코드나 공개 저장소에는 두지 않아요. 체험판(브라우저 저장)에서는 정할 수 없어요.
+  const metaGet = (k) => db.get('SELECT value FROM app_meta WHERE key = ?', [k])?.value || null;
+  const storedAdmin = () => metaGet('admin_hash');
+  const adminEnabled = () => !!options.adminPassword || !!storedAdmin();
+  const canSetupAdmin = () => !!options.allowAdminSetup && !adminEnabled();
   async function checkAdmin(password) {
     const pw = String(password || '');
     if (!adminEnabled() || !pw || pw.length > 100) return false;
-    return (await sec.sha256(pw)) === (await sec.sha256(options.adminPassword));
+    if (options.adminPassword && (await sec.sha256(pw)) === (await sec.sha256(options.adminPassword))) return true;
+    const hsh = storedAdmin();
+    return !!hsh && (await sec.verify(pw, hsh));
   }
-  route('GET', '/api/admin/status', null, async () => ({ body: { enabled: adminEnabled() } }));
+  route('GET', '/api/admin/status', null, async () => ({ body: { enabled: adminEnabled(), canSetup: canSetupAdmin() } }));
+  route('POST', '/api/admin/setup', null, async ({ body }) => {
+    if (!canSetupAdmin()) fail(403, '관리자 비밀번호가 이미 정해져 있어요.');
+    limit('admin-setup', 10);
+    const pw = String(body.password || '');
+    if (pw.length < 8 || pw.length > 100) fail(400, '관리자 비밀번호는 8자 이상으로 정해 주세요.');
+    const hashed = await sec.hash(pw);
+    if (!canSetupAdmin()) fail(403, '관리자 비밀번호가 이미 정해져 있어요.');
+    db.run('INSERT INTO app_meta (key, value) VALUES (?, ?)', ['admin_hash', hashed]);
+    const token = await newSession('admin', 0, null, 1);
+    return { body: { ok: true }, token };
+  });
   route('POST', '/api/admin/login', null, async ({ body }) => {
-    if (!adminEnabled()) fail(403, '전체 관리자는 서버 판에서 쓸 수 있어요. 서버에 ADMIN_PASSWORD를 정해 주세요.');
+    if (!adminEnabled()) fail(403, canSetupAdmin() ? '먼저 관리자 비밀번호를 정해 주세요.' : '전체 관리자는 수업용 서버판에서 쓸 수 있어요.');
     limit('admin-login', 10);
     if (!(await checkAdmin(body.password))) fail(401, '관리자 비밀번호가 맞지 않아요.');
     clearLimit('admin-login');

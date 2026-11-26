@@ -3,7 +3,7 @@
 // 선생님이 [설정]에서 주제·링크를 고칠 수 있어요(누리집 주소는 바뀔 수 있음).
 // 관광지 입장객 수는 공공데이터포털 「경상남도_주요관광지점 입장객 현황」(2017~2022년) 파일의 진주시 자료예요.
 
-import { TOUR_DATA, TOUR_YEARS, TOUR_SOURCE } from './tourdata.js?v=mwulaa5m';
+import { TOUR_DATA, TOUR_YEARS, TOUR_SOURCE } from './tourdata.js?v=mwx01ng7';
 
 export const DEFAULT_LIFE_REGION = '진주시';
 
