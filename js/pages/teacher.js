@@ -1,18 +1,18 @@
 // 교사 관리실 — 학생 화면과 같은 고서 배경 장면(왼쪽 판 6개 = 메뉴, 펼친 책 두 쪽 = 내용)
-import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwx3fqvm';
-import { api, isDemo } from '../api.js?v=mwx3fqvm';
-import { S } from '../store.js?v=mwx3fqvm';
-import { logout } from '../main.js?v=mwx3fqvm';
-import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwx3fqvm';
-import { renderStatic } from '../graph.js?v=mwx3fqvm';
-import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwx3fqvm';
-import { Book } from '../book.js?v=mwx3fqvm';
-import { PageTurner } from '../pageturn.js?v=mwx3fqvm';
-import { surveyForm } from './survey.js?v=mwx3fqvm';
-import { SCALE_LABELS } from '../../shared/survey.js?v=mwx3fqvm';
-import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwx3fqvm';
-import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwx3fqvm';
-import { OFFICES } from '../../shared/neis.js?v=mwx3fqvm';
+import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwx3mel6';
+import { api, isDemo } from '../api.js?v=mwx3mel6';
+import { S } from '../store.js?v=mwx3mel6';
+import { logout } from '../main.js?v=mwx3mel6';
+import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwx3mel6';
+import { renderStatic } from '../graph.js?v=mwx3mel6';
+import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwx3mel6';
+import { Book } from '../book.js?v=mwx3mel6';
+import { PageTurner } from '../pageturn.js?v=mwx3mel6';
+import { surveyForm } from './survey.js?v=mwx3mel6';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwx3mel6';
+import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwx3mel6';
+import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwx3mel6';
+import { OFFICES } from '../../shared/neis.js?v=mwx3mel6';
 
 const SECTIONS = [
   { key: 'class', label: '학급·명단', icon: 'home', subs: [['roster', '학생 명단'], ['qr', '학급 정보·QR']] },

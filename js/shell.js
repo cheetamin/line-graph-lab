@@ -1,5 +1,5 @@
 // 공통 머리띠(참고 화면: 매화·산수·정자 + 제목판)와 책상 소품
-import { h, A } from './ui.js?v=mwx3fqvm';
+import { h, A } from './ui.js?v=mwx3mel6';
 
 const D = (n) => `assets/art/${n}.webp`;
 

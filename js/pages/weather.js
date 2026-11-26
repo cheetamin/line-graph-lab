@@ -1,9 +1,9 @@
 // 제1장 기상자료 탐험실 (교과서 118~121쪽): 포털 조사 → 표 → 직접 그래프
-import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx3fqvm';
-import { api } from '../api.js?v=mwx3fqvm';
-import { S, saveState } from '../store.js?v=mwx3fqvm';
-import { graphSpread, celebrate } from './graphwork.js?v=mwx3fqvm';
-import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, DECADE_HEAT, isDecadeMode, yearLabel } from '../../shared/weather-sources.js?v=mwx3fqvm';
+import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx3mel6';
+import { api } from '../api.js?v=mwx3mel6';
+import { S, saveState } from '../store.js?v=mwx3mel6';
+import { graphSpread, celebrate } from './graphwork.js?v=mwx3mel6';
+import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, DECADE_HEAT, isDecadeMode, yearLabel } from '../../shared/weather-sources.js?v=mwx3mel6';
 
 function W() { return S.data.state.weather || { years: ['', '', '', '', ''], values: ['', '', '', '', ''] }; }
 
@@ -43,6 +43,7 @@ function guideSpread(app, w, done) {
       h('div', { class: 'page-head' }, icon('weather', 'ico'), h('div', null, h('div', { class: 'kicker' }, '1차 활동 · 꼭 먼저 하는 탐험'), h('h2', null, '기상자료 탐험실'))),
       h('div', { class: 'divider' }),
       h('p', null, '100년 전과 비교하면 우리나라 여름은 얼마나 더워졌을까요? 기상청 보고서에서 10년 단위(연대별) ', h('b', null, '폭염일수'), '를 직접 찾아 조사해 봐요.'),
+      decadeTable(isDecadeMode(w) ? w : {}),
       h('div', { class: 'def-box' }, h('b', null, '폭염일수 '), '하루 중 가장 높은 기온이 33 ℃ 이상인 날의 수예요.'),
       h('h3', { style: { marginTop: '16px' } }, '탐험 순서'),
       h('ol', { class: 'steps-list' },
