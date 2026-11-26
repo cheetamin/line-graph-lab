@@ -1,9 +1,9 @@
 // 그래프 그리기 공용 펼침(기상자료·조사 주제 모두 사용): 왼쪽 단계 안내, 오른쪽 모눈종이
-import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwx01ng7';
-import { api } from '../api.js?v=mwx01ng7';
-import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwx01ng7';
-import { GraphEditor } from '../graph.js?v=mwx01ng7';
-import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwx01ng7';
+import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwx2tiv2';
+import { api } from '../api.js?v=mwx2tiv2';
+import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwx2tiv2';
+import { GraphEditor } from '../graph.js?v=mwx2tiv2';
+import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwx2tiv2';
 
 const UNITS = ['월', '년', '일', '회', '권', '편', '개', '시간', '원', '명', '만 명', '곳'];
 const STATUS = { draft: ['그리는 중', 'warn'], submitted: ['제출함 · 선생님 확인 중', 'ok'], approved: ['승인됨 · 전시 중', 'green'], rejected: ['다시 그려 보세요', 'red'] };
@@ -27,7 +27,10 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
 
   let editor; let stepEls = {}; let statusEl; let submitBtn; let checkBox; let answerToggle;
 
+  let lastSaved = JSON.stringify(W); // 바뀐 것이 없으면 저장하지 않아요
   const save = debounce(async () => {
+    const snap = JSON.stringify(W);
+    if (snap === lastSaved) { setSave('저장됨 ✓'); return; }
     setSave('저장 중…');
     backup(BK, { data: W, savedAt: Date.now() });
     try {
@@ -36,13 +39,14 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       const i = S.data.works.findIndex(match);
       if (i >= 0) S.data.works[i] = r.work; else S.data.works.push(r.work);
       clearBackup(BK);
+      lastSaved = snap;
       setSave('저장됨 ✓');
       updateMarks();
     } catch (e) {
       setSave('저장 실패 · 기기에 보관', true);
       toast(e.message, 'bad');
     }
-  }, 900);
+  }, 2500); // 2.5초 동안 모았다가 한 번에 저장
 
   function change(patch, opts = {}) {
     if (lockedForever) return;

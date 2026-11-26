@@ -1,8 +1,9 @@
 // 제1장 기상자료 탐험실 (교과서 118~121쪽): 포털 조사 → 표 → 직접 그래프
-import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx01ng7';
-import { api } from '../api.js?v=mwx01ng7';
-import { S, saveState } from '../store.js?v=mwx01ng7';
-import { graphSpread, celebrate } from './graphwork.js?v=mwx01ng7';
+import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx2tiv2';
+import { api } from '../api.js?v=mwx2tiv2';
+import { S, saveState } from '../store.js?v=mwx2tiv2';
+import { graphSpread, celebrate } from './graphwork.js?v=mwx2tiv2';
+import { ARTICLE_SOURCES, ARTICLE_SOURCE_NAME } from '../../shared/weather-sources.js?v=mwx2tiv2';
 
 function W() { return S.data.state.weather || { years: ['', '', '', '', ''], values: ['', '', '', '', ''] }; }
 
@@ -15,7 +16,7 @@ export function spreads(app) {
       kind: 'weather',
       labels: w.years.map((y) => `${y}년`), values: w.values.map(Number), unit: '일', xUnit: '년',
       heading: { kicker: '기상자료 탐험실 ③', title: '폭염일수 꺾은선그래프' },
-      intro: `${w.region || ''} 지역의 연도별 폭염일수를 꺾은선그래프로 나타내요.`,
+      intro: `${w.region === '전국' ? '전국의' : `${w.region || ''} 지역의`} 연도별 폭염일수를 꺾은선그래프로 나타내요.`,
       onSubmitted: async () => {
         await app.reload(false);
         await celebrate('기상자료 탐험실 완료!', '폭염일수 그래프를 완성했어요. 이제 2차 「나의 주제 꺾은선그래프」와 3차 「우리 고장 꺾은선그래프」의 봉인이 풀렸어요.');
@@ -32,7 +33,7 @@ export function spreads(app) {
 }
 
 let pending = {};
-const flushWeather = debounce(() => { const p = pending; pending = {}; saveState({ weather: p }).catch((e) => toast(e.message, 'bad')); }, 700);
+const flushWeather = debounce(() => { const p = pending; pending = {}; saveState({ weather: p }).catch((e) => toast(e.message, 'bad')); }, 2000);
 const saveWeather = (patch) => { pending = { ...pending, ...patch }; flushWeather(); };
 
 function guideSpread(app, w, done) {
@@ -41,12 +42,12 @@ function guideSpread(app, w, done) {
     left: (el) => el.append(
       h('div', { class: 'page-head' }, icon('weather', 'ico'), h('div', null, h('div', { class: 'kicker' }, '1차 활동 · 꼭 먼저 하는 탐험'), h('h2', null, '기상자료 탐험실'))),
       h('div', { class: 'divider' }),
-      h('p', null, '우리 고장의 여름은 해마다 얼마나 더웠을까요? 기상청 자료를 직접 찾아 연도별 ', h('b', null, '폭염일수'), '를 조사해 봐요.'),
+      h('p', null, '우리나라의 여름은 해마다 얼마나 더웠을까요? 기상청 보도자료와 신문 기사에서 연도별 ', h('b', null, '폭염일수'), '를 직접 찾아 조사해 봐요.'),
       h('div', { class: 'def-box' }, h('b', null, '폭염일수 '), '하루 중 가장 높은 기온이 33 ℃ 이상인 날의 수예요.'),
       h('h3', { style: { marginTop: '16px' } }, '탐험 순서'),
       h('ol', { class: 'steps-list' },
-        h('li', null, h('span', null, '조사할 지역을 정해요.')),
-        h('li', null, h('span', null, '기상자료개방포털에서 연도별 폭염일수를 찾아요.')),
+        h('li', null, h('span', null, '조사할 지역과 연속된 5년을 정해요. (추천: 전국, 2022~2026년)')),
+        h('li', null, h('span', null, '오른쪽 기사·보도자료를 열어 연도별 폭염일수를 찾아요.')),
         h('li', null, h('span', null, '찾은 자료를 표로 정리해요.')),
         h('li', null, h('span', null, '가로축·세로축과 눈금 한 칸의 크기를 정해 꺾은선그래프를 그려요.')),
         h('li', null, h('span', null, '그래프를 보고 알 수 있는 내용을 써요.'))),
@@ -54,23 +55,36 @@ function guideSpread(app, w, done) {
       done ? h('div', { class: 'note green', style: { marginTop: '10px' } }, '✔ 이 탐험을 이미 완료했어요.') : null),
     right: (el) => {
       const s = S.data.cls.settings;
-      const region = h('input', { type: 'text', maxlength: 40, value: w.region || '', placeholder: '예: 서울, 부산, 대전', disabled: done, onInput: (e) => saveWeather({ region: e.target.value }) });
+      const region = h('input', { type: 'text', maxlength: 40, value: w.region || '', placeholder: '예: 전국', disabled: done, onInput: (e) => saveWeather({ region: e.target.value }) });
       const station = h('input', { type: 'text', maxlength: 40, value: w.station || '', placeholder: '지점 이름(선택)', disabled: done, onInput: (e) => saveWeather({ station: e.target.value }) });
-      const source = h('input', { type: 'text', maxlength: 80, value: w.source || '기상청 기상자료개방포털', disabled: done, onInput: (e) => saveWeather({ source: e.target.value }) });
+      const source = h('input', { type: 'text', maxlength: 80, value: w.source || ARTICLE_SOURCE_NAME, disabled: done, onInput: (e) => saveWeather({ source: e.target.value }) });
       const thisYear = new Date().getFullYear();
       const startSel = h('select', { disabled: done, onChange: async (e) => {
         const y0 = Number(e.target.value); if (!y0) return;
         const years = [0, 1, 2, 3, 4].map((k) => y0 + k);
         try { await saveState({ weather: { years, values: W().values?.length === 5 ? W().values : ['', '', '', '', ''] } }); toast(`${years[0]}년부터 ${years[4]}년까지 5년을 조사해요.`, 'ok'); } catch (ex) { toast(ex.message, 'bad'); }
       } }, h('option', { value: '' }, '시작 연도 고르기'), Array.from({ length: thisYear - 1973 - 3 }, (_, i) => thisYear - 4 - i).map((y) => h('option', { value: y, selected: w.years?.[0] === y ? true : undefined }, `${y}년 ~ ${y + 4}년`)));
-      if (!w.source && !done) saveWeather({ source: '기상청 기상자료개방포털' });
+      if (!w.source && !done) saveWeather({ source: ARTICLE_SOURCE_NAME });
+      const useArticles = async () => {
+        try {
+          await saveState({ weather: { region: '전국', source: ARTICLE_SOURCE_NAME, years: [2022, 2023, 2024, 2025, 2026], values: W().values?.length === 5 ? W().values : ['', '', '', '', ''] } });
+          toast('전국, 2022~2026년으로 정했어요. 기사에서 폭염일수를 찾아 표에 적어요.', 'ok');
+          app.go('weather', 0);
+        } catch (ex) { toast(ex.message, 'bad'); }
+      };
       el.append(
-        h('div', { class: 'center' }, h('h2', { class: 'plaque green' }, '기상자료개방포털 탐험')),
+        h('div', { class: 'center' }, h('h2', { class: 'plaque green' }, '기사·보도자료 탐험')),
         h('div', { class: 'panel stack' },
-          h('a', { class: 'btn gold', href: s.kmaUrl, target: '_blank', rel: 'noopener', onClick: () => saveWeather({ visited: true }) }, '기상자료개방포털 열기 ↗'),
-          h('p', { class: 'small muted center' }, '새 창(탭)에서 열려요. 자료를 찾은 뒤 이 탭으로 돌아와 적어요.'),
-          h('div', { class: 'path-chips', 'aria-label': '메뉴 경로' }, h('span', null, '기후통계분석'), h('i', null, '›'), h('span', null, '기상현상일수'), h('i', null, '›'), h('span', null, '폭염일수')),
-          h('div', { class: 'small', style: { whiteSpace: 'pre-line' } }, s.kmaGuide)),
+          h('div', { class: 'note gold small' }, h('b', null, '알림 '), '기상자료개방포털의 폭염일수 자료가 잠시 내려가 있어요. 대신 아래 기상청 보도자료와 신문 기사에서 ', h('b', null, '전국 여름철(6~8월) 폭염일수'), '를 찾아요.'),
+          done ? null : btn('전국 · 2022~2026년으로 바로 정하기', useArticles, { variant: 'green small' }),
+          h('ol', { class: 'src-list' }, ARTICLE_SOURCES.map((a) => h('li', null,
+            h('a', { href: a.url, target: '_blank', rel: 'noopener', onClick: () => saveWeather({ visited: true }) }, `${a.title} ↗`),
+            h('div', { class: 'small muted' }, a.date),
+            h('div', { class: 'small' }, '🔍 ', a.find)))),
+          h('p', { class: 'small muted' }, '새 창(탭)에서 열려요. 숫자를 찾은 뒤 이 탭으로 돌아와 다음 쪽 표에 적어요. 소수(예: 10.6일)는 그대로 적거나 반올림해 자연수로 적어도 돼요.'),
+          h('details', { class: 'small' }, h('summary', null, '기상자료개방포털로 찾기 (자료가 다시 열리면)'),
+            h('a', { href: s.kmaUrl, target: '_blank', rel: 'noopener' }, '기상자료개방포털 열기 ↗'),
+            h('div', { style: { whiteSpace: 'pre-line', marginTop: '6px' } }, s.kmaGuide))),
         h('div', { class: 'stack', style: { marginTop: '12px' } },
           h('label', { class: 'field' }, h('span', null, '조사할 지역'), region),
           h('label', { class: 'field' }, h('span', null, '관측 지점(선택)'), station),
@@ -87,20 +101,20 @@ function tableSpread(app, w, done) {
     left: (el) => el.append(
       h('div', { class: 'page-head' }, icon('table', 'ico'), h('div', null, h('div', { class: 'kicker' }, '기상자료 탐험실 ②'), h('h2', null, '조사한 자료를 표로'))),
       h('div', { class: 'divider' }),
-      h('p', null, '포털에서 찾은 연도별 폭염일수를 오른쪽 표에 옮겨 적어요.'),
+      h('p', null, '기사·보도자료에서 찾은 연도별 폭염일수를 오른쪽 표에 옮겨 적어요.'),
       h('ul', null,
         h('li', null, '연도는 왼쪽부터 차례대로(작은 연도부터) 적어요.'),
-        h('li', null, '폭염일수는 날수이므로 0 또는 자연수예요.'),
-        h('li', null, '모르는 값을 지어내지 않아요. 포털에 나온 수를 그대로 적어요.')),
+        h('li', null, '전국 평균이라 10.6일처럼 소수가 나올 수 있어요. 그대로 적거나 반올림해 자연수로 적어요.'),
+        h('li', null, '모르는 값을 지어내지 않아요. 기사에 나온 수를 그대로 적어요.')),
       h('div', { class: 'note gold' }, h('b', null, '생각해 보기 '), '꺾은선그래프로 나타내면 표보다 무엇을 더 쉽게 알 수 있을까요?'),
-      h('p', { class: 'small muted', style: { marginTop: '10px' } }, '지역: ', w.region || '(앞쪽에서 적어 주세요)', ' · 출처: ', w.source || '기상청 기상자료개방포털')),
+      h('p', { class: 'small muted', style: { marginTop: '10px' } }, '지역: ', w.region || '(앞쪽에서 적어 주세요)', ' · 출처: ', w.source || ARTICLE_SOURCE_NAME)),
     right: (el) => {
       const years = (w.years?.length === 5 ? w.years : ['', '', '', '', '']).slice();
       const vals = (w.values?.length === 5 ? w.values : ['', '', '', '', '']).slice();
       const msg = h('div', { role: 'status' });
-      const push = debounce(() => saveState({ weather: { years: years.map((y) => (y === '' ? '' : Number(y))), values: vals.map((v) => (v === '' ? '' : Number(v))) } }).catch((e) => toast(e.message, 'bad')), 600);
+      const push = debounce(() => saveState({ weather: { years: years.map((y) => (y === '' ? '' : Number(y))), values: vals.map((v) => (v === '' ? '' : Number(v))) } }).catch((e) => toast(e.message, 'bad')), 2000);
       const yIn = years.map((y, i) => h('input', { type: 'number', inputmode: 'numeric', 'aria-label': `${i + 1}번째 연도`, value: y, disabled: done, onInput: (e) => { years[i] = e.target.value; push(); } }));
-      const vIn = vals.map((v, i) => h('input', { type: 'number', inputmode: 'numeric', min: 0, max: 366, 'aria-label': `${i + 1}번째 폭염일수`, value: v, disabled: done, onInput: (e) => { vals[i] = e.target.value; push(); } }));
+      const vIn = vals.map((v, i) => h('input', { type: 'number', inputmode: 'decimal', step: 'any', min: 0, max: 366, 'aria-label': `${i + 1}번째 폭염일수`, value: v, disabled: done, onInput: (e) => { vals[i] = e.target.value; push(); } }));
       el.append(
         h('div', { class: 'center' }, h('h2', { class: 'plaque' }, `${w.region || '우리 지역'}의 연도별 폭염일수`)),
         h('div', { class: 'table-frame' }, h('table', { class: 'data htable' },

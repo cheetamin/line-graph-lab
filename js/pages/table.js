@@ -1,8 +1,8 @@
 // 제3장 자료표 만들기: 우리 반 응답을 보고 학생이 직접 표를 완성
-import { h, icon, btn, toast, fmt, debounce } from '../ui.js?v=mwx01ng7';
-import { api } from '../api.js?v=mwx01ng7';
-import { S, saveState } from '../store.js?v=mwx01ng7';
-import { topicById } from '../../shared/topics.js?v=mwx01ng7';
+import { h, icon, btn, toast, fmt, debounce } from '../ui.js?v=mwx2tiv2';
+import { api } from '../api.js?v=mwx2tiv2';
+import { S, saveState } from '../store.js?v=mwx2tiv2';
+import { topicById } from '../../shared/topics.js?v=mwx2tiv2';
 
 export function spreads(app) {
   const d = S.data; const s = d.cls.settings;
@@ -39,7 +39,7 @@ export function spreads(app) {
       h('p', { class: 'small muted', style: { marginTop: '8px' } }, '‘기억나지 않음’은 0으로 세지 않고 빼고 계산해요.'));
   };
 
-  const persist = debounce(() => saveState({ tableDraft: { topicId: t.id, values: vals } }).catch(() => {}), 800);
+  const persist = debounce(() => saveState({ tableDraft: { topicId: t.id, values: vals } }).catch(() => {}), 2000);
 
   return [{
     folio: ['우리 반 자료', '자료표'],

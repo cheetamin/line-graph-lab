@@ -2,11 +2,11 @@
 // - 모든 권한 검증과 학급 격리는 이 파일에서 수행합니다.
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
-import { SCHEMA } from './schema.js?v=mwx01ng7';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwx01ng7';
-import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwx01ng7';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwx01ng7';
-import { computeStats, round1 } from '../shared/stats.js?v=mwx01ng7';
+import { SCHEMA } from './schema.js?v=mwx2tiv2';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwx2tiv2';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwx2tiv2';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwx2tiv2';
+import { computeStats, round1 } from '../shared/stats.js?v=mwx2tiv2';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY = 86400000;
@@ -159,6 +159,9 @@ export function createApi({ db, sec, options = {} }) {
     return parse(r?.state);
   }
   function putState(studentId, classId, state) {
+    // 내용이 그대로면 쓰지 않아요(무료 플랜 '자료 쓰기' 한도 아끼기)
+    const cur = db.get('SELECT state FROM student_state WHERE student_id = ?', [studentId]);
+    if (cur && cur.state === JSON.stringify(state)) return;
     db.run(`INSERT INTO student_state(student_id, class_id, state, updated_at) VALUES (?,?,?,?)
       ON CONFLICT(student_id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at`,
     [studentId, classId, JSON.stringify(state), now()]);
@@ -779,7 +782,8 @@ export function createApi({ db, sec, options = {} }) {
       if (new Set(years).size !== 5) issues.push('같은 연도가 두 번 적혀 있어요.');
       for (let i = 1; i < 5; i++) if (years[i] <= years[i - 1]) { issues.push('연도는 왼쪽부터 차례대로(작은 연도부터) 적어 주세요.'); break; }
     }
-    if (values.length !== 5 || values.some((v) => v === '' || !Number.isInteger(Number(v)))) issues.push('폭염일수 5개를 모두 자연수(또는 0)로 적어 주세요.');
+    if (values.length !== 5 || values.some((v) => v === '' || !Number.isFinite(Number(v)))) issues.push('폭염일수 5개를 모두 적어 주세요.');
+    else if (values.some((v) => Math.abs(Math.round(Number(v) * 10) - Number(v) * 10) > 1e-6)) issues.push('폭염일수는 소수 첫째 자리까지만 적어요. (예: 10.6) 반올림해 자연수로 적어도 돼요.');
     else if (values.some((v) => v < 0 || v > 366)) issues.push('폭염일수는 0일부터 366일 사이여야 해요. 다시 확인해 보세요.');
     if (issues.length) return { body: { ok: false, issues } };
     state.weather.tableChecked = true;
@@ -903,7 +907,9 @@ export function createApi({ db, sec, options = {} }) {
       if (kind === 'weather' && state.weatherDone) fail(409, '기상자료 탐험을 이미 완료했어요.');
       status = 'draft';
     }
-    if (existing) {
+    if (existing && existing.data === JSON.stringify(data) && existing.status === status && (existing.topic_id ?? null) === (target.topicId ?? null)) {
+      // 바뀐 것이 없으면 쓰지 않아요
+    } else if (existing) {
       db.run('UPDATE works SET data = ?, status = ?, topic_id = ?, updated_at = ? WHERE id = ?', [JSON.stringify(data), status, target.topicId, now(), existing.id]);
     } else {
       db.run('INSERT INTO works(class_id, student_id, kind, topic_id, data, status, updated_at) VALUES (?,?,?,?,?,?,?)',

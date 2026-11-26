@@ -1306,3 +1306,6 @@ body.graph-big-open { overflow: hidden; }
 .tool-btn.big-btn svg { color: #2f6b4f; }
 .tool-btn.big-btn:not(:hover) { animation: bigPulse 2.4s ease-in-out 1s 3; }
 @keyframes bigPulse { 0%, 100% { filter: none; } 50% { filter: drop-shadow(0 0 6px rgba(47, 107, 79, .7)); } }
+/* 1차: 기사·보도자료 출처 목록 */
+.src-list { margin: 4px 0; padding-left: 1.3em; display: grid; gap: 8px; }
+.src-list a { font-weight: 700; color: #7a2d1f; }

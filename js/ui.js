@@ -80,9 +80,17 @@ export function modal({ title, body, actions = [{ label: '닫기', value: null }
 }
 export const confirmBox = (title, text, okLabel = '네') => modal({ title, body: text, actions: [{ label: '아니요', value: false, variant: 'green' }, { label: okLabel, value: true }] });
 
+// 잠깐 모았다가 한 번에 실행. 창을 닫거나 다른 탭으로 가면 남은 것을 바로 실행해요(저장이 빠지지 않게).
+const PENDING = new Set();
+function flushPending() { for (const d of [...PENDING]) d.flush(); }
+if (typeof window !== 'undefined') {
+  addEventListener('pagehide', flushPending);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushPending(); });
+}
 export function debounce(fn, ms) {
-  let t; const d = (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
-  d.flush = (...a) => { clearTimeout(t); return fn(...a); };
+  let t; let last = [];
+  const d = (...a) => { last = a; clearTimeout(t); PENDING.add(d); t = setTimeout(() => { PENDING.delete(d); fn(...a); }, ms); };
+  d.flush = (...a) => { clearTimeout(t); PENDING.delete(d); return fn(...(a.length ? a : last)); };
   return d;
 }
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
