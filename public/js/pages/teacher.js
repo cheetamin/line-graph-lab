@@ -259,7 +259,7 @@ async function studentDetail(id) {
   await modal({
     wide: true, title: `${r.student.number}번 ${r.student.name}`,
     body: h('div', { class: 'stack' },
-      h('div', null, h('b', null, '기상자료: '), w.region ? `${w.region} / ${(w.years || []).map((y, i) => `${y}년 ${w.values?.[i] ?? ''}일`).join(', ')}` : '아직 없음', ` · 출처: ${w.source || '-'}`),
+      h('div', null, h('b', null, '기상자료: '), w.region ? `${w.region} / ${(w.years || []).map((y, i) => `${y}${w.unit === 'decade' ? '년대' : '년'} ${w.values?.[i] ?? ''}일`).join(', ')}` : '아직 없음', ` · 출처: ${w.source || '-'}`),
       h('div', { class: 'row' },
         toggle('기상자료 단계 예외 허용(다음 장 열어 주기)', r.student.weatherOverride, async (v) => { await api('PUT', `/api/teacher/students/${id}`, { weatherOverride: v }); toast('바꾸었어요.', 'ok'); }),
         btn('기상자료 다시 하게 하기', async () => { if (await confirmBox('기상자료 다시 하기', '이 학생의 기상자료 완료를 취소하고 다시 고칠 수 있게 할까요?')) { await api('PUT', `/api/teacher/students/${id}`, { resetWeather: true }); toast('다시 할 수 있게 했어요.', 'ok'); } }, { variant: 'small green' })),

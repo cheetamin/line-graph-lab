@@ -119,7 +119,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       dataTable.replaceChildren(
         h('table', { class: 'data compact' },
           h('caption', { class: 'small muted' }, u ? '그래프로 옮길 자료 (어림값)' : '내가 완성한 표 (그래프로 옮길 자료)'),
-          h('tr', null, h('th', null, xUnit === '년' ? '연도' : '월'), labels.map((l) => h('th', null, l))),
+          h('tr', null, h('th', null, xUnit === '년' ? '연도' : xUnit === '년대' ? '연대' : '월'), labels.map((l) => h('th', null, l))),
           u ? h('tr', { class: 'approx-row' }, h('th', null, `어림값(${unit})`), values.map((v) => {
             const a = approxValue(v, maxValue);
             return h('td', null, a === null ? '—' : h('b', null, `약 ${koNum(a)}`));
