@@ -132,8 +132,8 @@ function tableSpread(app, w, done) {
       el.append(
         h('div', { class: 'center' }, h('h2', { class: 'plaque' }, `${w.region || '우리 지역'}의 ${isDecadeMode(w) ? '연대별' : '연도별'} ${metricOf(w).name}`)),
         h('div', { class: 'table-frame' }, h('table', { class: 'data htable' },
-          h('tr', null, h('th', null, isDecadeMode(w) ? '연대 (년대)' : '연도 (년)'), yIn.map((x) => h('td', null, x))),
-          h('tr', null, h('th', null, `${metricOf(w).name} (일)`), vIn.map((x) => h('td', null, x))))),
+          h('tr', null, h('th', null, isDecadeMode(w) ? '연대' : '연도', h('br'), h('span', { class: 'th-unit' }, isDecadeMode(w) ? '(년대)' : '(년)')), yIn.map((x) => h('td', null, x))),
+          h('tr', null, h('th', null, metricOf(w).name, h('br'), h('span', { class: 'th-unit' }, '(일)')), vIn.map((x) => h('td', null, x))))),
         h('div', { class: 'row', style: { marginTop: '12px', justifyContent: 'center' } },
           done ? h('span', { class: 'badge ok' }, '완료한 표예요') : btn('표 확인하기', async () => {
             await push.flush();
