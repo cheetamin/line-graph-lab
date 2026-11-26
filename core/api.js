@@ -782,7 +782,8 @@ export function createApi({ db, sec, options = {} }) {
       if (new Set(years).size !== 5) issues.push('같은 연도가 두 번 적혀 있어요.');
       for (let i = 1; i < 5; i++) if (years[i] <= years[i - 1]) { issues.push('연도는 왼쪽부터 차례대로(작은 연도부터) 적어 주세요.'); break; }
     }
-    if (values.length !== 5 || values.some((v) => v === '' || !Number.isInteger(Number(v)))) issues.push('폭염일수 5개를 모두 자연수(또는 0)로 적어 주세요.');
+    if (values.length !== 5 || values.some((v) => v === '' || !Number.isFinite(Number(v)))) issues.push('폭염일수 5개를 모두 적어 주세요.');
+    else if (values.some((v) => Math.abs(Math.round(Number(v) * 10) - Number(v) * 10) > 1e-6)) issues.push('폭염일수는 소수 첫째 자리까지만 적어요. (예: 10.6) 반올림해 자연수로 적어도 돼요.');
     else if (values.some((v) => v < 0 || v > 366)) issues.push('폭염일수는 0일부터 366일 사이여야 해요. 다시 확인해 보세요.');
     if (issues.length) return { body: { ok: false, issues } };
     state.weather.tableChecked = true;
