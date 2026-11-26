@@ -248,7 +248,7 @@ function adminForm(back) {
   wrap.append(loginForm());
   api('GET', '/api/admin/status').then((r) => {
     if (r.canSetup) wrap.replaceChildren(setupForm());
-    else if (!r.enabled) wrap.replaceChildren(demoNote());
+    else if (!r.enabled && isDemo()) wrap.replaceChildren(demoNote());
   }).catch(() => {});
   return wrap;
 }

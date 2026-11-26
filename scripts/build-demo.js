@@ -30,6 +30,8 @@ if (!PAGES) {
   fs.rmSync(path.join(out, 'css', 'fonts.css'), { force: true });
 } else if (!SERVER) fs.writeFileSync(path.join(out, '.nojekyll'), '');
 if (SERVER) {
+  // 배포 번호: Worker와 자료 저장소가 같은 코드인지 확인하는 데 써요
+  fs.writeFileSync(path.join(root, 'server', 'build-id.js'), `// 배포할 때마다 새로 적혀요\nexport const BUILD = '${Date.now().toString(36)}';\n`);
   // Cloudflare 정적 파일 머리글: 보안 + 코드 파일은 매번 확인, 그림은 일주일 보관
   fs.writeFileSync(path.join(out, '_headers'), [
     '/*',

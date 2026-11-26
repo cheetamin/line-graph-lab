@@ -5,6 +5,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { createApi } from '../core/api.js';
 import { neisSearch } from '../public/shared/neis.js';
+import { BUILD } from './build-id.js'; // 배포할 때마다 새로 정해지는 번호
 
 const COOKIE = 'kgl_session';
 const enc = new TextEncoder();
@@ -35,6 +36,7 @@ function splitSql(text) {
   return text.split(/;\s*(?:\r?\n|$)/).map((x) => x.replace(/^\s*--.*$/gm, '').trim()).filter((x) => x && !/^PRAGMA\b/i.test(x));
 }
 
+
 export class LabStore extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -63,7 +65,11 @@ export class LabStore extends DurableObject {
     ctx.blockConcurrencyWhile(async () => { this.api.init(); });
   }
 
-  async handle(req) {
+  async handle(req, build) {
+    // 앞쪽(Worker)과 배포 번호가 다르면 = 이 저장소가 옛 코드로 돌고 있음 → 스스로 다시 시작해 새 코드를 받아요
+    if (build && build !== BUILD) {
+      this.ctx.abort('새 코드로 다시 시작');
+    }
     return this.api.handle(req);
   }
 }
@@ -94,8 +100,14 @@ export default {
       if (text.length > 512 * 1024) return new Response('', { status: 413 });
       try { body = text ? JSON.parse(text) : {}; } catch { body = {}; }
     }
-    const store = env.LAB.get(env.LAB.idFromName('main'));
-    const out = await store.handle({ method: request.method, path: url.pathname, query: Object.fromEntries(url.searchParams), body, token: getCookie(request, COOKIE) });
+    const req = { method: request.method, path: url.pathname, query: Object.fromEntries(url.searchParams), body, token: getCookie(request, COOKIE) };
+    let out;
+    try {
+      out = await env.LAB.get(env.LAB.idFromName('main')).handle(req, BUILD);
+    } catch (e) {
+      // 저장소가 새 코드로 다시 시작하는 중이면 한 번 더 보내요
+      out = await env.LAB.get(env.LAB.idFromName('main')).handle(req, BUILD);
+    }
 
     const headers = new Headers(JSON_HEADERS);
     const attr = 'Path=/; HttpOnly; SameSite=Lax; Secure';
