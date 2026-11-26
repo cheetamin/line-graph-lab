@@ -1,9 +1,9 @@
 // 제1장 기상자료 탐험실 (교과서 118~121쪽): 포털 조사 → 표 → 직접 그래프
-import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx2tiv2';
-import { api } from '../api.js?v=mwx2tiv2';
-import { S, saveState } from '../store.js?v=mwx2tiv2';
-import { graphSpread, celebrate } from './graphwork.js?v=mwx2tiv2';
-import { ARTICLE_SOURCES, ARTICLE_SOURCE_NAME } from '../../shared/weather-sources.js?v=mwx2tiv2';
+import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx36j6u';
+import { api } from '../api.js?v=mwx36j6u';
+import { S, saveState } from '../store.js?v=mwx36j6u';
+import { graphSpread, celebrate } from './graphwork.js?v=mwx36j6u';
+import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, isDecadeMode, yearLabel } from '../../shared/weather-sources.js?v=mwx36j6u';
 
 function W() { return S.data.state.weather || { years: ['', '', '', '', ''], values: ['', '', '', '', ''] }; }
 
@@ -14,9 +14,9 @@ export function spreads(app) {
   if (w.tableChecked) {
     list.push(graphSpread(app, {
       kind: 'weather',
-      labels: w.years.map((y) => `${y}년`), values: w.values.map(Number), unit: '일', xUnit: '년',
+      labels: w.years.map((y) => yearLabel(w, y)), values: w.values.map(Number), unit: '일', xUnit: isDecadeMode(w) ? '년대' : '년',
       heading: { kicker: '기상자료 탐험실 ③', title: '폭염일수 꺾은선그래프' },
-      intro: `${w.region === '전국' ? '전국의' : `${w.region || ''} 지역의`} 연도별 폭염일수를 꺾은선그래프로 나타내요.`,
+      intro: `${w.region === '전국' ? '전국의' : `${w.region || ''} 지역의`} ${isDecadeMode(w) ? '연대별' : '연도별'} 폭염일수를 꺾은선그래프로 나타내요.`,
       onSubmitted: async () => {
         await app.reload(false);
         await celebrate('기상자료 탐험실 완료!', '폭염일수 그래프를 완성했어요. 이제 2차 「나의 주제 꺾은선그래프」와 3차 「우리 고장 꺾은선그래프」의 봉인이 풀렸어요.');
@@ -42,53 +42,51 @@ function guideSpread(app, w, done) {
     left: (el) => el.append(
       h('div', { class: 'page-head' }, icon('weather', 'ico'), h('div', null, h('div', { class: 'kicker' }, '1차 활동 · 꼭 먼저 하는 탐험'), h('h2', null, '기상자료 탐험실'))),
       h('div', { class: 'divider' }),
-      h('p', null, '우리나라의 여름은 해마다 얼마나 더웠을까요? 기상청 보도자료와 신문 기사에서 연도별 ', h('b', null, '폭염일수'), '를 직접 찾아 조사해 봐요.'),
+      h('p', null, '100년 전과 비교하면 우리나라 여름은 얼마나 더워졌을까요? 기상청 보고서에서 10년 단위(연대별) ', h('b', null, '폭염일수'), '를 직접 찾아 조사해 봐요.'),
       h('div', { class: 'def-box' }, h('b', null, '폭염일수 '), '하루 중 가장 높은 기온이 33 ℃ 이상인 날의 수예요.'),
       h('h3', { style: { marginTop: '16px' } }, '탐험 순서'),
       h('ol', { class: 'steps-list' },
-        h('li', null, h('span', null, '조사할 지역과 연속된 5년을 정해요. (추천: 전국, 2022~2026년)')),
-        h('li', null, h('span', null, '오른쪽 기사·보도자료를 열어 연도별 폭염일수를 찾아요.')),
+        h('li', null, h('span', null, '조사할 연속된 5개 연대를 정해요. (추천: 1980년대~2020년대)')),
+        h('li', null, h('span', null, '오른쪽 기상청 보고서의 【표 2】에서 연대별 폭염일수를 찾아요.')),
         h('li', null, h('span', null, '찾은 자료를 표로 정리해요.')),
         h('li', null, h('span', null, '가로축·세로축과 눈금 한 칸의 크기를 정해 꺾은선그래프를 그려요.')),
         h('li', null, h('span', null, '그래프를 보고 알 수 있는 내용을 써요.'))),
-      h('div', { class: 'note gold', style: { marginTop: '14px' } }, h('b', null, '생각해 보기 '), '모둠 친구들이 서로 다른 지역을 조사하면, 지역마다 폭염일수의 변화가 어떻게 다른지 비교할 수 있어요.'),
+      h('div', { class: 'def-box', style: { marginTop: '10px' } }, h('b', null, '연대 '), '10년을 한 묶음으로 부르는 말이에요. 1980년대는 1980년부터 1989년까지예요. 표의 값은 그 10년 동안의 한 해 평균 폭염일수예요.'),
+      h('div', { class: 'note gold', style: { marginTop: '14px' } }, h('b', null, '생각해 보기 '), '친구마다 다른 연대를 골라 그리면, 옛날과 요즘의 폭염일수 변화가 어떻게 보이는지 비교할 수 있어요.'),
       done ? h('div', { class: 'note green', style: { marginTop: '10px' } }, '✔ 이 탐험을 이미 완료했어요.') : null),
     right: (el) => {
       const s = S.data.cls.settings;
-      const region = h('input', { type: 'text', maxlength: 40, value: w.region || '', placeholder: '예: 전국', disabled: done, onInput: (e) => saveWeather({ region: e.target.value }) });
-      const station = h('input', { type: 'text', maxlength: 40, value: w.station || '', placeholder: '지점 이름(선택)', disabled: done, onInput: (e) => saveWeather({ station: e.target.value }) });
+      const dec = isDecadeMode(w);
       const source = h('input', { type: 'text', maxlength: 80, value: w.source || ARTICLE_SOURCE_NAME, disabled: done, onInput: (e) => saveWeather({ source: e.target.value }) });
-      const thisYear = new Date().getFullYear();
-      const startSel = h('select', { disabled: done, onChange: async (e) => {
-        const y0 = Number(e.target.value); if (!y0) return;
-        const years = [0, 1, 2, 3, 4].map((k) => y0 + k);
-        try { await saveState({ weather: { years, values: W().values?.length === 5 ? W().values : ['', '', '', '', ''] } }); toast(`${years[0]}년부터 ${years[4]}년까지 5년을 조사해요.`, 'ok'); } catch (ex) { toast(ex.message, 'bad'); }
-      } }, h('option', { value: '' }, '시작 연도 고르기'), Array.from({ length: thisYear - 1973 - 3 }, (_, i) => thisYear - 4 - i).map((y) => h('option', { value: y, selected: w.years?.[0] === y ? true : undefined }, `${y}년 ~ ${y + 4}년`)));
-      if (!w.source && !done) saveWeather({ source: ARTICLE_SOURCE_NAME });
-      const useArticles = async () => {
+      const setDecades = async (d0, msg) => {
+        const years = [0, 1, 2, 3, 4].map((k) => d0 + k * 10);
         try {
-          await saveState({ weather: { region: '전국', source: ARTICLE_SOURCE_NAME, years: [2022, 2023, 2024, 2025, 2026], values: W().values?.length === 5 ? W().values : ['', '', '', '', ''] } });
-          toast('전국, 2022~2026년으로 정했어요. 기사에서 폭염일수를 찾아 표에 적어요.', 'ok');
+          await saveState({ weather: { unit: 'decade', region: '전국', source: w.source || ARTICLE_SOURCE_NAME, years, values: dec && W().values?.length === 5 ? W().values : ['', '', '', '', ''] } });
+          toast(msg || `${years[0]}년대부터 ${years[4]}년대까지 조사해요.`, 'ok');
           app.go('weather', 0);
         } catch (ex) { toast(ex.message, 'bad'); }
       };
+      const startSel = h('select', { disabled: done, onChange: (e) => { const d0 = Number(e.target.value); if (d0) setDecades(d0); } },
+        h('option', { value: '' }, '시작 연대 고르기'),
+        DECADES.slice(0, DECADES.length - 4).reverse().map((d) => h('option', { value: d, selected: dec && w.years?.[0] === d ? true : undefined }, `${d}년대 ~ ${d + 40}년대`)));
+      // 처음 시작하는 학생은 연대별로(이미 연도별로 적은 학생은 그대로)
+      const empty = !(w.years || []).some((y) => y !== '' && y !== null && y !== undefined);
+      if (!done && !w.unit && empty) saveWeather({ unit: 'decade', region: w.region || '전국', source: w.source || ARTICLE_SOURCE_NAME });
+      else if (!w.source && !done) saveWeather({ source: ARTICLE_SOURCE_NAME });
       el.append(
-        h('div', { class: 'center' }, h('h2', { class: 'plaque green' }, '기사·보도자료 탐험')),
+        h('div', { class: 'center' }, h('h2', { class: 'plaque green' }, '기상청 보고서 탐험')),
         h('div', { class: 'panel stack' },
-          h('div', { class: 'note gold small' }, h('b', null, '알림 '), '기상자료개방포털의 폭염일수 자료가 잠시 내려가 있어요. 대신 아래 기상청 보도자료와 신문 기사에서 ', h('b', null, '전국 여름철(6~8월) 폭염일수'), '를 찾아요.'),
-          done ? null : btn('전국 · 2022~2026년으로 바로 정하기', useArticles, { variant: 'green small' }),
-          h('ol', { class: 'src-list' }, ARTICLE_SOURCES.map((a) => h('li', null,
-            h('a', { href: a.url, target: '_blank', rel: 'noopener', onClick: () => saveWeather({ visited: true }) }, `${a.title} ↗`),
-            h('div', { class: 'small muted' }, a.date),
-            h('div', { class: 'small' }, '🔍 ', a.find)))),
-          h('p', { class: 'small muted' }, '새 창(탭)에서 열려요. 숫자를 찾은 뒤 이 탭으로 돌아와 다음 쪽 표에 적어요. 소수(예: 10.6일)는 그대로 적거나 반올림해 자연수로 적어도 돼요.'),
+          h('div', { class: 'note gold small' }, h('b', null, '알림 '), '기상자료개방포털의 폭염일수 자료가 잠시 내려가 있어요. 대신 기상청이 펴낸 보고서의 ', h('b', null, '【표 2】 연대별 폭염일수'), '에서 찾아요.'),
+          h('a', { class: 'btn gold', href: DECADE_SOURCE.url, target: '_blank', rel: 'noopener', onClick: () => saveWeather({ visited: true }) }, '기상청 보고서 열기 ↗'),
+          h('div', { class: 'small' }, h('b', null, DECADE_SOURCE.title), ` (${DECADE_SOURCE.date})`),
+          h('div', { class: 'path-chips', 'aria-label': '찾는 곳' }, h('span', null, '아래쪽 [붙임 1]'), h('i', null, '›'), h('span', null, '【표 2】'), h('i', null, '›'), h('span', null, '폭염일수(일) 줄')),
+          h('p', { class: 'small muted' }, '새 창(탭)에서 열려요. Ctrl+F(휴대폰은 「페이지에서 찾기」)로 「표 2」를 찾으면 빨라요. 숫자를 찾은 뒤 이 탭으로 돌아와 다음 쪽 표에 적어요.'),
           h('details', { class: 'small' }, h('summary', null, '기상자료개방포털로 찾기 (자료가 다시 열리면)'),
             h('a', { href: s.kmaUrl, target: '_blank', rel: 'noopener' }, '기상자료개방포털 열기 ↗'),
             h('div', { style: { whiteSpace: 'pre-line', marginTop: '6px' } }, s.kmaGuide))),
         h('div', { class: 'stack', style: { marginTop: '12px' } },
-          h('label', { class: 'field' }, h('span', null, '조사할 지역'), region),
-          h('label', { class: 'field' }, h('span', null, '관측 지점(선택)'), station),
-          h('label', { class: 'field' }, h('span', null, '조사 기간(연속된 5년)'), startSel),
+          done ? null : btn('추천: 1980년대 ~ 2020년대로 바로 정하기', () => setDecades(1980, '1980년대~2020년대로 정했어요. 보고서 【표 2】에서 폭염일수를 찾아 표에 적어요.'), { variant: 'green small' }),
+          h('label', { class: 'field' }, h('span', null, '조사할 연대(연속된 5개)'), startSel),
           h('label', { class: 'field' }, h('span', null, '자료 출처'), source),
           btn('표 만들기로 넘기기 ›', () => app.go('weather', 1, 'next'), { variant: '' })));
     },
@@ -101,11 +99,11 @@ function tableSpread(app, w, done) {
     left: (el) => el.append(
       h('div', { class: 'page-head' }, icon('table', 'ico'), h('div', null, h('div', { class: 'kicker' }, '기상자료 탐험실 ②'), h('h2', null, '조사한 자료를 표로'))),
       h('div', { class: 'divider' }),
-      h('p', null, '기사·보도자료에서 찾은 연도별 폭염일수를 오른쪽 표에 옮겨 적어요.'),
+      h('p', null, isDecadeMode(w) ? '보고서 【표 2】에서 찾은 연대별 폭염일수를 오른쪽 표에 옮겨 적어요.' : '찾은 연도별 폭염일수를 오른쪽 표에 옮겨 적어요.'),
       h('ul', null,
-        h('li', null, '연도는 왼쪽부터 차례대로(작은 연도부터) 적어요.'),
-        h('li', null, '전국 평균이라 10.6일처럼 소수가 나올 수 있어요. 그대로 적거나 반올림해 자연수로 적어요.'),
-        h('li', null, '모르는 값을 지어내지 않아요. 기사에 나온 수를 그대로 적어요.')),
+        h('li', null, isDecadeMode(w) ? '연대는 1980, 1990, 2000처럼 왼쪽부터 10년씩 차례대로 적어요.' : '연도는 왼쪽부터 차례대로(작은 연도부터) 적어요.'),
+        h('li', null, '10년 동안의 평균이라 7.9일처럼 소수가 나와요. 소수 첫째 자리까지 그대로 적어요.'),
+        h('li', null, '모르는 값을 지어내지 않아요. 보고서에 나온 수를 그대로 적어요.')),
       h('div', { class: 'note gold' }, h('b', null, '생각해 보기 '), '꺾은선그래프로 나타내면 표보다 무엇을 더 쉽게 알 수 있을까요?'),
       h('p', { class: 'small muted', style: { marginTop: '10px' } }, '지역: ', w.region || '(앞쪽에서 적어 주세요)', ' · 출처: ', w.source || ARTICLE_SOURCE_NAME)),
     right: (el) => {
@@ -113,12 +111,12 @@ function tableSpread(app, w, done) {
       const vals = (w.values?.length === 5 ? w.values : ['', '', '', '', '']).slice();
       const msg = h('div', { role: 'status' });
       const push = debounce(() => saveState({ weather: { years: years.map((y) => (y === '' ? '' : Number(y))), values: vals.map((v) => (v === '' ? '' : Number(v))) } }).catch((e) => toast(e.message, 'bad')), 2000);
-      const yIn = years.map((y, i) => h('input', { type: 'number', inputmode: 'numeric', 'aria-label': `${i + 1}번째 연도`, value: y, disabled: done, onInput: (e) => { years[i] = e.target.value; push(); } }));
+      const yIn = years.map((y, i) => h('input', { type: 'number', inputmode: 'numeric', 'aria-label': `${i + 1}번째 ${isDecadeMode(w) ? '연대' : '연도'}`, value: y, disabled: done, onInput: (e) => { years[i] = e.target.value; push(); } }));
       const vIn = vals.map((v, i) => h('input', { type: 'number', inputmode: 'decimal', step: 'any', min: 0, max: 366, 'aria-label': `${i + 1}번째 폭염일수`, value: v, disabled: done, onInput: (e) => { vals[i] = e.target.value; push(); } }));
       el.append(
-        h('div', { class: 'center' }, h('h2', { class: 'plaque' }, `${w.region || '우리 지역'}의 연도별 폭염일수`)),
+        h('div', { class: 'center' }, h('h2', { class: 'plaque' }, `${w.region || '우리 지역'}의 ${isDecadeMode(w) ? '연대별' : '연도별'} 폭염일수`)),
         h('div', { class: 'table-frame' }, h('table', { class: 'data htable' },
-          h('tr', null, h('th', null, '연도 (년)'), yIn.map((x) => h('td', null, x))),
+          h('tr', null, h('th', null, isDecadeMode(w) ? '연대 (년대)' : '연도 (년)'), yIn.map((x) => h('td', null, x))),
           h('tr', null, h('th', null, '폭염일수 (일)'), vIn.map((x) => h('td', null, x))))),
         h('div', { class: 'row', style: { marginTop: '12px', justifyContent: 'center' } },
           done ? h('span', { class: 'badge ok' }, '완료한 표예요') : btn('표 확인하기', async () => {

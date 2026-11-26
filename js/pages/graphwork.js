@@ -1,9 +1,9 @@
 // 그래프 그리기 공용 펼침(기상자료·조사 주제 모두 사용): 왼쪽 단계 안내, 오른쪽 모눈종이
-import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwx2tiv2';
-import { api } from '../api.js?v=mwx2tiv2';
-import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwx2tiv2';
-import { GraphEditor } from '../graph.js?v=mwx2tiv2';
-import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwx2tiv2';
+import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwx36j6u';
+import { api } from '../api.js?v=mwx36j6u';
+import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwx36j6u';
+import { GraphEditor } from '../graph.js?v=mwx36j6u';
+import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwx36j6u';
 
 const UNITS = ['월', '년', '일', '회', '권', '편', '개', '시간', '원', '명', '만 명', '곳'];
 const STATUS = { draft: ['그리는 중', 'warn'], submitted: ['제출함 · 선생님 확인 중', 'ok'], approved: ['승인됨 · 전시 중', 'green'], rejected: ['다시 그려 보세요', 'red'] };
@@ -119,7 +119,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       dataTable.replaceChildren(
         h('table', { class: 'data compact' },
           h('caption', { class: 'small muted' }, u ? '그래프로 옮길 자료 (어림값)' : '내가 완성한 표 (그래프로 옮길 자료)'),
-          h('tr', null, h('th', null, xUnit === '년' ? '연도' : '월'), labels.map((l) => h('th', null, l))),
+          h('tr', null, h('th', null, xUnit === '년' ? '연도' : xUnit === '년대' ? '연대' : '월'), labels.map((l) => h('th', null, l))),
           u ? h('tr', { class: 'approx-row' }, h('th', null, `어림값(${unit})`), values.map((v) => {
             const a = approxValue(v, maxValue);
             return h('td', null, a === null ? '—' : h('b', null, `약 ${koNum(a)}`));

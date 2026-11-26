@@ -1,18 +1,18 @@
 // 교사 관리실 — 학생 화면과 같은 고서 배경 장면(왼쪽 판 6개 = 메뉴, 펼친 책 두 쪽 = 내용)
-import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwx2tiv2';
-import { api, isDemo } from '../api.js?v=mwx2tiv2';
-import { S } from '../store.js?v=mwx2tiv2';
-import { logout } from '../main.js?v=mwx2tiv2';
-import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwx2tiv2';
-import { renderStatic } from '../graph.js?v=mwx2tiv2';
-import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwx2tiv2';
-import { Book } from '../book.js?v=mwx2tiv2';
-import { PageTurner } from '../pageturn.js?v=mwx2tiv2';
-import { surveyForm } from './survey.js?v=mwx2tiv2';
-import { SCALE_LABELS } from '../../shared/survey.js?v=mwx2tiv2';
-import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwx2tiv2';
-import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwx2tiv2';
-import { OFFICES } from '../../shared/neis.js?v=mwx2tiv2';
+import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwx36j6u';
+import { api, isDemo } from '../api.js?v=mwx36j6u';
+import { S } from '../store.js?v=mwx36j6u';
+import { logout } from '../main.js?v=mwx36j6u';
+import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwx36j6u';
+import { renderStatic } from '../graph.js?v=mwx36j6u';
+import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwx36j6u';
+import { Book } from '../book.js?v=mwx36j6u';
+import { PageTurner } from '../pageturn.js?v=mwx36j6u';
+import { surveyForm } from './survey.js?v=mwx36j6u';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwx36j6u';
+import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwx36j6u';
+import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwx36j6u';
+import { OFFICES } from '../../shared/neis.js?v=mwx36j6u';
 
 const SECTIONS = [
   { key: 'class', label: '학급·명단', icon: 'home', subs: [['roster', '학생 명단'], ['qr', '학급 정보·QR']] },
@@ -259,7 +259,7 @@ async function studentDetail(id) {
   await modal({
     wide: true, title: `${r.student.number}번 ${r.student.name}`,
     body: h('div', { class: 'stack' },
-      h('div', null, h('b', null, '기상자료: '), w.region ? `${w.region} / ${(w.years || []).map((y, i) => `${y}년 ${w.values?.[i] ?? ''}일`).join(', ')}` : '아직 없음', ` · 출처: ${w.source || '-'}`),
+      h('div', null, h('b', null, '기상자료: '), w.region ? `${w.region} / ${(w.years || []).map((y, i) => `${y}${w.unit === 'decade' ? '년대' : '년'} ${w.values?.[i] ?? ''}일`).join(', ')}` : '아직 없음', ` · 출처: ${w.source || '-'}`),
       h('div', { class: 'row' },
         toggle('기상자료 단계 예외 허용(다음 장 열어 주기)', r.student.weatherOverride, async (v) => { await api('PUT', `/api/teacher/students/${id}`, { weatherOverride: v }); toast('바꾸었어요.', 'ok'); }),
         btn('기상자료 다시 하게 하기', async () => { if (await confirmBox('기상자료 다시 하기', '이 학생의 기상자료 완료를 취소하고 다시 고칠 수 있게 할까요?')) { await api('PUT', `/api/teacher/students/${id}`, { resetWeather: true }); toast('다시 할 수 있게 했어요.', 'ok'); } }, { variant: 'small green' })),

@@ -1,10 +1,10 @@
 // 첫 화면(고서 표지)과 입장(로그인)
-import { h, A, icon, btn, toast, reducedMotion } from '../ui.js?v=mwx2tiv2';
-import { api, isDemo } from '../api.js?v=mwx2tiv2';
-import { Book } from '../book.js?v=mwx2tiv2';
-import { makeHeader, deskProps, scene } from '../shell.js?v=mwx2tiv2';
-import { iconSrc } from '../ui.js?v=mwx2tiv2';
-import { boot } from '../main.js?v=mwx2tiv2';
+import { h, A, icon, btn, toast, reducedMotion } from '../ui.js?v=mwx36j6u';
+import { api, isDemo } from '../api.js?v=mwx36j6u';
+import { Book } from '../book.js?v=mwx36j6u';
+import { makeHeader, deskProps, scene } from '../shell.js?v=mwx36j6u';
+import { iconSrc } from '../ui.js?v=mwx36j6u';
+import { boot } from '../main.js?v=mwx36j6u';
 
 const ss = { get: (k) => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch { /* */ } }, del: (k) => { try { sessionStorage.removeItem(k); } catch { /* */ } } };
 

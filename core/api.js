@@ -2,11 +2,11 @@
 // - 모든 권한 검증과 학급 격리는 이 파일에서 수행합니다.
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
-import { SCHEMA } from './schema.js?v=mwx2tiv2';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwx2tiv2';
-import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwx2tiv2';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwx2tiv2';
-import { computeStats, round1 } from '../shared/stats.js?v=mwx2tiv2';
+import { SCHEMA } from './schema.js?v=mwx36j6u';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwx36j6u';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwx36j6u';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwx36j6u';
+import { computeStats, round1 } from '../shared/stats.js?v=mwx36j6u';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY = 86400000;
@@ -277,7 +277,8 @@ export function createApi({ db, sec, options = {} }) {
     if (kind === 'weather') {
       const w = state.weather || {};
       if (!w.tableChecked) fail(400, '기상자료 표를 먼저 완성해 주세요.');
-      return { labels: w.years.map((y) => `${y}년`), values: w.values.map(Number), xUnit: '년', yUnit: '일', topicId: null };
+      const dec = w.unit === 'decade';
+      return { labels: w.years.map((y) => `${y}${dec ? '년대' : '년'}`), values: w.values.map(Number), xUnit: dec ? '년대' : '년', yUnit: '일', topicId: null };
     }
     if (kind === 'life') {
       const L = state.life || {};
@@ -670,8 +671,9 @@ export function createApi({ db, sec, options = {} }) {
         station: p.weather.station !== undefined ? str(p.weather.station, 40) : w.station,
         source: p.weather.source !== undefined ? str(p.weather.source, 80) : w.source,
         visited: p.weather.visited !== undefined ? !!p.weather.visited : w.visited,
+        unit: p.weather.unit !== undefined ? (p.weather.unit === 'decade' ? 'decade' : 'year') : w.unit,
         years, values,
-        tableChecked: changed ? false : !!w.tableChecked,
+        tableChecked: (changed || (p.weather.unit !== undefined && p.weather.unit !== w.unit)) ? false : !!w.tableChecked,
       };
     }
     if (p.life && typeof p.life === 'object') {
@@ -772,12 +774,17 @@ export function createApi({ db, sec, options = {} }) {
     const state = getState(ctx.student.id);
     const w = state.weather || {};
     const issues = [];
+    if (!w.region && w.unit === 'decade') { w.region = '전국'; }
     if (!w.region) issues.push('조사한 지역을 적어 주세요.');
     if (!w.source) issues.push('자료 출처를 적어 주세요.');
     const years = w.years || []; const values = w.values || [];
     const thisYear = new Date().getFullYear();
-    if (years.length !== 5 || years.some((y) => !Number.isInteger(y))) issues.push('연도 5개를 모두 적어 주세요.');
-    else {
+    const dec = w.unit === 'decade';
+    if (years.length !== 5 || years.some((y) => !Number.isInteger(y))) issues.push(dec ? '연대 5개를 모두 적어 주세요.' : '연도 5개를 모두 적어 주세요.');
+    else if (dec) {
+      if (years.some((y) => y % 10 !== 0 || y < 1910 || y > thisYear)) issues.push('연대는 1910, 1920, … 2020처럼 10년 단위로 적어 주세요.');
+      for (let i = 1; i < 5; i++) if (years[i] - years[i - 1] !== 10) { issues.push('연대는 왼쪽부터 10년씩 차례대로 적어 주세요. (예: 1980, 1990, 2000, 2010, 2020)'); break; }
+    } else {
       if (years.some((y) => y < 1973 || y > thisYear)) issues.push(`연도는 1973년부터 ${thisYear}년 사이로 적어 주세요.`);
       if (new Set(years).size !== 5) issues.push('같은 연도가 두 번 적혀 있어요.');
       for (let i = 1; i < 5; i++) if (years[i] <= years[i - 1]) { issues.push('연도는 왼쪽부터 차례대로(작은 연도부터) 적어 주세요.'); break; }
