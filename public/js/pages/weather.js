@@ -3,7 +3,7 @@ import { sealImg, h, icon, btn, toast, debounce } from '../ui.js';
 import { api } from '../api.js';
 import { S, saveState } from '../store.js';
 import { graphSpread, celebrate } from './graphwork.js';
-import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, isDecadeMode, yearLabel } from '../../shared/weather-sources.js';
+import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, DECADE_HEAT, isDecadeMode, yearLabel } from '../../shared/weather-sources.js';
 
 function W() { return S.data.state.weather || { years: ['', '', '', '', ''], values: ['', '', '', '', ''] }; }
 
@@ -61,7 +61,7 @@ function guideSpread(app, w, done) {
       const setDecades = async (d0, msg) => {
         const years = [0, 1, 2, 3, 4].map((k) => d0 + k * 10);
         try {
-          await saveState({ weather: { unit: 'decade', region: '전국', source: w.source || ARTICLE_SOURCE_NAME, years, values: dec && W().values?.length === 5 ? W().values : ['', '', '', '', ''] } });
+          await saveState({ weather: { unit: 'decade', region: '전국', source: ARTICLE_SOURCE_NAME, years, values: dec && W().values?.length === 5 ? W().values : ['', '', '', '', ''] } });
           toast(msg || `${years[0]}년대부터 ${years[4]}년대까지 조사해요.`, 'ok');
           app.go('weather', 0);
         } catch (ex) { toast(ex.message, 'bad'); }
@@ -93,19 +93,31 @@ function guideSpread(app, w, done) {
   };
 }
 
+// 보고서 【표 2】의 폭염일수 줄을 그대로 보여 줘요(내가 고른 연대는 색칠). 6개씩 두 줄로 나눠 보여요.
+function decadeTable(w) {
+  const picked = new Set((w.years || []).map(Number));
+  const half = (list) => h('table', { class: 'data compact dec-table' },
+    h('tr', null, h('th', null, '연대'), list.map((d) => h('th', { class: picked.has(d) ? 'on' : '' }, `${d}년대`))),
+    h('tr', null, h('th', null, '폭염일수(일)'), list.map((d) => h('td', { class: picked.has(d) ? 'on' : '' }, DECADE_HEAT[d].toFixed(1)))));
+  return h('div', { class: 'pub-data' },
+    h('div', { class: 'small', style: { fontWeight: 700, marginBottom: '6px' } }, '【표 2】 연대별 폭염일수 (기상청 「우리나라 113년 기후변화 분석 보고서」)'),
+    half(DECADES.slice(0, 6)), h('div', { style: { height: '6px' } }), half(DECADES.slice(6)),
+    h('div', { class: 'small muted', style: { marginTop: '4px' } }, '색칠된 칸이 내가 고른 연대예요.'));
+}
+
 function tableSpread(app, w, done) {
   return {
     folio: ['119쪽 표', '표 만들기'],
     left: (el) => el.append(
       h('div', { class: 'page-head' }, icon('table', 'ico'), h('div', null, h('div', { class: 'kicker' }, '기상자료 탐험실 ②'), h('h2', null, '조사한 자료를 표로'))),
       h('div', { class: 'divider' }),
-      h('p', null, isDecadeMode(w) ? '보고서 【표 2】에서 찾은 연대별 폭염일수를 오른쪽 표에 옮겨 적어요.' : '찾은 연도별 폭염일수를 오른쪽 표에 옮겨 적어요.'),
-      h('ul', null,
+      h('p', null, isDecadeMode(w) ? '아래 보고서 【표 2】에서 내가 고른 연대(색칠된 칸)의 폭염일수를 찾아 오른쪽 표에 옮겨 적어요.' : '찾은 연도별 폭염일수를 오른쪽 표에 옮겨 적어요.'),
+      isDecadeMode(w) ? decadeTable(w) : null,
+      h('ul', { style: { marginTop: '10px' } },
         h('li', null, isDecadeMode(w) ? '연대는 1980, 1990, 2000처럼 왼쪽부터 10년씩 차례대로 적어요.' : '연도는 왼쪽부터 차례대로(작은 연도부터) 적어요.'),
-        h('li', null, '10년 동안의 평균이라 7.9일처럼 소수가 나와요. 소수 첫째 자리까지 그대로 적어요.'),
-        h('li', null, '모르는 값을 지어내지 않아요. 보고서에 나온 수를 그대로 적어요.')),
+        h('li', null, '10년 동안의 평균이라 7.9일처럼 소수가 나와요. 소수 첫째 자리까지 그대로 적어요.')),
       h('div', { class: 'note gold' }, h('b', null, '생각해 보기 '), '꺾은선그래프로 나타내면 표보다 무엇을 더 쉽게 알 수 있을까요?'),
-      h('p', { class: 'small muted', style: { marginTop: '10px' } }, '지역: ', w.region || '(앞쪽에서 적어 주세요)', ' · 출처: ', w.source || ARTICLE_SOURCE_NAME)),
+      h('p', { class: 'small muted', style: { marginTop: '10px' } }, '지역: ', w.region || '(앞쪽에서 적어 주세요)', ' · 출처: ', isDecadeMode(w) ? ARTICLE_SOURCE_NAME : (w.source || ARTICLE_SOURCE_NAME))),
     right: (el) => {
       const years = (w.years?.length === 5 ? w.years : ['', '', '', '', '']).slice();
       const vals = (w.values?.length === 5 ? w.values : ['', '', '', '', '']).slice();
