@@ -1,8 +1,8 @@
 // 제3장 자료표 만들기: 우리 반 응답을 보고 학생이 직접 표를 완성
-import { h, icon, btn, toast, fmt, debounce } from '../ui.js?v=mwx47cj1';
-import { api } from '../api.js?v=mwx47cj1';
-import { S, saveState } from '../store.js?v=mwx47cj1';
-import { topicById } from '../../shared/topics.js?v=mwx47cj1';
+import { h, icon, btn, toast, fmt, debounce } from '../ui.js?v=mwx4ch1e';
+import { api } from '../api.js?v=mwx4ch1e';
+import { S, saveState } from '../store.js?v=mwx4ch1e';
+import { topicById } from '../../shared/topics.js?v=mwx4ch1e';
 
 export function spreads(app) {
   const d = S.data; const s = d.cls.settings;

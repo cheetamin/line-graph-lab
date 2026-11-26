@@ -1,9 +1,9 @@
 // 제1장 기상자료 탐험실 (교과서 118~121쪽): 포털 조사 → 표 → 직접 그래프
-import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx47cj1';
-import { api } from '../api.js?v=mwx47cj1';
-import { S, saveState } from '../store.js?v=mwx47cj1';
-import { graphSpread, celebrate } from './graphwork.js?v=mwx47cj1';
-import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, METRICS, metricOf, isDecadeMode, yearLabel } from '../../shared/weather-sources.js?v=mwx47cj1';
+import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwx4ch1e';
+import { api } from '../api.js?v=mwx4ch1e';
+import { S, saveState } from '../store.js?v=mwx4ch1e';
+import { graphSpread, celebrate } from './graphwork.js?v=mwx4ch1e';
+import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, METRICS, metricOf, isDecadeMode, yearLabel } from '../../shared/weather-sources.js?v=mwx4ch1e';
 
 function W() { return S.data.state.weather || { years: ['', '', '', '', ''], values: ['', '', '', '', ''] }; }
 
@@ -88,9 +88,8 @@ function guideSpread(app, w, done) {
         h('div', { class: 'stack', style: { marginTop: '10px' } },
           h('div', { class: 'field' }, h('span', null, '조사할 기상 현상'),
             h('div', { class: 'row', role: 'radiogroup', style: { gap: '6px', flexWrap: 'wrap' } }, Object.entries(METRICS).map(([k, m]) => h('button', { type: 'button', class: `chip-btn ${(w.metric || 'heat') === k ? 'on' : ''}`, role: 'radio', 'aria-checked': String((w.metric || 'heat') === k), disabled: done, onClick: async () => {
-              try { await saveState({ weather: { metric: k, ...(dec ? {} : { unit: 'decade', region: '전국', source: ARTICLE_SOURCE_NAME, years: [1980, 1990, 2000, 2010, 2020], values: ['', '', '', '', ''] }) } }); toast(`${m.name}를 조사해요. 표에서 「${m.name}」 줄을 찾아요.`, 'ok'); app.go('weather', 0); } catch (ex) { toast(ex.message, 'bad'); }
+              try { await saveState({ weather: { metric: k, ...(dec ? {} : { unit: 'decade', region: '전국', source: ARTICLE_SOURCE_NAME, years: ['', '', '', '', ''], values: ['', '', '', '', ''] }) } }); toast(`${m.name}를 조사해요. 표에서 「${m.name}」 줄을 찾아요.`, 'ok'); app.go('weather', 0); } catch (ex) { toast(ex.message, 'bad'); }
             } }, m.name)))),
-          done ? null : btn('추천: 1980년대 ~ 2020년대로 바로 정하기', () => setDecades(1980, `1980년대~2020년대로 정했어요. 【표 2】에서 「${metricOf(w).name}」 줄을 찾아 표에 적어요.`), { variant: 'green small' }),
           h('label', { class: 'field' }, h('span', null, '조사할 연대(연속된 5개)'), startSel),
           h('label', { class: 'field' }, h('span', null, '자료 출처'), source),
           btn('표 만들기로 넘기기 ›', () => app.go('weather', 1, 'next'), { variant: '' })));
