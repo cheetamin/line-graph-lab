@@ -2,11 +2,11 @@
 // - 모든 권한 검증과 학급 격리는 이 파일에서 수행합니다.
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
-import { SCHEMA } from './schema.js?v=mwy8rmum';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwy8rmum';
-import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwy8rmum';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwy8rmum';
-import { computeStats, round1 } from '../shared/stats.js?v=mwy8rmum';
+import { SCHEMA } from './schema.js?v=mwy932gn';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwy932gn';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwy932gn';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwy932gn';
+import { computeStats, round1 } from '../shared/stats.js?v=mwy932gn';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY = 86400000;
@@ -787,7 +787,7 @@ export function createApi({ db, sec, options = {} }) {
               const tolV = mul === 1 ? 0.5 : 10000; // 만 명은 반올림·버림 어림 모두 인정
               if (Math.abs(Number(v) * mul - real) > tolV) wrong.push(`${y}년`);
             });
-            if (wrong.length) issues.push(`왼쪽 공공데이터 자료표의 수와 다른 칸이 있어요: ${wrong.join(', ')}. 자료표를 다시 보고 옮겨 적어 보세요.`);
+            if (wrong.length) L.dataNote = `공공데이터와 다른 칸: ${wrong.join(', ')}`; else delete L.dataNote;
           }
         }
       }
@@ -982,10 +982,16 @@ export function createApi({ db, sec, options = {} }) {
     const { state } = requireGate(ctx, kind === 'topic' ? 'graph' : kind);
     const key = kind === 'topic' ? tkind(researchOf(ctx.student, ctx.cls.settings, state)) : kind;
     const w = workRow(ctx.student.id, key);
-    const data = parse(w?.data);
-    if (!w || !data.checked) fail(400, '[확인하기]를 통과한 뒤에 제출할 수 있어요.');
+    if (!w) fail(400, '먼저 그래프를 그려 주세요.');
+    const data = parse(w.data);
     if (['submitted', 'approved'].includes(w.status)) return { body: { ok: true, work: publicWork(w) } };
-    db.run("UPDATE works SET status = 'submitted', feedback = '', submitted_at = ?, updated_at = ? WHERE id = ?", [now(), now(), w.id]);
+    if (!Object.keys(data.points || {}).length) fail(400, '모눈종이에 점을 찍은 뒤에 제출해요.');
+    // 확인하기를 통과하지 않아도 제출할 수 있어요. 최종 판단(전시 승인)은 선생님이 해요.
+    const target = workTarget(ctx, kind, state);
+    const issues = checkWork(data, target);
+    data.labels = target.labels; data.values = target.values;
+    data.autoIssues = issues.map((i) => i.msg).slice(0, 8);
+    db.run("UPDATE works SET status = 'submitted', data = ?, feedback = '', submitted_at = ?, updated_at = ? WHERE id = ?", [JSON.stringify(data), now(), now(), w.id]);
     if (kind === 'weather') {
       state.weatherDone = true;
       putState(ctx.student.id, ctx.cls.id, state);

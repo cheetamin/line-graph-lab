@@ -1,18 +1,18 @@
 // 교사 관리실 — 학생 화면과 같은 고서 배경 장면(왼쪽 판 6개 = 메뉴, 펼친 책 두 쪽 = 내용)
-import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwy8rmum';
-import { api, isDemo } from '../api.js?v=mwy8rmum';
-import { S } from '../store.js?v=mwy8rmum';
-import { logout } from '../main.js?v=mwy8rmum';
-import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwy8rmum';
-import { renderStatic } from '../graph.js?v=mwy8rmum';
-import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwy8rmum';
-import { Book } from '../book.js?v=mwy8rmum';
-import { PageTurner } from '../pageturn.js?v=mwy8rmum';
-import { surveyForm } from './survey.js?v=mwy8rmum';
-import { SCALE_LABELS } from '../../shared/survey.js?v=mwy8rmum';
-import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwy8rmum';
-import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwy8rmum';
-import { OFFICES } from '../../shared/neis.js?v=mwy8rmum';
+import { h, A, btn, toast, modal, confirmBox, fmt, iconSrc, sealImg } from '../ui.js?v=mwy932gn';
+import { api, isDemo } from '../api.js?v=mwy932gn';
+import { S } from '../store.js?v=mwy932gn';
+import { logout } from '../main.js?v=mwy932gn';
+import { TOPICS, CATEGORIES, topicById } from '../../shared/topics.js?v=mwy932gn';
+import { renderStatic } from '../graph.js?v=mwy932gn';
+import { makeHeader, scene, lanternImg, deskProps } from '../shell.js?v=mwy932gn';
+import { Book } from '../book.js?v=mwy932gn';
+import { PageTurner } from '../pageturn.js?v=mwy932gn';
+import { surveyForm } from './survey.js?v=mwy932gn';
+import { SCALE_LABELS } from '../../shared/survey.js?v=mwy932gn';
+import { buildLifeSources, normalizeRegion, hasTourData, regionFromAddress } from '../../shared/life.js?v=mwy932gn';
+import { qrSvg, joinUrl, getBase, setBase, defaultBase } from '../qr.js?v=mwy932gn';
+import { OFFICES } from '../../shared/neis.js?v=mwy932gn';
 
 const SECTIONS = [
   { key: 'class', label: '학급·명단', icon: 'home', subs: [['roster', '학생 명단'], ['qr', '학급 정보·QR']] },
@@ -535,6 +535,7 @@ async function worksView() {
         h('div', { class: 'graph-frame', style: { marginTop: '6px' } }, renderStatic(w.data, { showValues: true })),
         st ? h('div', { class: 'small', style: { marginTop: '6px' } }, `가장 큰 값 ${st.maxLabels.join(', ')} · 가장 작은 값 ${st.minLabels.join(', ')} · 변화가 가장 큰 시기 ${st.changeLabels.join(', ')}`) : null,
         h('div', { class: 'note green small', style: { marginTop: '6px' } }, w.data.interp?.sentence || '(해석 없음)'),
+        w.data.autoIssues?.length ? h('details', { class: 'small', style: { marginTop: '6px' } }, h('summary', null, `참고: 자동 점검에서 다른 점 ${w.data.autoIssues.length}개`), h('ul', { class: 'issue-list' }, w.data.autoIssues.map((t) => h('li', null, t)))) : (w.data.autoIssues ? h('div', { class: 'small muted', style: { marginTop: '6px' } }, '참고: 자동 점검에서 다른 점이 없어요.') : null),
         h('div', { style: { marginTop: '8px' } }, fb),
         h('div', { class: 'row', style: { marginTop: '8px' } },
           w.status !== 'approved' ? btn('승인(전시)', () => act('approve'), { variant: 'gold small' }) : btn('전시 내리기', () => act('unpublish'), { variant: 'small green' }),

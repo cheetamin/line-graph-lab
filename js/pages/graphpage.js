@@ -1,8 +1,8 @@
 // 제4장 꺾은선그래프 그리기 (연구 주제)
-import { S } from '../store.js?v=mwy8rmum';
-import { topicById } from '../../shared/topics.js?v=mwy8rmum';
-import { graphSpread, celebrate } from './graphwork.js?v=mwy8rmum';
-import { myDone } from './student.js?v=mwy8rmum';
+import { S } from '../store.js?v=mwy932gn';
+import { topicById } from '../../shared/topics.js?v=mwy932gn';
+import { graphSpread, celebrate } from './graphwork.js?v=mwy932gn';
+import { myDone } from './student.js?v=mwy932gn';
 
 export function spreads(app) {
   const d = S.data; const s = d.cls.settings;
@@ -18,7 +18,7 @@ export function spreads(app) {
     unit: t.unit, xUnit: '월',
     heading: { kicker: '2차 활동 ④ · 직접 그리기', title: t.name },
     intro: tb.auto ? `2장에서 제출한 내 기록으로 자료표를 자동으로 만들었어요.${tb.compact && tb.months.length < (s.monthTo - s.monthFrom + 1) ? ' ‘기억나지 않음’인 달은 뺐어요.' : ''} 표를 보고 모눈종이에 직접 꺾은선그래프를 그려요.` : '완성한 자료표를 보고 모눈종이에 직접 꺾은선그래프를 그려요.',
-    submitText: s.topicMode === 'own' ? `확인을 통과하면 제출해요. 꼭 ${s.minWorks}개를 내고, 시간이 남으면 다른 주제로 더 만들 수 있어요.` : null,
+    submitText: s.topicMode === 'own' ? `다 그렸으면 제출해요(선생님이 보고 전시해요). 꼭 ${s.minWorks}개를 내고, 시간이 남으면 다른 주제로 더 만들 수 있어요.` : null,
     onSubmitted: async () => {
       await app.reload(false);
       if (s.topicMode === 'own') {

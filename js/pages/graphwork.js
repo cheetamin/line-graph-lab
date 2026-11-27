@@ -1,9 +1,9 @@
 // 그래프 그리기 공용 펼침(기상자료·조사 주제 모두 사용): 왼쪽 단계 안내, 오른쪽 모눈종이
-import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwy8rmum';
-import { api } from '../api.js?v=mwy8rmum';
-import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwy8rmum';
-import { GraphEditor } from '../graph.js?v=mwy8rmum';
-import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwy8rmum';
+import { sealImg, h, btn, toast, modal, debounce, fmt, confirmBox } from '../ui.js?v=mwy932gn';
+import { api } from '../api.js?v=mwy932gn';
+import { S, setSave, backup, clearBackup, getBackup } from '../store.js?v=mwy932gn';
+import { GraphEditor } from '../graph.js?v=mwy932gn';
+import { SCALE_OPTIONS, MAJOR, MAX_CELLS, MIN_CELLS, cellsNeeded, approxUnit, approxValue, koNum, PLACE_NAME } from '../../shared/topics.js?v=mwy932gn';
 
 const UNITS = ['월', '년', '일', '회', '권', '편', '개', '시간', '원', '명', '만 명', '곳'];
 const STATUS = { draft: ['그리는 중', 'warn'], submitted: ['제출함 · 선생님 확인 중', 'ok'], approved: ['승인됨 · 전시 중', 'green'], rejected: ['다시 그려 보세요', 'red'] };
@@ -90,7 +90,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       const [t, c] = STATUS[status] || STATUS.draft;
       statusEl.replaceChildren(h('span', { class: `badge ${c}` }, t), status === 'rejected' && feedback ? h('span', { class: 'small' }, ` 선생님 말씀: ${feedback}`) : null);
     }
-    if (submitBtn) submitBtn.disabled = !W.checked || st.submit || lockedForever;
+    if (submitBtn) submitBtn.disabled = st.submit || lockedForever;
   }
 
   function step(key, n, title, ...body) {
@@ -180,10 +180,10 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
           h('label', { class: 'field' }, h('span', null, '변화가 가장 큰 시기 (선분이 가장 많이 기울어진 곳)'), pick('changeLabel', pairOpts, '고르기')),
           h('label', { class: 'field' }, h('span', null, '알게 된 내용과 그 까닭 (10자 이상)'), sentence)),
         step('check', 7, '확인하기',
-          h('p', { class: 'small' }, '제목, 축, 눈금, 점의 위치, 선분, 해석을 한꺼번에 확인해요. 틀린 곳은 알려 주지만 정답 수는 알려 주지 않아요.'),
+          h('p', { class: 'small' }, '(선택) 제목, 축, 눈금, 점의 위치, 선분, 해석을 스스로 점검해 봐요. 통과하지 않아도 제출할 수 있어요.'),
           h('div', { class: 'row' }, btn('중간 저장', () => save.flush(), { variant: 'green small' }), btn('확인하기', () => check(), { variant: 'small' })),
           checkBox),
-        step('submit', 8, '작품 제출하기', h('p', { class: 'small' }, kind === 'weather' ? '확인을 통과하면 제출할 수 있어요. 제출하면 기상자료 탐험실이 완료되고 다음 장이 열려요.' : (submitText || '확인을 통과하면 제출할 수 있어요. 선생님이 승인하면 작품 전시관에 걸려요.')), submitBtn)),
+        step('submit', 8, '작품 제출하기', h('p', { class: 'small' }, kind === 'weather' ? '다 그렸으면 제출해요. 제출하면 기상자료 탐험실이 완료되고 다음 장이 열려요. 선생님이 보고 전시해요.' : (submitText || '다 그렸으면 제출해요. 선생님이 보고 승인하면 작품 전시관에 걸려요.')), submitBtn)),
     );
     updateMarks();
   };
