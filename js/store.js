@@ -1,6 +1,6 @@
 // 학생 상태 보관소: 서버가 원본, 이 파일은 화면용 사본입니다.
-import { api } from './api.js?v=mwy932gn';
-import { debounce } from './ui.js?v=mwy932gn';
+import { api } from './api.js?v=mwy97aq6';
+import { debounce } from './ui.js?v=mwy97aq6';
 
 export const S = {
   me: null,        // /api/me 결과

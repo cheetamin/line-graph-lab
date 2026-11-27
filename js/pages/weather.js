@@ -1,9 +1,9 @@
 // 제1장 기상자료 탐험실 (교과서 118~121쪽): 포털 조사 → 표 → 직접 그래프
-import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwy932gn';
-import { api } from '../api.js?v=mwy932gn';
-import { S, saveState } from '../store.js?v=mwy932gn';
-import { graphSpread, celebrate } from './graphwork.js?v=mwy932gn';
-import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, METRICS, metricOf, isDecadeMode, yearLabel } from '../../shared/weather-sources.js?v=mwy932gn';
+import { sealImg, h, icon, btn, toast, debounce } from '../ui.js?v=mwy97aq6';
+import { api } from '../api.js?v=mwy97aq6';
+import { S, saveState } from '../store.js?v=mwy97aq6';
+import { graphSpread, celebrate } from './graphwork.js?v=mwy97aq6';
+import { DECADE_SOURCE, ARTICLE_SOURCE_NAME, DECADES, METRICS, metricOf, isDecadeMode, yearLabel } from '../../shared/weather-sources.js?v=mwy97aq6';
 
 function W() { return S.data.state.weather || { years: ['', '', '', '', ''], values: ['', '', '', '', ''] }; }
 

@@ -1,8 +1,8 @@
 // 제4장 꺾은선그래프 그리기 (연구 주제)
-import { S } from '../store.js?v=mwy932gn';
-import { topicById } from '../../shared/topics.js?v=mwy932gn';
-import { graphSpread, celebrate } from './graphwork.js?v=mwy932gn';
-import { myDone } from './student.js?v=mwy932gn';
+import { S } from '../store.js?v=mwy97aq6';
+import { topicById } from '../../shared/topics.js?v=mwy97aq6';
+import { graphSpread, celebrate } from './graphwork.js?v=mwy97aq6';
+import { myDone } from './student.js?v=mwy97aq6';
 
 export function spreads(app) {
   const d = S.data; const s = d.cls.settings;

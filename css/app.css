@@ -323,6 +323,7 @@ table.data.compact td, table.data.compact th { padding: 3px 6px; font-size: .95r
 .month-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 6px 8px; align-items: center; padding: 8px 10px; background: rgba(255, 250, 236, .78); border: 1.5px solid #c9ad80; border-radius: 8px; }
 .month-row.unknown { background: rgba(232, 225, 210, .8); }
 .month-row.bad { border-color: var(--bad); background: #fff0ec; }
+.month-row.filled { border-color: #4f8a5b; box-shadow: inset 4px 0 0 #4f8a5b; }
 .month-row .m { font-family: var(--f-title); font-size: 1.2rem; text-align: center; }
 .num-input { display: grid; grid-template-columns: 44px minmax(90px, 1fr) 44px; gap: 4px; align-items: center; max-width: 340px; }
 .num-input button { min-height: 44px; border: 1.5px solid #a88a62; background: #f6e7c3; border-radius: 6px; font-size: 1.3rem; cursor: pointer; }

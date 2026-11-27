@@ -1,18 +1,18 @@
 // 학생용 책: 상단 막대 + 장(章) 책갈피 + 책장 넘김 탐색
-import { sealImg, h, A, icon, toast, iconSrc } from '../ui.js?v=mwy932gn';
-import { Book } from '../book.js?v=mwy932gn';
-import { S, loadStudent, saveUi } from '../store.js?v=mwy932gn';
-import { logout } from '../main.js?v=mwy932gn';
-import { makeHeader, deskProps, lanternImg, scene } from '../shell.js?v=mwy932gn';
-import { PageTurner } from '../pageturn.js?v=mwy932gn';
-import * as home from './home.js?v=mwy932gn';
-import * as weather from './weather.js?v=mwy932gn';
-import * as topics from './topics.js?v=mwy932gn';
-import * as table from './table.js?v=mwy932gn';
-import * as graphCh from './graphpage.js?v=mwy932gn';
-import * as gallery from './gallery.js?v=mwy932gn';
-import * as life from './life.js?v=mwy932gn';
-import * as survey from './survey.js?v=mwy932gn';
+import { sealImg, h, A, icon, toast, iconSrc } from '../ui.js?v=mwy97aq6';
+import { Book } from '../book.js?v=mwy97aq6';
+import { S, loadStudent, saveUi } from '../store.js?v=mwy97aq6';
+import { logout } from '../main.js?v=mwy97aq6';
+import { makeHeader, deskProps, lanternImg, scene } from '../shell.js?v=mwy97aq6';
+import { PageTurner } from '../pageturn.js?v=mwy97aq6';
+import * as home from './home.js?v=mwy97aq6';
+import * as weather from './weather.js?v=mwy97aq6';
+import * as topics from './topics.js?v=mwy97aq6';
+import * as table from './table.js?v=mwy97aq6';
+import * as graphCh from './graphpage.js?v=mwy97aq6';
+import * as gallery from './gallery.js?v=mwy97aq6';
+import * as life from './life.js?v=mwy97aq6';
+import * as survey from './survey.js?v=mwy97aq6';
 
 export const CHAPTERS = [
   { key: 'home', label: '목차', icon: 'home', mod: home },

@@ -68,16 +68,6 @@ export function validateEntry(topic, month, value) {
   const v = Number(value);
   if (!Number.isFinite(v)) return '숫자만 적을 수 있어요.';
   if (v < 0) return '0보다 작은 수는 적을 수 없어요.';
-  const mx = monthMax(topic, month);
-  if (v > mx) {
-    return topic.kind === 'days'
-      ? `${month}월은 ${mx}일까지 있어요. ${mx}보다 큰 수는 적을 수 없어요.`
-      : `${mx.toLocaleString()}${topic.unit}보다 큰 수는 다시 확인해 주세요.`;
-  }
-  const step = topic.step || 1;
-  if (Math.abs(Math.round(v / step) * step - v) > 1e-9) {
-    return step === 0.5 ? '0.5 단위(30분)로 적어 주세요.' : step === 10 ? '10원 단위로 적어 주세요.' : '자연수(0, 1, 2 …)로 적어 주세요.';
-  }
   return null;
 }
 
