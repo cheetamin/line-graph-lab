@@ -1,11 +1,11 @@
 // 3차 활동: 꺾은선그래프를 생활에 활용해 볼까요? (교과서 122~123쪽, 수학익힘 78~79쪽)
 // 우리 고장(선생님이 정한 시·군) 자료를 누리집·뉴스에서 직접 찾아 → 표 → 꺾은선그래프 → 다음 해 예상하기
-import { sealImg, h, icon, btn, toast, debounce, fmt, confirmBox } from '../ui.js?v=mwy8mt3z';
-import { api } from '../api.js?v=mwy8mt3z';
-import { S, saveState } from '../store.js?v=mwy8mt3z';
-import { graphSpread, celebrate } from './graphwork.js?v=mwy8mt3z';
-import { renderStatic } from '../graph.js?v=mwy8mt3z';
-import { approxValue, koNum } from '../../shared/topics.js?v=mwy8mt3z';
+import { sealImg, h, icon, btn, toast, debounce, fmt, confirmBox } from '../ui.js?v=mwy8rmum';
+import { api } from '../api.js?v=mwy8rmum';
+import { S, saveState } from '../store.js?v=mwy8rmum';
+import { graphSpread, celebrate } from './graphwork.js?v=mwy8rmum';
+import { renderStatic } from '../graph.js?v=mwy8rmum';
+import { approxValue, koNum } from '../../shared/topics.js?v=mwy8rmum';
 
 const N = 8; // 표 칸 수(3~8개 사용)
 const L = () => S.data.state.life || {};

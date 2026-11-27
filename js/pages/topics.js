@@ -1,8 +1,8 @@
 // 제2장 주제 선택·투표 + 2026년 월별 경험 조사
-import { sealImg, h, icon, btn, toast, fmt, iconSrc } from '../ui.js?v=mwy8mt3z';
-import { api } from '../api.js?v=mwy8mt3z';
-import { S, saveState, backup, getBackup, clearBackup } from '../store.js?v=mwy8mt3z';
-import { TOPICS, CATEGORIES, topicById, monthMax, validateEntry, YEAR } from '../../shared/topics.js?v=mwy8mt3z';
+import { sealImg, h, icon, btn, toast, fmt, iconSrc } from '../ui.js?v=mwy8rmum';
+import { api } from '../api.js?v=mwy8rmum';
+import { S, saveState, backup, getBackup, clearBackup } from '../store.js?v=mwy8rmum';
+import { TOPICS, CATEGORIES, topicById, monthMax, validateEntry, YEAR } from '../../shared/topics.js?v=mwy8rmum';
 
 let selTopic = null; let cat = 'all'; let query = ''; let surveyTopic = null;
 
@@ -144,15 +144,27 @@ function surveySpread(app) {
       };
       input.addEventListener('input', () => { e.value = input.value; e.status = input.value === '' ? 'blank' : 'value'; validate(); keep(); });
       const bump = (dv) => { if (!canEdit || e.status === 'unknown') return; const v = Math.max(0, Math.min(mx, Math.round(((Number(input.value) || 0) + dv) * 100) / 100)); input.value = v; e.value = v; e.status = 'value'; validate(); keep(); };
-      const unkBtn = h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': String(e.status === 'unknown'), disabled: !canEdit, onClick: () => {
+      // 실제 기록 · 기억 추정 · 기억나지 않음은 셋 중 하나만 켜져요
+      const opts = h('div', { class: 'opts', role: 'radiogroup' });
+      const sync = () => {
+        const unk = e.status === 'unknown';
+        opts.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(unk ? b.dataset.src === 'unknown' : b.dataset.src === e.source)));
+        input.disabled = !canEdit || unk; row.classList.toggle('unknown', unk);
+      };
+      const unkBtn = h('button', { type: 'button', class: 'chip-btn', 'data-src': 'unknown', disabled: !canEdit, onClick: () => {
         e.status = e.status === 'unknown' ? (input.value === '' ? 'blank' : 'value') : 'unknown';
-        unkBtn.setAttribute('aria-pressed', String(e.status === 'unknown')); input.disabled = e.status === 'unknown'; row.classList.toggle('unknown', e.status === 'unknown'); validate(); keep();
+        sync(); validate(); keep();
       } }, '기억나지 않음');
-      const srcBtn = (val, label) => h('button', { type: 'button', class: 'chip-btn', 'aria-pressed': String(e.source === val), disabled: !canEdit, onClick: (ev) => { e.source = val; ev.currentTarget.parentElement.querySelectorAll('[data-src]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.src === val))); keep(); }, 'data-src': val }, label);
+      const srcBtn = (val, label) => h('button', { type: 'button', class: 'chip-btn', 'data-src': val, disabled: !canEdit, onClick: () => {
+        e.source = val;
+        if (e.status === 'unknown') { e.status = input.value === '' ? 'blank' : 'value'; setTimeout(() => input.focus(), 0); }
+        sync(); validate(); keep();
+      } }, label);
+      opts.append(srcBtn('record', '실제 기록'), srcBtn('memory', '기억 추정'), unkBtn);
       row.append(h('span', { class: 'm' }, `${m}월`),
         h('div', { class: 'num-input' }, h('button', { type: 'button', 'aria-label': '1 줄이기', disabled: !canEdit, onClick: () => bump(-t.step) }, '−'), input, h('button', { type: 'button', 'aria-label': '1 늘리기', disabled: !canEdit, onClick: () => bump(t.step) }, '+')),
-        h('div', { class: 'opts' }, srcBtn('record', '실제 기록'), srcBtn('memory', '기억 추정'), unkBtn), msg);
-      validate();
+        opts, msg);
+      sync(); validate();
       return row;
     };
     months.forEach((m) => rows.append(rowFor(m)));
