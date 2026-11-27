@@ -246,3 +246,17 @@ test('학생 자료 지우기·학급 전체 초기화', async () => {
   s = await ctx.S('GET', '/api/student/state');
   assert.equal(s.status, 200, '학생은 같은 PIN으로 계속 들어올 수 있음');
 });
+
+test('확인하기를 통과하지 않아도 제출 가능(선생님이 판단), 점이 없으면 제출 불가', async () => {
+  const S = ctx.S;
+  let r = await S('PUT', '/api/student/state', { research: { topicId: 11 } });
+  r = await S('PUT', '/api/student/responses', { topicId: 11, entries: entries([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  r = await S('PUT', '/api/student/work', { kind: 'topic', data: { title: '', points: {}, segments: [] } });
+  r = await S('POST', '/api/student/work/submit', { kind: 'topic' });
+  assert.equal(r.status, 400);
+  r = await S('PUT', '/api/student/work', { kind: 'topic', data: { title: '대충', points: { 0: 5, 1: 1 }, segments: [] } });
+  r = await S('POST', '/api/student/work/submit', { kind: 'topic' });
+  assert.equal(r.body.work.status, 'submitted', JSON.stringify(r.body));
+  assert.ok(r.body.work.data.autoIssues.length > 0);
+});

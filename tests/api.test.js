@@ -96,14 +96,13 @@ test('기상자료 표 검증과 직접 그린 그래프 검사·제출', async 
   assert.equal(r.body.ok, false);
   const msgs = r.body.issues.map((i) => i.step);
   assert.ok(msgs.includes('points') && msgs.includes('lines'));
-  r = await S('POST', '/api/student/work/submit', { kind: 'weather' });
-  assert.equal(r.status, 400, '검사 통과 전 제출 불가');
   // 바른 그래프
   await S('PUT', '/api/student/work', { kind: 'weather', data: { ...base, points: { ...base.points, 4: 22 }, segments: [[0, 1], [1, 2], [2, 3], [3, 4]] } });
   r = await S('POST', '/api/student/work/check', { kind: 'weather' });
   assert.equal(r.body.ok, true, JSON.stringify(r.body.issues));
   r = await S('POST', '/api/student/work/submit', { kind: 'weather' });
   assert.equal(r.body.work.status, 'submitted');
+  assert.deepEqual(r.body.work.data.autoIssues, []);
   r = await S('GET', '/api/student/state');
   assert.equal(r.body.gates.weatherDone, true);
   assert.equal(r.body.gates.topics, null);

@@ -535,6 +535,7 @@ async function worksView() {
         h('div', { class: 'graph-frame', style: { marginTop: '6px' } }, renderStatic(w.data, { showValues: true })),
         st ? h('div', { class: 'small', style: { marginTop: '6px' } }, `가장 큰 값 ${st.maxLabels.join(', ')} · 가장 작은 값 ${st.minLabels.join(', ')} · 변화가 가장 큰 시기 ${st.changeLabels.join(', ')}`) : null,
         h('div', { class: 'note green small', style: { marginTop: '6px' } }, w.data.interp?.sentence || '(해석 없음)'),
+        w.data.autoIssues?.length ? h('details', { class: 'small', style: { marginTop: '6px' } }, h('summary', null, `참고: 자동 점검에서 다른 점 ${w.data.autoIssues.length}개`), h('ul', { class: 'issue-list' }, w.data.autoIssues.map((t) => h('li', null, t)))) : (w.data.autoIssues ? h('div', { class: 'small muted', style: { marginTop: '6px' } }, '참고: 자동 점검에서 다른 점이 없어요.') : null),
         h('div', { style: { marginTop: '8px' } }, fb),
         h('div', { class: 'row', style: { marginTop: '8px' } },
           w.status !== 'approved' ? btn('승인(전시)', () => act('approve'), { variant: 'gold small' }) : btn('전시 내리기', () => act('unpublish'), { variant: 'small green' }),
