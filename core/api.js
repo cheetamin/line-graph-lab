@@ -2,11 +2,11 @@
 // - 모든 권한 검증과 학급 격리는 이 파일에서 수행합니다.
 // - db 어댑터: { all(sql, params), get(sql, params), run(sql, params), exec(sql), tx(fn) }
 // - sec 어댑터: { hash(secret), verify(secret, stored), token(), sha256(text) }  (모두 Promise 가능)
-import { SCHEMA } from './schema.js?v=mwx4evtz';
-import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwx4evtz';
-import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwx4evtz';
-import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwx4evtz';
-import { computeStats, round1 } from '../shared/stats.js?v=mwx4evtz';
+import { SCHEMA } from './schema.js?v=mwy8mt3z';
+import { DEFAULT_LIFE_SOURCES, DEFAULT_LIFE_REGION, cleanLifeSources, buildLifeSources, normalizeRegion, regionFromAddress, hasTourData } from '../shared/life.js?v=mwy8mt3z';
+import { STUDENT_SURVEY, TEACHER_SURVEY, cleanSurvey, summarize } from '../shared/survey.js?v=mwy8mt3z';
+import { TOPICS, topicById, validateEntry, SCALE_OPTIONS, snapStep, approxValue, MONTH_DAYS, MAX_CELLS, MIN_CELLS, cellsNeeded } from '../shared/topics.js?v=mwy8mt3z';
+import { computeStats, round1 } from '../shared/stats.js?v=mwy8mt3z';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY = 86400000;
@@ -223,6 +223,28 @@ export function createApi({ db, sec, options = {} }) {
     return aggregate(classId, topic, s).map((a) => ({ month: a.month, value: a.value }));
   }
 
+  // 개인 기록 모드: 제출한 월별 기록으로 자료표를 자동으로 만들어요('기억나지 않음' 달은 빼고).
+  // 이미 예전 방식(12달 칸)으로 그리던 작품이 있으면 그 배치를 그대로 둬요.
+  function autoTable(studentId, s, state, tid) {
+    if (!isPersonal(s)) return false;
+    const topic = topicById(tid);
+    if (!topic || !db.get('SELECT 1 AS x FROM submissions WHERE student_id = ? AND topic_id = ?', [studentId, tid])) return false;
+    const series = ownSeries(studentId, topic, s);
+    state.tables = state.tables || {};
+    const prev = state.tables[tid] || {};
+    const compact = prev.compact !== undefined ? !!prev.compact : !workRow(studentId, tkind(tid));
+    const known = series.filter((r) => r.value !== null);
+    const next = compact
+      ? { months: known.map((r) => r.month), values: known.map((r) => r.value), verified: true, compact: true, auto: true }
+      : { values: series.map((r) => (r.value === null ? '' : r.value)), verified: true, compact: false, auto: true };
+    if (JSON.stringify(prev) === JSON.stringify(next)) return false;
+    if (compact && prev.compact && JSON.stringify(prev.months) !== JSON.stringify(next.months)) {
+      db.run("DELETE FROM works WHERE student_id = ? AND kind = ? AND status IN ('draft','rejected')", [studentId, tkind(tid)]);
+    }
+    state.tables[tid] = next;
+    return true;
+  }
+
   // 세 활동 모두 제출: 1차(기상자료 완료) + 2차 주제 그래프 1개 이상 + 3차 우리 고장 그래프
   function allThree(studentId, wd) {
     if (!wd) return false;
@@ -289,7 +311,8 @@ export function createApi({ db, sec, options = {} }) {
     if (!topic) fail(400, '연구 주제를 먼저 정해야 해요.');
     const t = state.tables?.[topic.id];
     if (!t?.verified) fail(400, '자료표를 먼저 완성해 주세요.');
-    const tv = targetValues(ctx.cls.id, ctx.student.id, topic, s);
+    let tv = targetValues(ctx.cls.id, ctx.student.id, topic, s);
+    if (t.compact && isPersonal(s)) tv = tv.filter((a) => a.value !== null);
     return { labels: tv.map((a) => `${a.month}월`), values: tv.map((a) => a.value), xUnit: '월', yUnit: topic.unit, topicId: topic.id, topic };
   }
 
@@ -634,6 +657,11 @@ export function createApi({ db, sec, options = {} }) {
     const { student, cls } = ctx;
     const s = cls.settings;
     const state = getState(student.id);
+    if (isPersonal(s)) {
+      let ch = false;
+      for (const r of db.all('SELECT topic_id FROM submissions WHERE student_id = ?', [student.id])) ch = autoTable(student.id, s, state, r.topic_id) || ch;
+      if (ch) putState(student.id, cls.id, state);
+    }
     const g = gates(student, cls, state);
     const vote = db.get('SELECT topic_id FROM votes WHERE student_id = ?', [student.id]);
     const responses = db.all('SELECT topic_id, month, status, value, source FROM responses WHERE student_id = ?', [student.id]);
@@ -713,8 +741,10 @@ export function createApi({ db, sec, options = {} }) {
       if (topicById(tid) && Array.isArray(p.tableDraft.values)) {
         state.tables = state.tables || {};
         const prev = state.tables[tid] || {};
+        if (prev.auto) { /* 자동 자료표는 그대로 */ } else {
         const vals = p.tableDraft.values.slice(0, 12).map((v) => (v === '' || v === null ? '' : Number(v)));
         state.tables[tid] = { ...prev, values: vals, verified: prev.verified && JSON.stringify(prev.values) === JSON.stringify(vals) };
+        }
       }
     }
     if (p.ui && typeof p.ui === 'object') state.ui = { chapter: str(p.ui.chapter, 20), spread: int(p.ui.spread) || 0 };
@@ -850,6 +880,7 @@ export function createApi({ db, sec, options = {} }) {
       db.run(`INSERT INTO submissions(class_id, student_id, topic_id, submitted_at) VALUES (?,?,?,?)
         ON CONFLICT(student_id, topic_id) DO UPDATE SET submitted_at = excluded.submitted_at`, [ctx.cls.id, ctx.student.id, topic.id, t]);
     });
+    if (isPersonal(s)) { const st = getState(ctx.student.id); if (autoTable(ctx.student.id, s, st, topic.id)) putState(ctx.student.id, ctx.cls.id, st); }
     return { body: { ok: true } };
   });
 
@@ -880,6 +911,8 @@ export function createApi({ db, sec, options = {} }) {
     const s = ctx.cls.settings;
     const topic = topicById(body.topicId);
     if (!topic || !canSurvey(ctx.student, s, topic.id, getState(ctx.student.id))) fail(400, '조사 주제를 다시 골라 주세요.');
+    const cur = getState(ctx.student.id);
+    if (isPersonal(s) && cur.tables?.[topic.id]?.auto) return { body: { ok: true, result: [], auto: true } };
     const agg = targetValues(ctx.cls.id, ctx.student.id, topic, s);
     const vals = Array.isArray(body.values) ? body.values : [];
     const result = agg.map((a, i) => {

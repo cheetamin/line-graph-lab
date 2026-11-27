@@ -1,10 +1,10 @@
 // 체험용(가상) 학급 데이터. 실제 운영 데이터와 구분되도록 학급 이름에 '체험용'을 붙이고 is_demo=1로 저장합니다.
 // 모든 단계를 둘러볼 수 있도록 기상자료·우리 고장 자료도 '예시(가상) 값'으로 채웁니다. 실제 통계가 아니에요.
-import { topicById } from '../shared/topics.js?v=mwx4evtz';
-import { DEFAULT_SETTINGS } from './api.js?v=mwx4evtz';
-import { computeStats } from '../shared/stats.js?v=mwx4evtz';
-import { SCALE_OPTIONS } from '../shared/topics.js?v=mwx4evtz';
-import { DEFAULT_LIFE_SOURCES } from '../shared/life.js?v=mwx4evtz';
+import { topicById } from '../shared/topics.js?v=mwy8mt3z';
+import { DEFAULT_SETTINGS } from './api.js?v=mwy8mt3z';
+import { computeStats } from '../shared/stats.js?v=mwy8mt3z';
+import { SCALE_OPTIONS } from '../shared/topics.js?v=mwy8mt3z';
+import { DEFAULT_LIFE_SOURCES } from '../shared/life.js?v=mwy8mt3z';
 
 const NAMES = ['체험학생', '김하늘', '이도윤', '박서연', '최지호', '정하은', '강민준', '조수아', '윤시우', '장예린',
   '임주원', '한지안', '오서준', '서다인', '신우진', '권나연', '황준서', '안채원', '송유찬', '전소율'];

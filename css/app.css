@@ -320,15 +320,16 @@ table.data.compact td, table.data.compact th { padding: 3px 6px; font-size: .95r
 
 /* 월별 입력 */
 .month-list { display: grid; gap: 8px; }
-.month-row { display: grid; grid-template-columns: 52px minmax(120px, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; background: rgba(255, 250, 236, .78); border: 1.5px solid #c9ad80; border-radius: 8px; }
+.month-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 6px 8px; align-items: center; padding: 8px 10px; background: rgba(255, 250, 236, .78); border: 1.5px solid #c9ad80; border-radius: 8px; }
 .month-row.unknown { background: rgba(232, 225, 210, .8); }
 .month-row.bad { border-color: var(--bad); background: #fff0ec; }
 .month-row .m { font-family: var(--f-title); font-size: 1.2rem; text-align: center; }
-.num-input { display: grid; grid-template-columns: 44px 1fr 44px; gap: 4px; align-items: center; }
+.num-input { display: grid; grid-template-columns: 44px minmax(90px, 1fr) 44px; gap: 4px; align-items: center; max-width: 340px; }
 .num-input button { min-height: 44px; border: 1.5px solid #a88a62; background: #f6e7c3; border-radius: 6px; font-size: 1.3rem; cursor: pointer; }
-.num-input input { text-align: center; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.num-input input { min-width: 0; width: 100%; padding: 6px 4px; text-align: center; font-size: 1.3rem; font-weight: 700; color: #2b1d12; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.num-input input::-webkit-inner-spin-button, .num-input input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .num-input .u { grid-column: 1 / -1; }
-.month-row .opts { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.month-row .opts { grid-column: 2 / -1; display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-start; }
 .month-row .opts .chip-btn { min-height: 36px; padding: 3px 10px; font-size: .86rem; }
 .month-row .msg { grid-column: 1 / -1; }
 

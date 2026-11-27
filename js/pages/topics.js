@@ -1,8 +1,8 @@
 // 제2장 주제 선택·투표 + 2026년 월별 경험 조사
-import { sealImg, h, icon, btn, toast, fmt, iconSrc } from '../ui.js?v=mwx4evtz';
-import { api } from '../api.js?v=mwx4evtz';
-import { S, saveState, backup, getBackup, clearBackup } from '../store.js?v=mwx4evtz';
-import { TOPICS, CATEGORIES, topicById, monthMax, validateEntry, YEAR } from '../../shared/topics.js?v=mwx4evtz';
+import { sealImg, h, icon, btn, toast, fmt, iconSrc } from '../ui.js?v=mwy8mt3z';
+import { api } from '../api.js?v=mwy8mt3z';
+import { S, saveState, backup, getBackup, clearBackup } from '../store.js?v=mwy8mt3z';
+import { TOPICS, CATEGORIES, topicById, monthMax, validateEntry, YEAR } from '../../shared/topics.js?v=mwy8mt3z';
 
 let selTopic = null; let cat = 'all'; let query = ''; let surveyTopic = null;
 
@@ -170,8 +170,10 @@ function surveySpread(app) {
           await api('PUT', '/api/student/responses', { topicId: t.id, entries });
           clearBackup(`resp-${t.id}`);
           await app.reload(false);
-          toast('조사를 제출했어요! 우리 반 집계에 더해졌어요.', 'ok');
-          app.refresh();
+          if (s.topicMode !== 'class' && t.id === S.data.gates.research && !S.data.gates.graph) {
+            toast('기록을 제출했어요! 자료표가 저절로 만들어졌어요. 바로 꺾은선그래프를 그려요.', 'ok');
+            app.go('graph', 0, 'next');
+          } else { toast(s.topicMode !== 'class' ? '기록을 제출했어요!' : '조사를 제출했어요! 우리 반 집계에 더해졌어요.', 'ok'); app.refresh(); }
         } catch (ex) {
           const errs = ex.data?.errors || {};
           errBox.replaceChildren(h('div', { class: 'note' }, h('b', null, ex.message), Object.keys(errs).length ? h('ul', { class: 'issue-list' }, Object.entries(errs).map(([m, t2]) => h('li', null, `${m}월: ${t2}`))) : null));
@@ -194,8 +196,8 @@ function surveySpread(app) {
             h('span', null, h('span', { class: 't', style: { fontSize: '1.05rem' } }, t.name), h('br'), h('span', { class: 'small muted' }, `단위: ${t.unit}`)),
             sub ? h('span', { class: 'badge ok' }, '제출함') : h('span', { class: 'badge warn' }, '아직'));
         })),
-        s.topicMode === 'own' ? h('div', { class: 'row', style: { marginTop: '12px' } }, btn('‹ 다른 주제 고르기', () => app.go('topics', 0, 'prev'), { variant: 'small' }), d.gates.submittedTopics.includes(d.gates.research) ? btn('자료표 만들러 가기 ›', () => app.go('table', 0, 'next'), { variant: 'small green' }) : null)
-          : lottery ? (d.gates.submittedTopics.includes(d.gates.research) ? h('div', { class: 'row', style: { marginTop: '12px' } }, btn('자료표 만들러 가기 ›', () => app.go('table', 0, 'next'), { variant: 'small green' })) : null)
+        s.topicMode === 'own' ? h('div', { class: 'row', style: { marginTop: '12px' } }, btn('‹ 다른 주제 고르기', () => app.go('topics', 0, 'prev'), { variant: 'small' }), d.gates.submittedTopics.includes(d.gates.research) ? btn(s.topicMode !== 'class' ? '꺾은선그래프 그리러 가기 ›' : '자료표 만들러 가기 ›', () => app.go(s.topicMode !== 'class' ? 'graph' : 'table', 0, 'next'), { variant: 'small green' }) : null)
+          : lottery ? (d.gates.submittedTopics.includes(d.gates.research) ? h('div', { class: 'row', style: { marginTop: '12px' } }, btn(s.topicMode !== 'class' ? '꺾은선그래프 그리러 가기 ›' : '자료표 만들러 가기 ›', () => app.go(s.topicMode !== 'class' ? 'graph' : 'table', 0, 'next'), { variant: 'small green' })) : null)
           : active.length ? researchPicker(app, active) : null);
     },
     right: (el) => { rightEl = el; drawRight(); },
@@ -213,7 +215,7 @@ function researchPicker(app, active) {
       if (!e.target.value) return;
       try { await saveState({ research: { topicId: Number(e.target.value) } }); await app.reload(false); toast('연구 주제를 정했어요.', 'ok'); app.refresh(); } catch (ex) { toast(ex.message, 'bad'); }
     } }, h('option', { value: '' }, '연구 주제 고르기'), choices.map((t) => h('option', { value: t.id, selected: cur === t.id ? true : undefined }, t.name))),
-    cur ? h('div', { class: 'row', style: { marginTop: '10px' } }, d.gates.table ? h('span', { class: 'small muted' }, d.gates.table) : btn('자료표 만들러 가기 ›', () => app.go('table', 0, 'next'), { variant: 'small green' })) : null);
+    cur ? h('div', { class: 'row', style: { marginTop: '10px' } }, d.gates.table ? h('span', { class: 'small muted' }, d.gates.table) : btn(s.topicMode !== 'class' ? '꺾은선그래프 그리러 가기 ›' : '자료표 만들러 가기 ›', () => app.go(s.topicMode !== 'class' ? 'graph' : 'table', 0, 'next'), { variant: 'small green' })) : null);
 }
 
 
