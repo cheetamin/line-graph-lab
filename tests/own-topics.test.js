@@ -35,13 +35,17 @@ async function makeGraph(S, topicId, vals) {
   assert.equal(r.status, 200, JSON.stringify(r.body));
   r = await S('PUT', '/api/student/responses', { topicId, entries: entries(vals) });
   assert.equal(r.status, 200, JSON.stringify(r.body));
-  r = await S('POST', '/api/student/table-check', { topicId, values: vals.map((v) => (v === null ? '' : v)) });
-  assert.equal(r.body.ok, true);
-  const labels = vals.map((_, i) => `${i + 1}월`);
-  const points = {}; vals.forEach((v, i) => { if (v !== null) points[i] = v; });
-  const idx = vals.map((v, i) => (v === null ? -1 : i)).filter((i) => i >= 0);
-  const segments = idx.slice(1).map((b, k) => [idx[k], b]);
-  const st = computeStats(labels, vals);
+  // 제출하면 자료표가 저절로 만들어지고, '기억나지 않음' 달은 빠져요
+  r = await S('GET', '/api/student/state');
+  const tb = r.body.state.tables[topicId];
+  assert.equal(tb.verified, true); assert.equal(tb.compact, true);
+  const known = vals.map((v, i) => ({ v, m: i + 1 })).filter((x) => x.v !== null);
+  assert.deepEqual(tb.months, known.map((x) => x.m));
+  assert.equal(r.body.gates.graph, null);
+  const labels = known.map((x) => `${x.m}월`); const kv = known.map((x) => x.v);
+  const points = {}; kv.forEach((v, i) => { points[i] = v; });
+  const segments = kv.slice(1).map((_, k) => [k, k + 1]);
+  const st = computeStats(labels, kv);
   r = await S('PUT', '/api/student/work', { kind: 'topic', data: { title: `나의 ${t.name}`, xName: '월', xUnit: '월', yName: '수량', yUnit: t.unit, scale: 1, points, segments,
     interp: { maxLabel: st.maxLabels[0], minLabel: st.minLabels[0], changeLabel: st.changeLabels[0], sentence: '여름에 가장 많고 겨울에 적었어요. 꾸준히 늘었어요.' } } });
   assert.equal(r.status, 200, JSON.stringify(r.body));

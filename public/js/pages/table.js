@@ -9,6 +9,24 @@ export function spreads(app) {
   const t = topicById(d.gates.research);
   const months = []; for (let m = s.monthFrom; m <= s.monthTo; m++) months.push(m);
   const saved = d.state.tables?.[t.id];
+  if (saved?.auto) {
+    const ms = saved.compact ? saved.months : months;
+    return [{
+      folio: ['나의 기록', '자료표'],
+      left: (el) => el.append(
+        h('div', { class: 'page-head' }, icon('search'), h('div', null, h('div', { class: 'kicker' }, '2차 활동 ③'), h('h2', null, '자료표가 저절로 만들어졌어요'))),
+        h('div', { class: 'row' }, h('span', { class: 'label-tag' }, t.name)),
+        h('div', { class: 'divider' }),
+        h('p', null, '2장에서 제출한 내 월별 기록으로 자료표를 만들었어요. ‘기억나지 않음’인 달은 표에서 뺐어요.'),
+        h('p', { class: 'small muted' }, '기록을 고치고 싶으면 2장 「나의 주제·기록」에서 고쳐 다시 제출하면 표도 함께 바뀌어요.')),
+      right: (el) => el.append(
+        h('div', { class: 'center' }, h('h2', { class: 'plaque' }, `나의 ${t.name}`)),
+        h('div', { class: 'table-frame', style: { marginTop: '8px' } }, h('table', { class: 'data' },
+          h('thead', null, h('tr', null, h('th', null, '월'), h('th', null, `나의 기록 (${t.unit})`))),
+          h('tbody', null, ms.map((m, i) => h('tr', null, h('th', null, `${m}월`), h('td', null, saved.values[i] === '' ? '—' : fmt(saved.values[i]))))))),
+        h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '12px' } }, btn('꺾은선그래프 그리러 가기 ›', () => app.go('graph', 0, 'next'), { variant: 'gold' }))),
+    }];
+  }
   const vals = months.map((_, i) => (saved?.values?.[i] ?? ''));
   let verified = !!saved?.verified;
   let ref = null;

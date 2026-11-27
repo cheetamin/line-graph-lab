@@ -88,18 +88,19 @@ test('학생: 배정된 주제만 기록, 연구 주제 직접 선택 불가, �
   assert.equal(r.status, 200, JSON.stringify(r.body));
   r = await S('GET', `/api/student/table-ref?topicId=${mine}`);
   assert.equal(r.body.mode, 'own'); assert.equal(r.body.rows[1].value, 4); assert.equal(r.body.rows[2].status, 'unknown');
-  r = await S('POST', '/api/student/table-check', { topicId: mine, values: vals.map((v) => (v === null ? 3 : v)) });
-  assert.equal(r.body.ok, false, '모름 칸은 비워야 함');
-  r = await S('POST', '/api/student/table-check', { topicId: mine, values: vals.map((v) => (v === null ? '' : v)) });
-  assert.equal(r.body.ok, true);
-  const points = {}; vals.forEach((v, i) => { if (v !== null) points[i] = v; });
-  const segs = [[0, 1], [1, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10]];
-  const labels = vals.map((_, i) => `${i + 1}월`);
+  // 내 기록 모드: 제출하면 자료표가 저절로(모름 달은 빠짐) 만들어져 바로 그래프로
+  r = await S('GET', '/api/student/state');
+  assert.equal(r.body.state.tables[mine].compact, true); assert.equal(r.body.gates.graph, null);
+  assert.deepEqual(r.body.state.tables[mine].months, [1, 2, 4, 5, 6, 7, 8, 9, 10, 11]);
+  const kv = vals.filter((v) => v !== null);
+  const points = {}; kv.forEach((v, i) => { points[i] = v; });
+  const segs = kv.slice(1).map((_, k) => [k, k + 1]);
+  const labels = [1, 2, 4, 5, 6, 7, 8, 9, 10, 11].map((m) => `${m}월`);
   await S('PUT', '/api/student/work', { kind: 'topic', data: { title: '나의 기록', xName: '월', xUnit: '월', yName: '횟수', yUnit: r.body ? undefined : '', scale: 1, points, segments: segs, interp: {} } });
   r = await S('POST', '/api/student/work/check', { kind: 'topic' });
   assert.equal(r.body.ok, false);
   assert.ok(r.body.issues.every((i) => i.step !== 'points'), '점 위치는 내 기록과 맞음: ' + JSON.stringify(r.body.issues));
-  assert.deepEqual(r.body.work.data.values, vals);
+  assert.deepEqual(r.body.work.data.values, kv);
   ctx.S = S; ctx.mine = mine; ctx.labels = labels;
 });
 
