@@ -95,7 +95,7 @@ test('기상자료 표 검증과 직접 그린 그래프 검사·제출', async 
   r = await S('POST', '/api/student/work/check', { kind: 'weather' });
   assert.equal(r.body.ok, false);
   const msgs = r.body.issues.map((i) => i.step);
-  assert.ok(msgs.includes('points') && msgs.includes('lines'));
+  assert.ok(msgs.includes('lines') && !msgs.includes('points'), '맞고 틀림은 보지 않고 빠뜨린 것만');
   // 바른 그래프
   await S('PUT', '/api/student/work', { kind: 'weather', data: { ...base, points: { ...base.points, 4: 22 }, segments: [[0, 1], [1, 2], [2, 3], [3, 4]] } });
   r = await S('POST', '/api/student/work/check', { kind: 'weather' });
@@ -120,7 +120,7 @@ test('주제 투표(중복 없음)와 월별 조사 검증', async () => {
   assert.equal(r.status, 400);
   await T('PUT', `/api/teacher/classes/${ctx.classId}`, { settings: { activeTopics: [3, 10, 19] } });
   const entries = Array.from({ length: 11 }, (_, i) => ({ month: i + 1, status: 'value', value: i + 1, source: 'memory' }));
-  entries[1] = { month: 2, status: 'value', value: 29 }; // 2월은 28일까지
+  entries[1] = { month: 2, status: 'value', value: -1 }; // 음수는 불가
   r = await S('PUT', '/api/student/responses', { topicId: 3, entries });
   assert.equal(r.status, 400); assert.ok(r.body.errors[2]);
   entries[1] = { month: 2, status: 'unknown' };

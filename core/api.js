@@ -407,6 +407,23 @@ export function createApi({ db, sec, options = {} }) {
     return issues;
   }
 
+  // 학생용 확인: 맞고 틀림은 따지지 않고, 빠뜨린 것(입력하지 않은 칸, 찍지 않은 점, 잇지 않은 선)만 알려 줘요.
+  function missingWork(data, target) {
+    const issues = [];
+    const { labels, values } = target;
+    if (!data.title) issues.push({ step: 'title', msg: '그래프 제목을 적어 주세요.' });
+    if (!data.xName || !data.yName || !data.xUnit || !data.yUnit) issues.push({ step: 'axis', msg: '가로축·세로축의 이름과 단위를 모두 적어 주세요.' });
+    if (!data.scale) issues.push({ step: 'scale', msg: '세로 작은 눈금 한 칸의 크기를 정해 주세요.' });
+    const present = labels.map((_, i) => i).filter((i) => values[i] !== null);
+    const missing = present.filter((i) => data.points[i] === undefined).map((i) => labels[i]);
+    if (missing.length) issues.push({ step: 'points', msg: `점을 찍지 않은 곳이 있어요: ${missing.join(', ')}` });
+    const pts = present.filter((i) => data.points[i] !== undefined);
+    if (pts.length > 1 && data.segments.length < pts.length - 1) issues.push({ step: 'lines', msg: '점들을 선분으로 모두 이어 주세요.' });
+    if (!data.interp.maxLabel || !data.interp.minLabel || !data.interp.changeLabel) issues.push({ step: 'interp', msg: '그래프 해석의 고르기 칸을 모두 골라 주세요.' });
+    if (!(data.interp.sentence || '').trim()) issues.push({ step: 'interp', msg: '그래프에서 알게 된 내용을 써 주세요.' });
+    return issues;
+  }
+
   function workName(r, d) {
     if (r.kind === 'weather') return d?.subject || '연도별 폭염일수';
     if (r.kind === 'life') return d?.subject ? `우리 고장: ${d.subject}` : '우리 고장 자료';
@@ -764,33 +781,8 @@ export function createApi({ db, sec, options = {} }) {
     const pairs = (L.years || []).map((y, i) => [y, (L.values || [])[i]]).filter(([y, v]) => y !== '' || (v !== '' && v !== undefined));
     if (pairs.length < 3) issues.push('연도와 값을 3개 이상 적어 주세요(최대 8개).');
     else {
-      const ys = pairs.map(([y]) => y);
-      if (ys.some((y) => !Number.isInteger(y))) issues.push('연도를 모두 적어 주세요.');
-      else {
-        if (ys.some((y) => y < 1950 || y > thisYear)) issues.push(`연도는 1950년부터 ${thisYear}년 사이로 적어 주세요.`);
-        for (let i = 1; i < ys.length; i++) if (ys[i] <= ys[i - 1]) { issues.push('연도는 왼쪽부터 차례대로(작은 연도부터) 적어 주세요.'); break; }
-      }
-      const vs = pairs.map(([, v]) => v);
-      if (vs.some((v) => v === '' || v === undefined || !Number.isFinite(Number(v)))) issues.push('값을 모두 숫자로 적어 주세요.');
-      else if (vs.some((v) => v < 0 || v > 100000000)) issues.push('값은 0보다 크거나 같고 1억보다 작아야 해요.');
-      else if (vs.some((v) => Math.abs(Math.round(v * 10) - v * 10) > 1e-6)) issues.push('값은 소수 첫째 자리까지만 적어요. 큰 수는 ‘만 명’처럼 단위를 바꾸어 어림해도 돼요.');
-      else {
-        // 공공데이터가 들어 있는 자료면, 적은 수가 자료표의 수와 맞는지 확인(만 명으로 어림한 것도 인정)
-        const src = (ctx.cls.settings.lifeSources || []).find((x) => x.id === L.sourceId && x.data);
-        if (src && Number.isInteger(ys[0])) {
-          const mul = L.unit === '만 명' ? 10000 : L.unit === '명' ? 1 : 0;
-          if (mul) {
-            const wrong = [];
-            pairs.forEach(([y, v]) => {
-              const k = src.data.years.indexOf(y); const real = k >= 0 ? src.data.values[k] : null;
-              if (real === null || real === undefined) { wrong.push(`${y}년(자료표에 없는 해)`); return; }
-              const tolV = mul === 1 ? 0.5 : 10000; // 만 명은 반올림·버림 어림 모두 인정
-              if (Math.abs(Number(v) * mul - real) > tolV) wrong.push(`${y}년`);
-            });
-            if (wrong.length) L.dataNote = `공공데이터와 다른 칸: ${wrong.join(', ')}`; else delete L.dataNote;
-          }
-        }
-      }
+      if (pairs.some(([y]) => y === '' || y === null || !Number.isFinite(Number(y)))) issues.push('연도를 모두 적어 주세요.');
+      if (pairs.some(([, v]) => v === '' || v === undefined || v === null || !Number.isFinite(Number(v)))) issues.push('값을 모두 숫자로 적어 주세요.');
     }
     if (issues.length) return { body: { ok: false, issues } };
     L.years = pairs.map(([y]) => y); L.values = pairs.map(([, v]) => Number(v));
@@ -811,19 +803,9 @@ export function createApi({ db, sec, options = {} }) {
     const years = w.years || []; const values = w.values || [];
     const thisYear = new Date().getFullYear();
     const dec = w.unit === 'decade';
-    if (years.length !== 5 || years.some((y) => !Number.isInteger(y))) issues.push(dec ? '연대 5개를 모두 적어 주세요.' : '연도 5개를 모두 적어 주세요.');
-    else if (dec) {
-      if (years.some((y) => y % 10 !== 0 || y < 1910 || y > thisYear)) issues.push('연대는 1910, 1920, … 2020처럼 10년 단위로 적어 주세요.');
-      for (let i = 1; i < 5; i++) if (years[i] - years[i - 1] !== 10) { issues.push('연대는 왼쪽부터 10년씩 차례대로 적어 주세요. (예: 1980, 1990, 2000, 2010, 2020)'); break; }
-    } else {
-      if (years.some((y) => y < 1973 || y > thisYear)) issues.push(`연도는 1973년부터 ${thisYear}년 사이로 적어 주세요.`);
-      if (new Set(years).size !== 5) issues.push('같은 연도가 두 번 적혀 있어요.');
-      for (let i = 1; i < 5; i++) if (years[i] <= years[i - 1]) { issues.push('연도는 왼쪽부터 차례대로(작은 연도부터) 적어 주세요.'); break; }
-    }
     const mName = ({ tropical: '열대야일수', cold: '한파일수' })[w.metric] || '폭염일수';
-    if (values.length !== 5 || values.some((v) => v === '' || !Number.isFinite(Number(v)))) issues.push(`${mName} 5개를 모두 적어 주세요.`);
-    else if (values.some((v) => Math.abs(Math.round(Number(v) * 10) - Number(v) * 10) > 1e-6)) issues.push(`${mName}는 소수 첫째 자리까지만 적어요. (예: 10.6)`);
-    else if (values.some((v) => v < 0 || v > 366)) issues.push(`${mName}는 0일부터 366일 사이여야 해요. 다시 확인해 보세요.`);
+    if (years.length !== 5 || years.some((y) => !Number.isInteger(y))) issues.push(dec ? '연대 5개를 모두 적어 주세요.' : '연도 5개를 모두 적어 주세요.');
+    if (values.length !== 5 || values.some((v) => v === '' || v === null || !Number.isFinite(Number(v)))) issues.push(`${mName} 5개를 모두 적어 주세요.`);
     if (issues.length) return { body: { ok: false, issues } };
     state.weather.tableChecked = true;
     putState(ctx.student.id, ctx.cls.id, state);
@@ -969,12 +951,13 @@ export function createApi({ db, sec, options = {} }) {
     const w = workRow(ctx.student.id, key);
     if (!w) fail(400, '먼저 그래프를 그려 주세요.');
     const data = parse(w.data);
-    const issues = checkWork(data, target);
+    const issues = missingWork(data, target);
+    const exact = checkWork(data, target).length === 0;
     data.labels = target.labels; data.values = target.values;
     data.checked = issues.length === 0;
     data.checkedAt = data.checked ? now() : null;
     db.run('UPDATE works SET data = ?, updated_at = ? WHERE id = ?', [JSON.stringify(data), now(), w.id]);
-    return { body: { ok: issues.length === 0, issues, answer: issues.length === 0 ? { labels: target.labels, values: target.values } : null, work: publicWork(workRow(ctx.student.id, key)) } };
+    return { body: { ok: issues.length === 0, issues, answer: exact ? { labels: target.labels, values: target.values } : null, work: publicWork(workRow(ctx.student.id, key)) } };
   });
 
   route('POST', '/api/student/work/submit', 'student', async ({ ctx, body }) => {

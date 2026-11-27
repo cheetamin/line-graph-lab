@@ -71,8 +71,8 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       axis: !!(W.xName && W.xUnit && W.yName && W.yUnit),
       scale: !!W.scale,
       points: pts >= need && need > 0,
-      lines: adj >= Math.max(0, need - 1) && (W.segments || []).length === adj && need > 1,
-      interp: !!(W.interp.maxLabel && W.interp.minLabel && W.interp.changeLabel && (W.interp.sentence || '').length >= 10),
+      lines: need > 1 && (W.segments || []).length >= Math.min(pts, need) - 1 && pts > 1,
+      interp: !!(W.interp.maxLabel && W.interp.minLabel && W.interp.changeLabel && (W.interp.sentence || '').trim()),
       check: !!W.checked,
       submit: status === 'submitted' || status === 'approved',
       n,
@@ -83,8 +83,9 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
     const st = steps();
     const badSteps = new Set(lastIssues.map((i) => i.step));
     for (const [k, el] of Object.entries(stepEls)) {
-      el.classList.toggle('done', !!st[k] && !badSteps.has(k));
-      el.classList.toggle('bad', badSteps.has(k) && !st.check);
+      // 입력하면 바로 초록, 빠뜨린 것만 빨강
+      el.classList.toggle('done', !!st[k]);
+      el.classList.toggle('bad', badSteps.has(k) && !st[k]);
     }
     if (statusEl) {
       const [t, c] = STATUS[status] || STATUS.draft;
@@ -180,7 +181,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
           h('label', { class: 'field' }, h('span', null, '변화가 가장 큰 시기 (선분이 가장 많이 기울어진 곳)'), pick('changeLabel', pairOpts, '고르기')),
           h('label', { class: 'field' }, h('span', null, '알게 된 내용과 그 까닭 (10자 이상)'), sentence)),
         step('check', 7, '확인하기',
-          h('p', { class: 'small' }, '(선택) 제목, 축, 눈금, 점의 위치, 선분, 해석을 스스로 점검해 봐요. 통과하지 않아도 제출할 수 있어요.'),
+          h('p', { class: 'small' }, '(선택) 빠뜨린 것(제목, 축, 눈금, 점, 선분, 해석)이 없는지 확인해요. 통과하지 않아도 제출할 수 있어요.'),
           h('div', { class: 'row' }, btn('중간 저장', () => save.flush(), { variant: 'green small' }), btn('확인하기', () => check(), { variant: 'small' })),
           checkBox),
         step('submit', 8, '작품 제출하기', h('p', { class: 'small' }, kind === 'weather' ? '다 그렸으면 제출해요. 제출하면 기상자료 탐험실이 완료되고 다음 장이 열려요. 선생님이 보고 전시해요.' : (submitText || '다 그렸으면 제출해요. 선생님이 보고 승인하면 작품 전시관에 걸려요.')), submitBtn)),
@@ -198,7 +199,7 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
     });
     answerToggle = h('input', { type: 'checkbox', onChange: (e) => { editor.answer = e.target.checked ? values.map((v) => (v === '' || v === null ? null : (approxUnit(maxValue) ? approxValue(v, maxValue) : v))) : null; editor.render(); } });
     el.append(
-      h('div', { class: 'row between' }, h('h2', { class: 'plaque' }, '모눈종이'), h('label', { class: `toggle small ${W.checked ? '' : 'hidden'}` }, answerToggle, '정답 비교 그래프 겹쳐 보기')),
+      h('div', { class: 'row between' }, h('h2', { class: 'plaque' }, '모눈종이'), h('label', { class: 'toggle small hidden' }, answerToggle, '정답 비교 그래프 겹쳐 보기')),
       editor.el);
     editor.render();
     editor.setHint(lockedForever ? '완료한 그래프예요.' : W.scale ? '[점 찍기]로 자료값에 맞는 곳에 점을 찍어요.' : '왼쪽 3단계에서 세로 눈금 한 칸의 크기를 먼저 정해요.');
@@ -214,9 +215,10 @@ export function graphSpread(app, { kind, topicId = null, labels, values, unit, x
       editor.wrongLabels = pi ? pi.labels : [];
       editor.render();
       checkBox.replaceChildren(r.ok
-        ? h('div', { class: 'note green' }, h('b', null, '훌륭해요! '), '모든 확인을 통과했어요. 오른쪽 위의 [정답 비교 그래프]로 내 그래프와 겹쳐 볼 수 있어요. 이제 작품을 제출해요.')
-        : h('div', { class: 'note' }, h('b', null, '다시 살펴볼 곳이 있어요'), h('ul', { class: 'issue-list' }, lastIssues.map((i) => h('li', null, i.msg)))));
-      if (r.ok) { answerToggle.closest('label').classList.remove('hidden'); toast('확인을 통과했어요!', 'ok'); } else toast('다시 살펴볼 곳이 있어요.', 'bad');
+        ? h('div', { class: 'note green' }, h('b', null, '훌륭해요! '), '빠뜨린 것이 없어요. 이제 작품을 제출해요.')
+        : h('div', { class: 'note' }, h('b', null, '빠뜨린 곳이 있어요'), h('ul', { class: 'issue-list' }, lastIssues.map((i) => h('li', null, i.msg)))));
+      if (r.answer) answerToggle.closest('label').classList.remove('hidden');
+      if (r.ok) toast('빠뜨린 것이 없어요!', 'ok'); else toast('빠뜨린 곳이 있어요.', 'bad');
       updateMarks();
       if (!r.ok) {
         const first = lastIssues[0]?.step;

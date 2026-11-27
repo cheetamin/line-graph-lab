@@ -135,15 +135,15 @@ function surveySpread(app) {
     const keep = () => backup(`resp-${t.id}`, E);
     const rowFor = (m) => {
       const e = E[m]; const mx = monthMax(t, m);
-      const input = h('input', { type: 'number', inputmode: t.step < 1 ? 'decimal' : 'numeric', min: 0, max: mx, step: t.step, value: e.status === 'value' ? e.value : '', disabled: !canEdit || e.status === 'unknown', 'aria-label': `${m}월 ${t.unit}` });
+      const input = h('input', { type: 'number', inputmode: t.step < 1 ? 'decimal' : 'numeric', min: 0, step: 'any', value: e.status === 'value' ? e.value : '', disabled: !canEdit || e.status === 'unknown', 'aria-label': `${m}월 ${t.unit}` });
       const msg = h('div', { class: 'msg err-text small' });
       const row = h('div', { class: `month-row ${e.status === 'unknown' ? 'unknown' : ''}` });
       const validate = () => {
         const err = e.status === 'value' ? validateEntry(t, m, e.value) : null;
-        msg.textContent = err || ''; row.classList.toggle('bad', !!err); input.classList.toggle('err', !!err);
+        msg.textContent = err || ''; row.classList.toggle('bad', !!err); input.classList.toggle('err', !!err); row.classList.toggle('filled', !err && (e.status === 'unknown' || (e.status === 'value' && input.value !== '')));
       };
       input.addEventListener('input', () => { e.value = input.value; e.status = input.value === '' ? 'blank' : 'value'; validate(); keep(); });
-      const bump = (dv) => { if (!canEdit || e.status === 'unknown') return; const v = Math.max(0, Math.min(mx, Math.round(((Number(input.value) || 0) + dv) * 100) / 100)); input.value = v; e.value = v; e.status = 'value'; validate(); keep(); };
+      const bump = (dv) => { if (!canEdit || e.status === 'unknown') return; const v = Math.max(0, Math.round(((Number(input.value) || 0) + dv) * 100) / 100); input.value = v; e.value = v; e.status = 'value'; validate(); keep(); };
       // 실제 기록 · 기억 추정 · 기억나지 않음은 셋 중 하나만 켜져요
       const opts = h('div', { class: 'opts', role: 'radiogroup' });
       const sync = () => {
